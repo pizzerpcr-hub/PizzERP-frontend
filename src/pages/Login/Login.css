@@ -1,0 +1,611 @@
+.login-layout {
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  display: grid;
+  grid-template-columns: minmax(360px, 43%) 1fr;
+
+  background: #faf8f5;
+}
+
+/* =========================
+   Sidebar
+========================= */
+
+.login-sidebar {
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 40px clamp(32px, 6vw, 88px);
+
+  color: #fff;
+
+  background:
+    radial-gradient(
+      circle at 12% 84%,
+      rgba(244, 197, 83, 0.2),
+      transparent 30%
+    ),
+    linear-gradient(
+      145deg,
+      #20110e 0%,
+      #4a2017 55%,
+      #77291a 100%
+    );
+}
+
+.sidebar-logo {
+  display: block;
+
+  width: min(250px, 100%);
+
+  padding: 8px;
+
+  background: #050505;
+  border-radius: 10px;
+
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.25);
+}
+
+.sidebar-logo img {
+  display: block;
+
+  width: 100%;
+  height: auto;
+
+  border-radius: 5px;
+}
+
+.sidebar-copy {
+  margin: auto 0;
+  max-width: 480px;
+}
+
+.kicker {
+  margin: 0 0 13px;
+
+  color: #f7cb67;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.sidebar-copy h1 {
+  margin: 0 0 16px;
+
+  color: #fff;
+
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.08;
+}
+
+.sidebar-copy p:last-child {
+  margin: 0;
+
+  max-width: 410px;
+
+  color: rgba(255, 255, 255, 0.77);
+
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.sidebar-footer {
+  color: rgba(255, 255, 255, 0.55);
+
+  font-size: 14px;
+}
+
+/* =========================
+   Login content
+========================= */
+
+.login-content {
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  display: grid;
+  place-items: center;
+
+  padding: 40px 24px;
+
+  background:
+    radial-gradient(
+      circle at 88% 8%,
+      rgba(229, 176, 76, 0.17),
+      transparent 23rem
+    ),
+    linear-gradient(
+      135deg,
+      #fffdf9 0%,
+      #f8f1ea 100%
+    );
+}
+
+.login-card {
+  width: min(100%, 440px);
+
+  padding: clamp(28px, 4vw, 40px);
+
+  border: 1px solid rgba(150, 107, 80, 0.14);
+  border-radius: 16px;
+
+  background: #fff;
+
+  box-shadow: 0 16px 36px rgba(65, 37, 25, 0.09);
+}
+
+/* =========================
+   Welcome
+========================= */
+
+.welcome {
+  margin-bottom: 34px;
+}
+
+.welcome .eyebrow {
+  margin: 0 0 7px;
+
+  color: #a33e16;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.welcome h2 {
+  margin: 0 0 9px;
+
+  color: #231815;
+
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.welcome p:last-child {
+  margin: 0;
+
+  color: #6f625e;
+
+  font-size: 16px;
+  font-weight: 400;
+}
+
+/* =========================
+   Form
+========================= */
+
+#loginForm {
+  display: grid;
+  gap: 20px;
+}
+
+.form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.form-field label,
+.remember {
+  color: #392e29;
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.form-field input {
+  width: 100%;
+  min-height: 48px;
+
+  padding: 12px 14px;
+
+  border: 1px solid #d9d1cb;
+  border-radius: 9px;
+
+  outline: none;
+
+  background: #fff;
+  color: #231815;
+
+  font-size: 16px;
+  font-weight: 400;
+
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.form-field input::placeholder {
+  color: #a69b96;
+}
+
+.form-field input:focus {
+  border-color: #b74b1b;
+
+  box-shadow: 0 0 0 3px rgba(183, 75, 27, 0.14);
+}
+
+.label-row {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+/* =========================
+   Password
+========================= */
+
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap input {
+  padding-right: 82px;
+}
+
+.password-toggle {
+  position: absolute;
+
+  top: 50%;
+  right: 8px;
+
+  transform: translateY(-50%);
+
+  border: 0;
+  padding: 7px 8px;
+
+  background: transparent;
+
+  color: #8b3a1a;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  color: #a33e16;
+}
+
+/* =========================
+   Remember
+========================= */
+
+.remember {
+  display: flex;
+
+  align-items: center;
+
+  gap: 9px;
+
+  font-weight: 500;
+
+  cursor: pointer;
+}
+
+.remember input {
+  width: 16px;
+  height: 16px;
+
+  margin: 0;
+
+  accent-color: #aa431a;
+}
+
+/* =========================
+   Form message
+========================= */
+
+.form-message {
+  min-height: 0;
+
+  margin: -10px 0 -4px;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-message.error {
+  color: #b42318;
+}
+
+.form-message.success {
+  color: #15803d;
+}
+
+/* =========================
+   Login button
+========================= */
+
+.login-button {
+  min-height: 50px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 12px;
+
+  border: 0;
+  border-radius: 9px;
+
+  background: #a63c16;
+  color: #fff;
+
+  font-size: 16px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+
+.login-button:hover {
+  background: #812b10;
+
+  transform: translateY(-1px);
+}
+
+.login-button:disabled {
+  cursor: wait;
+
+  opacity: 0.75;
+
+  transform: none;
+}
+
+/* =========================
+   Help
+========================= */
+
+.help-text {
+  margin: 28px 0 0;
+
+  color: #796d68;
+
+  font-size: 14px;
+
+  text-align: center;
+}
+
+.help-text a {
+  color: #a33e16;
+
+  font-weight: 600;
+
+  text-decoration: none;
+}
+
+.help-text a:hover {
+  text-decoration: underline;
+}
+
+/* =========================
+   Tablet
+========================= */
+
+@media (min-width: 761px) and (max-width: 1024px) {
+  .login-layout {
+    grid-template-columns: minmax(300px, 40%) 1fr;
+  }
+
+  .login-sidebar {
+    padding: 32px 36px;
+  }
+
+  .sidebar-copy h1 {
+    font-size: 36px;
+  }
+
+  .sidebar-copy p:last-child {
+    font-size: 15px;
+  }
+
+  .login-content {
+    padding: 32px;
+  }
+}
+
+/* =========================
+   Mobile
+========================= */
+
+@media (max-width: 760px) {
+  .login-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .login-sidebar {
+    min-height: auto;
+
+    padding: 26px 28px 34px;
+  }
+
+  .sidebar-logo {
+    width: 170px;
+  }
+
+  .sidebar-copy {
+    margin: 35px 0 0;
+  }
+
+  .sidebar-copy h1 {
+    font-size: 30px;
+  }
+
+  .sidebar-footer {
+    display: none;
+  }
+
+  .login-content {
+    min-height: auto;
+
+    padding: 46px 24px;
+  }
+}
+
+/* =========================
+   Small mobile
+========================= */
+
+@media (max-width: 480px) {
+  .login-sidebar {
+    padding: 22px 20px 28px;
+  }
+
+  .sidebar-logo {
+    width: 155px;
+    padding: 6px;
+  }
+
+  .sidebar-copy {
+    margin-top: 28px;
+  }
+
+  .sidebar-copy h1 {
+    font-size: 24px;
+  }
+
+  .sidebar-copy p:last-child,
+  .welcome p:last-child {
+    font-size: 16px;
+  }
+
+  .login-content {
+    padding: 32px 16px;
+  }
+
+  .login-card {
+    width: 100%;
+    padding: 24px 18px;
+  }
+
+  .welcome {
+    margin-bottom: 28px;
+  }
+
+  .welcome h2 {
+    font-size: 24px;
+  }
+
+  .label-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  #loginForm {
+    gap: 18px;
+  }
+
+  .login-button {
+    min-height: 52px;
+  }
+}
+
+/* =========================
+   Very small screens
+========================= */
+
+@media (max-width: 359px) {
+  .login-sidebar {
+    padding-inline: 16px;
+  }
+
+  .login-content {
+    padding-inline: 12px;
+  }
+
+  .login-card {
+    padding-inline: 16px;
+  }
+
+  .sidebar-copy h1 {
+    font-size: 24px;
+  }
+
+  .form-field input {
+    padding-inline: 11px;
+  }
+
+  .password-wrap input {
+    padding-right: 70px;
+  }
+
+  .password-toggle {
+    right: 4px;
+  }
+}
+
+/* =========================
+   Landscape mobile
+========================= */
+
+@media (max-width: 760px) and (max-height: 600px) and (orientation: landscape) {
+  .login-layout {
+    grid-template-columns: minmax(260px, 38%) 1fr;
+  }
+
+  .login-sidebar {
+    min-height: 100dvh;
+    padding: 22px 28px;
+  }
+
+  .sidebar-logo {
+    width: 145px;
+  }
+
+  .sidebar-copy {
+    margin: auto 0;
+  }
+
+  .sidebar-copy h1 {
+    font-size: 26px;
+  }
+
+  .sidebar-copy p:last-child {
+    font-size: 13px;
+  }
+
+  .sidebar-footer {
+    display: block;
+  }
+
+  .login-content {
+    min-height: 100dvh;
+    padding: 28px 34px;
+  }
+
+  .welcome {
+    margin-bottom: 20px;
+  }
+
+  .welcome h2 {
+    font-size: 27px;
+  }
+
+  #loginForm {
+    gap: 13px;
+  }
+
+  .help-text {
+    margin-top: 18px;
+  }
+}
