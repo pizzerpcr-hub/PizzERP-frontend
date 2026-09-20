@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 import "./Login.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
 
+import { useNavigate } from "react-router-dom";
+
+
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     username: "",
@@ -29,7 +33,8 @@ function Login() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const inicioSesion = (e) => {
+    
     e.preventDefault();
 
     if (!formData.username.trim() || !formData.password.trim()) {
@@ -46,9 +51,11 @@ function Login() {
 
     // Aquí posteriormente conectarías el backend/API.
     setFormMessage("Datos ingresados correctamente.");
+    
     setMessageType("success");
 
     console.log("Login:", formData);
+    navigate("/usuarios");
   };
 
   return (
@@ -99,7 +106,7 @@ function Login() {
 
           <form
             id="loginForm"
-            onSubmit={handleSubmit}
+            onSubmit={inicioSesion}
             noValidate
           >
             {formMessage && (
