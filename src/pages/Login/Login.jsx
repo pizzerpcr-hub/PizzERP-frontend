@@ -59,7 +59,7 @@ function Login() {
       >
         <a
           className="sidebar-logo"
-          href="#"
+          href="/"
           aria-label="PizzERP, inicio"
         >
           <img
