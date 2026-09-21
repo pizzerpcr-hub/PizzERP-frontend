@@ -2,10 +2,29 @@ import { useEffect, useState } from "react";
 import "./Login.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
 
+const API_URL =
+  import.meta.env.VITE_API_URL ??
+  `http://${window.location.hostname}:8000`;
+
+function getCookie(name) {
+  const cookie = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
+
+  if (!cookie) {
+    return "";
+  }
+
+  return decodeURIComponent(
+    cookie.split("=").slice(1).join("="),
+  );
+}
+
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -15,11 +34,52 @@ function Login() {
 
   const currentYear = new Date().getFullYear();
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  useEffect(() => {
+  const controller = new AbortController();
 
-    setFormData((prev) => ({
-      ...prev,
+  const checkSession = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/user`,
+        {
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+          },
+          signal: controller.signal,
+        },
+      );
+
+      if (!response.ok) {
+        return;
+      }
+
+      const responseData = await response.json();
+
+      setFormMessage(
+        `Sesión activa: ${responseData.usuario.nombre_completo}.`,
+      );
+      setMessageType("success");
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        setFormMessage("");
+        setMessageType("");
+      }
+    }
+  };
+
+  checkSession();
+
+  return () => {
+    controller.abort();
+  };
+}, []);
+
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
+
+    setFormData((previousData) => ({
+      ...previousData,
       [name]: type === "checkbox" ? checked : value,
     }));
 
@@ -29,26 +89,103 @@ function Login() {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-    if (!formData.username.trim() || !formData.password.trim()) {
+    if (
+      !formData.username.trim() ||
+      !formData.password.trim()
+    ) {
       setFormMessage("Ingresa tu usuario y contraseña.");
       setMessageType("error");
+
       return;
     }
 
-    if (formData.password.length < 4) {
-      setFormMessage("La contraseña debe tener al menos 4 caracteres.");
+    if (formData.password.length < 8) {
+      setFormMessage(
+        "La contraseña debe tener al menos 8 caracteres.",
+      );
       setMessageType("error");
+
       return;
     }
 
-    // Aquí posteriormente conectarías el backend/API.
-    setFormMessage("Datos ingresados correctamente.");
-    setMessageType("success");
+    setIsSubmitting(true);
+    setFormMessage("");
 
-    console.log("Login:", formData);
+    try {
+      const csrfResponse = await fetch(
+        `${API_URL}/sanctum/csrf-cookie`,
+        {
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+
+      if (!csrfResponse.ok) {
+        throw new Error(
+          "No fue posible iniciar la conexión segura.",
+        );
+      }
+
+      const csrfToken = getCookie("XSRF-TOKEN");
+
+      const loginResponse = await fetch(
+        `${API_URL}/api/login`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-XSRF-TOKEN": csrfToken,
+          },
+          body: JSON.stringify({
+            username: formData.username.trim(),
+            password: formData.password,
+            remember: formData.remember,
+          }),
+        },
+      );
+
+      const responseData = await loginResponse
+        .json()
+        .catch(() => ({}));
+
+      if (!loginResponse.ok) {
+        const validationMessage = responseData.errors
+          ? Object.values(responseData.errors).flat()[0]
+          : null;
+
+        throw new Error(
+          validationMessage ??
+            responseData.message ??
+            "No fue posible iniciar sesión.",
+        );
+      }
+
+      setFormMessage(
+        `Bienvenido, ${responseData.usuario.nombre_completo}.`,
+      );
+      setMessageType("success");
+
+      setFormData((previousData) => ({
+        ...previousData,
+        password: "",
+      }));
+    } catch (error) {
+      setFormMessage(
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error inesperado.",
+      );
+      setMessageType("error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -63,7 +200,7 @@ function Login() {
           aria-label="PizzERP, inicio"
         >
           <img
-            src= {logoMabet}
+            src={logoMabet}
             alt="Logo de Pizzería Mabet"
           />
         </a>
@@ -74,8 +211,8 @@ function Login() {
           <h1>Todo el negocio, en un solo lugar.</h1>
 
           <p>
-            Administra pedidos, ventas e inventario con PizzERP de forma
-            simple y segura.
+            Administra pedidos, ventas e inventario con PizzERP
+            de forma simple y segura.
           </p>
         </div>
 
@@ -101,6 +238,7 @@ function Login() {
             id="loginForm"
             onSubmit={handleSubmit}
             noValidate
+            aria-busy={isSubmitting}
           >
             {formMessage && (
               <p
@@ -125,6 +263,7 @@ function Login() {
                 placeholder="Ingresa tu usuario"
                 value={formData.username}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -140,12 +279,15 @@ function Login() {
                 <input
                   id="password"
                   name="password"
-                  type={showPassword ? "text" : "password"}
+                  type={
+                    showPassword ? "text" : "password"
+                  }
                   autoComplete="current-password"
                   placeholder="Ingresa tu contraseña"
-                  minLength={4}
+                  minLength={8}
                   value={formData.password}
                   onChange={handleChange}
+                  disabled={isSubmitting}
                   required
                 />
 
@@ -159,8 +301,11 @@ function Login() {
                   }
                   aria-pressed={showPassword}
                   onClick={() =>
-                    setShowPassword((prev) => !prev)
+                    setShowPassword(
+                      (previousValue) => !previousValue,
+                    )
                   }
+                  disabled={isSubmitting}
                 >
                   {showPassword ? "Ocultar" : "Mostrar"}
                 </button>
@@ -173,6 +318,7 @@ function Login() {
                 name="remember"
                 checked={formData.remember}
                 onChange={handleChange}
+                disabled={isSubmitting}
               />
 
               <span>Recordarme en este equipo</span>
@@ -181,8 +327,11 @@ function Login() {
             <button
               className="login-button"
               type="submit"
+              disabled={isSubmitting}
             >
-              Ingresar al sistema
+              {isSubmitting
+                ? "Verificando..."
+                : "Ingresar al sistema"}
             </button>
           </form>
 
