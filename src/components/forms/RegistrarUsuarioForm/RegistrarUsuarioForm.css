@@ -1,0 +1,232 @@
+ /* =========================
+    Dialog / Modal
+ ========================= */
+
+.user-dialog {
+    position: fixed;
+    top: 47%;
+    left: 50%;
+    width: min(92vw, 440px);
+    max-width: 440px;
+    max-height: calc(100dvh - 32px);
+    margin: 0;
+    padding: 0;
+    transform: translate(-50%, -50%);
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 22px 55px rgba(35, 20, 14, 0.27);
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.user-dialog::backdrop {
+    background: rgba(34, 18, 13, 0.47);
+}
+
+.user-dialog form {
+    padding: 26px;
+}
+
+.user-dialog.small {
+    max-width: 390px;
+}
+
+
+/* =========================
+   Dialog heading
+========================= */
+
+.dialog-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.dialog-heading .eyebrow {
+    margin: 0;
+    color: #a33e16;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.dialog-heading h2 {
+    margin: 0;
+    color: #38221a;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.dialog-close {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 50%;
+    background: #f3ece7;
+    color: #63443a;
+    font-size: 21px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.dialog-close:hover {
+    background: #e9ddd5;
+}
+
+
+/* =========================
+   Dialog fields
+========================= */
+
+.dialog-field {
+    display: grid;
+    gap: 7px;
+    margin-bottom: 15px;
+}
+
+.dialog-field label {
+    color: #543e34;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dialog-field input,
+.dialog-field select {
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 10px;
+    border: 1px solid #ddd3cd;
+    border-radius: 8px;
+    outline: none;
+    background: #fff;
+    color: #3b2922;
+    font-family: var(--font);
+    font-size: 14px;
+}
+
+.dialog-field input:focus,
+.dialog-field select:focus {
+    border-color: #b74b1b;
+    box-shadow: 0 0 0 3px rgba(183, 75, 27, 0.12);
+}
+
+
+/* =========================
+   Password
+========================= */
+
+.password-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-field input {
+    width: 100%;
+    padding-right: 75px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    border: 0;
+    background: transparent;
+    color: #87401f;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.password-toggle:hover {
+    color: #a62c23;
+}
+
+
+/* =========================
+   Dialog messages
+========================= */
+
+.dialog-message {
+    display: none;
+    margin: -4px 0 15px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    background: #fef2f2;
+    color: #a62c23;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dialog-message.visible {
+    display: block;
+}
+
+.dialog-hint {
+    margin: -2px 0 0;
+    color: #796c66;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+
+/* =========================
+   Dialog actions
+========================= */
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    margin-top: 23px;
+}
+
+.dialog-actions button {
+    min-width: 110px;
+}
+
+
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 720px) {
+
+    .user-dialog {
+        width: calc(100vw - 32px);
+        max-width: 440px;
+        max-height: calc(100dvh - 32px);
+    }
+}
+
+@media (max-width: 480px) {
+
+    .user-dialog {
+        width: calc(100vw - 20px);
+        max-height: calc(100dvh - 20px);
+    }
+
+    .user-dialog form {
+        padding: 20px 16px;
+    }
+
+    .dialog-actions {
+        flex-direction: column-reverse;
+    }
+
+    .dialog-actions button {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 359px) {
+
+    .user-dialog {
+        width: calc(100vw - 16px);
+    }
+}

@@ -1,389 +1,444 @@
 import "./Usuarios.css";
+import { useEffect, useState } from "react";
 import logoMabet from "../../assets/images/logo-mabet.webp";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import RegistrarUsuarioForm from "../../components/forms/RegistrarUsuarioForm/RegistrarUsuarioForm";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 function Usuarios() {
     const navigate = useNavigate();
     const [mostrarForm, setMostrarForm] = useState(false);
+    const [usuarios, setUsuarios] = useState([]);
+    const { usuario } = useAuth();
+    const [cargandoUsuarios, setCargandoUsuarios] = useState(true);
 
-  return (
-    <div className="management-shell">
+    const obtenerCookie = (nombre) => {
+        const cookies = document.cookie.split(";");
 
-      {/* Menú móvil */}
-      <button
-        className="mobile-menu-toggle"
-        id="mobileMenuToggle"
-        type="button"
-        aria-label="Abrir menú"
-        aria-controls="mobileNavigation"
-        aria-expanded="false"
-      >
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
+        for (const cookie of cookies) {
+            const [clave, valor] = cookie.trim().split("=");
 
-      {/* Sidebar */}
-      <aside
-        className="management-sidebar"
-        id="mobileNavigation"
-        aria-label="Navegación de TI"
-      >
-        <a
-          className="sidebar-logo"
-          href="#"
-          aria-label="PizzERP, inicio"
-        >
-          <img
-            src={logoMabet}
-            alt="Logo de Pizzería Mabet"
-          />
-        </a>
+            if (clave === nombre) {
+                return decodeURIComponent(valor);
+            }
+        }
+        return null;
+    };
 
-        <div className="management-brand">
-          <strong>PizzERP</strong>
-          <span>Panel de tecnología</span>
-        </div>
 
-        <nav
-          className="management-nav"
-          aria-label="Módulos permitidos"
-        >
-          <span className="management-nav-label">
-            MÓDULOS DE TI
-          </span>
+    const registrarUsuario = async (usuario) => {
+        try {
+            await fetch("/sanctum/csrf-cookie", {
+                method: "GET",
+                credentials: "include",
+            });
 
-          <a className="active" href="#">
-            Usuarios
-          </a>
+            const xsrfToken = obtenerCookie("XSRF-TOKEN");
 
-          <a href="#">
-            Bitácora de Movimientos
-          </a>
-        </nav>
+            const response = await fetch("/api/users", {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    "X-XSRF-TOKEN": xsrfToken,
+                },
+                body: JSON.stringify(usuario),
+            });
 
-        <div className="management-account">
+            const data = await response.json();
 
-          <div className="management-profile">
-            <span className="profile-avatar">
-              TI
-            </span>
+            if (!response.ok) {
+                throw new Error(
+                    data.message || "Error al registrar el usuario."
+                );
+            }
 
-            <div>
-              <strong>Encargado de TI</strong>
-              <small>Rol: TI</small>
-            </div>
-          </div>
+            return data;
+        } catch (error) {
+            console.error("Error al registrar el usuario:", error);
+            throw error;
+        }
+    };
 
-          <button
-            className="logout-button"
-            type="button"
-            onClick={() => navigate("/")}
-          >
-            <span aria-hidden="true"></span>
-            Cerrar sesión
-          </button>
+    const handleFormSubmit = async (usuario) => {
+        try {
+            const data = await registrarUsuario(usuario);
 
-        </div>
-      </aside>
+            setUsuarios((usuariosActuales) => [
+                ...usuariosActuales,
+                data.usuario,
+            ]);
 
-      {/* Contenido principal */}
-      <main className="management-main">
+            setMostrarForm(false);
+        } catch (error) {
+            console.error("Error al registrar el usuario:", error);
+        }
+    };
 
-        <header className="management-header">
+    const obtenerUsuarios = async () => {
+        try {
+            const response = await fetch("/api/users", {
+                method: "GET",
+                credentials: "include",
+                headers: {
+                    Accept: "application/json",
+                },
+            });
 
-          <div>
-            <p className="eyebrow">
-              Administración
-            </p>
+            const data = await response.json();
 
-            <h1>Usuarios</h1>
+            if (!response.ok) {
+                throw new Error(
+                    data.message || "Error al obtener los usuarios."
+                );
+            }
 
-            <div className="header-description">
-                <p>
-                    Registra y administra las cuentas del sistema.
-                </p>
+            return data.usuarios;
+        } catch (error) {
+            console.error("Error al obtener usuarios:", error);
+            throw error;
+        }
+    };
 
-                <button
-                    className="management-primary"
-                    type="button"
-                    onClick={() => setMostrarForm(true)}
+    useEffect(() => {
+          if (!usuario) {
+              return;
+          }
+
+          const cargarUsuarios = async () => {
+              try {
+                  setCargandoUsuarios(true);
+
+                  const data = await obtenerUsuarios();
+                  setUsuarios(data);
+              } catch (error) {
+                  console.error(error);
+              } finally {
+                  setCargandoUsuarios(false);
+              }
+          };
+
+          cargarUsuarios();
+      }, [usuario]);
+
+
+    useEffect(() => {
+          if (!usuario) {
+              navigate("/");
+              return;
+          }
+
+          if (usuario.rol?.toUpperCase() !== "ADMINISTRADOR") {
+              navigate("/");
+          }
+      }, [usuario, navigate]);
+
+      if (!usuario || usuario.rol?.toUpperCase() !== "ADMINISTRADOR") {
+          return null;
+      }
+
+    const cerrarSesion = async () => {
+        try {
+            await fetch("/sanctum/csrf-cookie", {
+                method: "GET",
+                credentials: "include",
+            });
+
+            const xsrfToken = obtenerCookie("XSRF-TOKEN");
+
+            const response = await fetch("/api/logout", {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    Accept: "application/json",
+                    "X-XSRF-TOKEN": xsrfToken,
+                },
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+
+                throw new Error(
+                    data.message || "Error al cerrar sesión."
+                );
+            }
+
+            navigate("/");
+        } catch (error) {
+            console.error("Error al cerrar sesión:", error);
+        }
+    };
+
+    return (
+        <div className="management-shell">
+
+            {/* Menú móvil */}
+            <button
+                className="mobile-menu-toggle"
+                id="mobileMenuToggle"
+                type="button"
+                aria-label="Abrir menú"
+                aria-controls="mobileNavigation"
+                aria-expanded="false"
+            >
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            {/* Sidebar */}
+            <aside
+                className="management-sidebar"
+                id="mobileNavigation"
+                aria-label="Navegación de TI"
+            >
+                <a
+                    className="sidebar-logo"
+                    href="/usuarios"
+                    aria-label="PizzERP, inicio"
                 >
-                    + Registrar usuario
-                </button>
-            </div>
-          </div>
+                    <img
+                        src={logoMabet}
+                        alt="Logo de Pizzería Mabet"
+                    />
+                </a>
 
-        </header>
+                <div className="management-brand">
+                    <strong>PizzERP</strong>
+                    <span>Panel de tecnología</span>
+                </div>
 
-        <p
-          className="management-notice"
-          id="managementNotice"
-          role="status"
-          aria-live="polite"
-          hidden
-        ></p>
+                <nav
+                    className="management-nav"
+                    aria-label="Módulos permitidos"
+                >
+                    <span className="management-nav-label">
+                        MÓDULOS DE TI
+                    </span>
 
-        <section className="management-panel users-panel">
+                    <a className="active" href="#">
+                        Usuarios
+                    </a>
 
-          <div className="management-panel-header">
+                    <a href="#">
+                        Bitácora de Movimientos
+                    </a>
+                </nav>
 
-            <div>
-              <h2>Usuarios registrados</h2>
+                <div className="management-account">
+                    <div className="management-profile">
+                        <span className="profile-avatar">
+                            TI
+                        </span>
 
-              <p>
-                Modifica los datos de una cuenta o elimina
-                usuarios que ya no requieren acceso.
-              </p>
-            </div>
+                        <div>
+                            <strong>Encargado de TI</strong>
+                            <small>Rol: TI</small>
+                        </div>
+                    </div>
 
-            <label className="search-box">
-              ⌕
-              <input
-                id="userSearch"
-                type="search"
-                placeholder="Buscar usuario"
-              />
-            </label>
+                    <button
+                        className="logout-button"
+                        type="button"
+                        onClick={cerrarSesion}
+                    >
+                        <span aria-hidden="true"></span>
+                        Cerrar sesión
+                    </button>
+                </div>
+            </aside>
 
-          </div>
+            {/* Contenido principal */}
+            <main className="management-main">
 
-          <div className="table-wrap">
+                <header className="management-header">
+                    <div>
+                        <p className="eyebrow">
+                            Administración
+                        </p>
 
-            <table>
+                        <h1>Usuarios</h1>
 
-              <thead>
-                <tr>
-                  <th>Usuario</th>
-                  <th>Rol asignado</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
+                        <div className="header-description">
+                            <p>
+                                Registra y administra las cuentas del sistema.
+                            </p>
 
-              <tbody id="usersTable">
-                {/* Los usuarios se cargarán posteriormente */}
-                <tr>
-                   
-                </tr>
-              </tbody>
+                            <button
+                                className="management-primary"
+                                type="button"
+                                onClick={() => setMostrarForm(true)}
+                            >
+                                + Registrar usuario
+                            </button>
+                        </div>
+                    </div>
+                </header>
 
-            </table>
+                <p
+                    className="management-notice"
+                    id="managementNotice"
+                    role="status"
+                    aria-live="polite"
+                    hidden
+                ></p>
 
-          </div>
+                <section className="management-panel users-panel">
 
-        </section>
+                    <div className="management-panel-header">
+                        <div>
+                            <h2>Usuarios registrados</h2>
 
-      </main>
+                            <p>
+                                Modifica los datos de una cuenta o elimina
+                                usuarios que ya no requieren acceso.
+                            </p>
+                        </div>
 
-      {/* Modal registrar usuario */}
-      <dialog
-        className="user-dialog"
-        id="userDialog"
-        open = {mostrarForm}
-      >
-        <form id="userForm" noValidate>
+                        <label className="search-box">
+                            ⌕
 
-          <div className="dialog-heading">
+                            <input
+                                id="userSearch"
+                                type="search"
+                                placeholder="Buscar usuario"
+                            />
+                        </label>
+                    </div>
 
-            <div>
-              <p className="eyebrow">
-                Gestión de usuarios
-              </p>
+                    <div className="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre Completo</th>
+                                    <th>Usuario</th>
+                                    <th>Rol asignado</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
 
-              <h2 id="dialogTitle">
-                Registrar usuario
-              </h2>
-            </div>
+                            {cargandoUsuarios ? (
+                                <tbody>
+                                    <tr>
+                                        <td colSpan="5" className="cargando-usuarios">  
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            ) : (
+                                <tbody id="usersTable">
+                                    {usuarios.map((usuario) => (
+                                        <tr key={usuario.id_usuario}>
+                                            <td>
+                                                {usuario.nombre_completo}
+                                            </td>
 
-            <button
-              className="dialog-close"
-              type="button"
-              aria-label="Cerrar"
-              onClick={() => setMostrarForm(false)}
+                                            <td>
+                                                {usuario.nombre_usuario}
+                                            </td>
+
+                                            <td>
+                                                {usuario.rol}
+                                            </td>
+
+                                            <td>
+                                                {usuario.estado}
+                                            </td>
+
+                                            <td className="user-actions">
+                                                <button
+                                                    type="button"
+                                                    className="management-primary"
+                                                >
+                                                    Modificar
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    className="management-danger"
+                                                >
+                                                    {usuario.estado === "ACTIVO" ||
+                                                    usuario.estado === "Activo"
+                                                        ? "Eliminar"
+                                                        : "Activar"}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            )}
+
+                        </table>
+                    </div>
+                </section>
+            </main>
+
+            {/* Formulario de registrar usuario */}
+            {mostrarForm && (
+                <RegistrarUsuarioForm
+                    onSubmit={handleFormSubmit}
+                    onClose={() => setMostrarForm(false)}
+                />
+            )}
+
+            {/* Modal eliminar */}
+            <dialog
+                className="user-dialog small"
+                id="deleteDialog"
             >
-              ×
-            </button>
+                <form id="deleteForm">
 
-          </div>
+                    <div className="dialog-heading">
+                        <div>
+                            <p className="eyebrow">
+                                Eliminar usuario
+                            </p>
 
-          <input
-            id="editingId"
-            type="hidden"
-          />
+                            <h2>
+                                ¿Confirmar eliminación?
+                            </h2>
+                        </div>
 
-          <p
-            id="userFormMessage"
-            className="dialog-message"
-            role="alert"
-            aria-live="polite"
-          ></p>
+                        <button
+                            className="dialog-close"
+                            type="button"
+                            aria-label="Cerrar"
+                        >
+                            ×
+                        </button>
+                    </div>
 
-          <div className="dialog-field">
-            <label htmlFor="formName">
-              Nombre completo
-            </label>
+                    <p>
+                        Esta acción no se puede deshacer.
+                    </p>
 
-            <input
-              id="formName"
-              name="name"
-              required
-              placeholder="Nombre del usuario"
-              autoComplete="name"
-            />
-          </div>
+                    <input
+                        id="deletingId"
+                        type="hidden"
+                    />
 
-          <div className="dialog-field">
-            <label htmlFor="formUsername">
-              Nombre de usuario
-            </label>
+                    <div className="dialog-actions">
+                        <button
+                            className="management-secondary"
+                            type="button"
+                        >
+                            Cancelar
+                        </button>
 
-            <input
-              id="formUsername"
-              name="username"
-              required
-              placeholder="Usuario"
-              autoComplete="username"
-            />
-          </div>
+                        <button
+                            className="management-danger"
+                            type="submit"
+                        >
+                            Eliminar
+                        </button>
+                    </div>
 
-          <div className="dialog-field">
-            <label htmlFor="formPassword">
-              Contraseña
-            </label>
+                </form>
+            </dialog>
 
-            <input
-              id="formPassword"
-              name="password"
-              type="password"
-              required
-              minLength="8"
-              placeholder="Mínimo 8 caracteres"
-              autoComplete="new-password"
-            />
-          </div>
-
-          <div className="dialog-field">
-            <label htmlFor="formRole">
-              Rol
-            </label>
-
-            <select
-              id="formRole"
-              name="role"
-              required
-            >
-              <option value="">
-                Seleccione un rol
-              </option>
-
-              <option value="Administrador">
-                Administrador
-              </option>
-
-              <option value="Caja">
-                Caja
-              </option>
-
-              <option value="Cocina">
-                Cocina
-              </option>
-
-              <option value="TI">
-                Encargado de TI
-              </option>
-            </select>
-          </div>
-
-          <p className="dialog-hint">
-            Todos los campos son obligatorios.
-            
-          </p>
-
-          <div className="dialog-actions">
-
-            <button
-              className="management-secondary"
-              type="button"
-              onClick={() => setMostrarForm(false)}
-            >
-              Cancelar
-            </button>
-
-            <button
-              className="management-primary"
-              type="submit"
-            >
-              Guardar usuario
-            </button>
-
-          </div>
-
-        </form>
-      </dialog>
-
-      {/* Modal eliminar */}
-      <dialog
-        className="user-dialog small"
-        id="deleteDialog"
-      >
-        <form id="deleteForm">
-
-          <div className="dialog-heading">
-
-            <div>
-              <p className="eyebrow">
-                Eliminar usuario
-              </p>
-
-              <h2>
-                ¿Confirmar eliminación?
-              </h2>
-            </div>
-
-            <button
-              className="dialog-close"
-              type="button"
-              aria-label="Cerrar"
-            >
-              ×
-            </button>
-
-          </div>
-
-          <p>
-            Esta acción no se puede deshacer.
-          </p>
-
-          <input
-            id="deletingId"
-            type="hidden"
-          />
-
-          <div className="dialog-actions">
-
-            <button
-              className="management-secondary"
-              type="button"
-            >
-              Cancelar
-            </button>
-
-            <button
-              className="management-danger"
-              type="submit"
-            >
-              Eliminar
-            </button>
-
-          </div>
-
-        </form>
-      </dialog>
-
-    </div>
-  );
+        </div>
+    );
 }
 
 export default Usuarios;
