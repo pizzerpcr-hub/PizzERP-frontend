@@ -1,5 +1,5 @@
 import Login  from "../src/pages/Login/Login.jsx";
-import Usuarios from "./pages/Usuarios/Usuarios.jsx";
+import ModuloTI from "./pages/Usuarios/Usuarios.jsx";
 import { Routes, Route } from "react-router-dom"; 
 
 
@@ -10,7 +10,7 @@ function App() {
     <>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/usuarios" element={<Usuarios />} />
+        <Route path="/usuarios" element={<ModuloTI />} />
       </Routes>
 
     </>
