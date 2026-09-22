@@ -155,17 +155,33 @@ function Login() {
         .json()
         .catch(() => ({}));
 
-      if (!loginResponse.ok) {
-        const validationMessage = responseData.errors
-          ? Object.values(responseData.errors).flat()[0]
-          : null;
+if (!loginResponse.ok) {
+  const validationMessage = responseData.errors
+    ? Object.values(responseData.errors).flat()[0]
+    : null;
 
-        throw new Error(
-          validationMessage ??
-            responseData.message ??
-            "No fue posible iniciar sesión.",
-        );
-      }
+  let errorMessage =
+    validationMessage ??
+    responseData.message ??
+    "No fue posible iniciar sesión.";
+
+  if (
+    loginResponse.status === 401 &&
+    Number.isInteger(responseData.intentos_restantes)
+  ) {
+    const remainingAttempts =
+      responseData.intentos_restantes;
+
+    const attemptsMessage =
+      remainingAttempts === 1
+        ? "Te queda 1 intento."
+        : `Te quedan ${remainingAttempts} intentos.`;
+
+    errorMessage = `${errorMessage} ${attemptsMessage}`;
+  }
+
+  throw new Error(errorMessage);
+}
 
       setFormMessage(
         `Bienvenido, ${responseData.usuario.nombre_completo}.`,
