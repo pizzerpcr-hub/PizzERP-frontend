@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import "./Login.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
 import { useNavigate } from "react-router-dom"; 
+import { useAuth } from "../../context/AuthContext.jsx";
 
-const API_URL ="";
+const API_URL = "";
 
 function getCookie(name) {
   const cookie = document.cookie
@@ -24,6 +25,7 @@ function Login() {
   const [formMessage, setFormMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { iniciarSesion } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -187,6 +189,7 @@ if (!loginResponse.ok) {
         `Bienvenido, ${responseData.usuario.nombre_completo}.`,
       );
       setMessageType("success");
+      iniciarSesion(responseData.usuario);
 
       if(responseData.usuario.rol === "Administrador" || responseData.usuario.rol === "ADMINISTRADOR") {
         navigate("/usuarios");
