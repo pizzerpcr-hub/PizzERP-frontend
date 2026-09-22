@@ -188,7 +188,7 @@ if (!loginResponse.ok) {
       );
       setMessageType("success");
 
-      if(responseData.usuario.rol === "Administrador") {
+      if(responseData.usuario.rol === "Administrador" || responseData.usuario.rol === "ADMINISTRADOR") {
         navigate("/usuarios");
       }
 
