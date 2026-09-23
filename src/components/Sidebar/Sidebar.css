@@ -12,8 +12,7 @@
     flex-direction: column;
 
     width: 258px;
-    height: 100vh;
-    min-height: 100dvh;
+    height: 100dvh;
 
     gap: 20px;
     padding: 26px 16px;
@@ -22,20 +21,37 @@
 
     color: #fff;
     background: #2b1914;
+
+    overflow-y: auto;
+    overflow-x: hidden;
 }
+
+/* =========================
+   Logo
+========================= */
+
 .sidebar-logo {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
     width: 100%;
     max-width: 184px;
+
+    margin: 0 auto;
     padding: 5px;
+
     box-sizing: border-box;
 
     background: #050505;
     border-radius: 7px;
+
+    flex-shrink: 0;
 }
 
 .sidebar-logo img {
     display: block;
+
     width: 100%;
     height: auto;
 
@@ -49,7 +65,10 @@
 .management-brand {
     display: grid;
     gap: 3px;
+
     padding: 0 10px 4px;
+
+    flex-shrink: 0;
 }
 
 .management-brand strong {
@@ -60,6 +79,7 @@
 
 .management-brand span {
     color: rgba(255, 255, 255, 0.62);
+
     font-size: 14px;
     font-weight: 400;
 }
@@ -71,12 +91,15 @@
 .management-nav {
     display: grid;
     gap: 4px;
+
+    flex-shrink: 0;
 }
 
 .management-nav-label {
     padding: 12px 10px 5px;
 
     color: rgba(255, 255, 255, 0.42);
+
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.08em;
@@ -89,6 +112,7 @@
     align-items: center;
 
     min-height: 40px;
+
     padding: 9px 12px;
 
     border-left: 3px solid transparent;
@@ -113,7 +137,9 @@
 
 .management-nav a.active {
     color: #fff;
+
     border-left-color: #f1bd76;
+
     background: rgba(255, 255, 255, 0.17);
 }
 
@@ -124,12 +150,18 @@
 .management-account {
     display: grid;
     gap: 14px;
+
+    width: 100%;
+
     margin-top: auto;
+
+    flex-shrink: 0;
 }
 
 .management-profile {
     display: flex;
     align-items: center;
+
     gap: 10px;
 
     margin-top: 0;
@@ -140,12 +172,14 @@
 
 .management-profile strong {
     display: block;
+
     font-size: 14px;
     font-weight: 600;
 }
 
 .management-profile small {
     color: rgba(255, 255, 255, 0.62);
+
     font-size: 14px;
 }
 
@@ -155,6 +189,8 @@
 
     width: 34px;
     height: 34px;
+
+    flex-shrink: 0;
 
     border-radius: 50%;
 
@@ -177,7 +213,10 @@
     justify-self: center;
 
     gap: 8px;
+
     padding: 0 14px;
+
+    box-sizing: border-box;
 
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 7px;
@@ -197,11 +236,11 @@
         transform 0.2s;
 }
 
-
-
 .logout-button:hover {
     border-color: #866c3b;
+
     background: rgba(244, 194, 98, 0.16);
+
     transform: translateY(-1px);
 }
 
@@ -218,10 +257,12 @@
 ========================= */
 
 @media (max-width: 720px) {
+
     .mobile-menu-toggle {
         position: fixed;
         top: 14px;
         left: 14px;
+
         z-index: 110;
 
         display: grid;
@@ -232,6 +273,10 @@
 
         width: 46px;
         height: 46px;
+
+        padding: 0;
+
+        box-sizing: border-box;
 
         border: 1px solid #e4dfda;
         border-radius: 8px;
@@ -244,8 +289,12 @@
     }
 
     .mobile-menu-toggle span {
+        display: block;
+
         width: 20px;
         height: 2px;
+
+        flex-shrink: 0;
 
         border-radius: 2px;
 
@@ -259,51 +308,91 @@
     .management-sidebar {
         position: fixed;
         inset: 0;
+
         z-index: 100;
 
         display: flex;
+        flex-direction: column;
 
-        width: auto;
-        min-height: 100dvh;
+        width: 100%;
+        max-width: none;
 
-        padding: 86px 24px 28px;
+        height: 100dvh;
+        min-height: 0;
 
+        padding: 82px 24px 24px;
+
+        box-sizing: border-box;
+
+        gap: 16px;
+
+        overflow-x: hidden;
         overflow-y: auto;
 
         background: #2b1914;
 
         transform: translateX(-100%);
+
         transition: transform 0.25s ease;
+
+        -webkit-overflow-scrolling: touch;
     }
 
     .management-sidebar .sidebar-logo {
         align-self: center;
+
         width: min(184px, 60vw);
+        max-width: 184px;
+
+        flex-shrink: 0;
     }
 
     .management-brand {
         display: grid;
+
+        gap: 3px;
+
+        padding: 0;
+
         text-align: center;
+
+        flex-shrink: 0;
     }
 
     .management-nav {
+        display: grid;
+
         grid-template-columns: 1fr;
+
         width: 100%;
+
         gap: 10px;
+
+        flex-shrink: 0;
     }
 
     .management-nav-label {
         display: block;
+
+        padding: 8px 10px 4px;
     }
 
     .management-nav a {
         min-height: 50px;
+
         justify-content: flex-start;
-        padding-inline: 16px;
+
+        padding: 12px 16px;
+
+        box-sizing: border-box;
     }
 
     .management-account {
         width: 100%;
+
+        margin-top: auto;
+
+        flex-shrink: 0;
     }
 
     body.mobile-menu-open {
@@ -316,7 +405,9 @@
 
     body.mobile-menu-open .mobile-menu-toggle {
         border-color: transparent;
+
         background: transparent;
+
         box-shadow: none;
     }
 
@@ -324,15 +415,21 @@
         background: #fff;
     }
 
-    body.mobile-menu-open .mobile-menu-toggle span:nth-child(1) {
+    body.mobile-menu-open
+        .mobile-menu-toggle
+        span:nth-child(1) {
         transform: translateY(7px) rotate(45deg);
     }
 
-    body.mobile-menu-open .mobile-menu-toggle span:nth-child(2) {
+    body.mobile-menu-open
+        .mobile-menu-toggle
+        span:nth-child(2) {
         opacity: 0;
     }
 
-    body.mobile-menu-open .mobile-menu-toggle span:nth-child(3) {
+    body.mobile-menu-open
+        .mobile-menu-toggle
+        span:nth-child(3) {
         transform: translateY(-7px) rotate(-45deg);
     }
 }
@@ -342,28 +439,87 @@
 ========================= */
 
 @media (max-width: 480px) {
+
     .management-sidebar {
         gap: 12px;
-        padding: 86px 16px 24px;
+
+        padding: 74px 16px 18px;
+
+        height: 100dvh;
+        min-height: 0;
+
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .management-sidebar .sidebar-logo {
         width: 116px;
+        max-width: 116px;
+
+        margin: 0 auto;
+
+        flex-shrink: 0;
+    }
+
+    .management-brand {
+        gap: 2px;
+
+        padding: 0;
+
+        text-align: center;
+
+        flex-shrink: 0;
+    }
+
+    .management-brand strong {
+        font-size: 14px;
+    }
+
+    .management-brand span {
+        font-size: 13px;
     }
 
     .management-nav {
+        display: grid;
+
         grid-template-columns: 1fr;
+
+        width: 100%;
+
         gap: 8px;
+
+        flex-shrink: 0;
+    }
+
+    .management-nav-label {
+        padding: 8px 8px 4px;
+
+        font-size: 12px;
     }
 
     .management-nav a {
         min-height: 44px;
+
         justify-content: center;
 
         padding: 10px 12px;
 
+        box-sizing: border-box;
+
         border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 6px;
+    }
+
+    .management-account {
+        width: 100%;
+
+        margin-top: auto;
+
+        flex-shrink: 0;
+    }
+
+    .management-profile {
+        padding-top: 14px;
     }
 
     .logout-button {

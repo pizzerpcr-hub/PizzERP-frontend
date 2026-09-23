@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { cerrarSesion as cerrarSesionService } from "../../services/loginService.js";
 
 function Sidebar({ items = [] }) {
     const navigate = useNavigate();
@@ -36,40 +37,7 @@ function Sidebar({ items = [] }) {
 
     const cerrarSesion = async () => {
         try {
-            await fetch("/sanctum/csrf-cookie", {
-                method: "GET",
-                credentials: "include",
-            });
-
-            const cookies = document.cookie.split(";");
-
-            let xsrfToken = null;
-
-            for (const cookie of cookies) {
-                const [clave, valor] = cookie.trim().split("=");
-
-                if (clave === "XSRF-TOKEN") {
-                    xsrfToken = decodeURIComponent(valor);
-                    break;
-                }
-            }
-
-            const response = await fetch("/api/logout", {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    Accept: "application/json",
-                    "X-XSRF-TOKEN": xsrfToken,
-                },
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-
-                throw new Error(
-                    data.message || "Error al cerrar sesión."
-                );
-            }
+            await cerrarSesionService();
 
             cerrarMenuMovil();
             navigate("/");

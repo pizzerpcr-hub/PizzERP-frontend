@@ -3,22 +3,9 @@ import "./Login.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
 import { useNavigate } from "react-router-dom"; 
 import { useAuth } from "../../context/AuthContext.jsx";
+import {verificarSesion,iniciarSesion as iniciarSesionService,} from "../../services/loginService.js";
 
-const API_URL = "";
 
-function getCookie(name) {
-  const cookie = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith(`${name}=`));
-
-  if (!cookie) {
-    return "";
-  }
-
-  return decodeURIComponent(
-    cookie.split("=").slice(1).join("="),
-  );
-}
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -37,45 +24,37 @@ function Login() {
   const currentYear = new Date().getFullYear();
 
   useEffect(() => {
-  const controller = new AbortController();
+        const controller = new AbortController();
 
-  const checkSession = async () => {
-    try {
-      const response = await fetch(
-        `${API_URL}/api/user`,
-        {
-          credentials: "include",
-          headers: {
-            Accept: "application/json",
-          },
-          signal: controller.signal,
-        },
-      );
+        const checkSession = async () => {
+            try {
+                const usuarioActual = await verificarSesion(
+                    controller.signal
+                );
 
-      if (!response.ok) {
-        return;
-      }
+                if (!usuarioActual) {
+                    return;
+                }
 
-      const responseData = await response.json();
+                setFormMessage(
+                    `Sesión activa: ${usuarioActual.nombre_completo}.`
+                );
 
-      setFormMessage(
-        `Sesión activa: ${responseData.usuario.nombre_completo}.`,
-      );
-      setMessageType("success");
-    } catch (error) {
-      if (error.name !== "AbortError") {
-        setFormMessage("");
-        setMessageType("");
-      }
-    }
-  };
+                setMessageType("success");
+            } catch (error) {
+                if (error.name !== "AbortError") {
+                    setFormMessage("");
+                    setMessageType("");
+                }
+            }
+        };
 
-  checkSession();
+        checkSession();
 
-  return () => {
-    controller.abort();
-  };
-}, []);
+        return () => {
+            controller.abort();
+        };
+    }, []);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -92,123 +71,51 @@ function Login() {
   };
 
   const handleSubmit = async (event) => {
-    event.preventDefault();
+      event.preventDefault();
 
-    if (
-      !formData.username.trim() ||
-      !formData.password.trim()
-    ) {
-      setFormMessage("Ingresa tu usuario y contraseña.");
-      setMessageType("error");
-
-      return;
-    }
-
-    if (formData.password.length < 8) {
-      setFormMessage(
-        "La contraseña debe tener al menos 8 caracteres.",
-      );
-      setMessageType("error");
-
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFormMessage("");
-
-    try {
-      const csrfResponse = await fetch(
-        `${API_URL}/sanctum/csrf-cookie`,
-        {
-          credentials: "include",
-          headers: {
-            Accept: "application/json",
-          },
-        },
-      );
-
-      if (!csrfResponse.ok) {
-        throw new Error(
-          "No fue posible iniciar la conexión segura.",
-        );
+      if (!formData.username.trim() || !formData.password) {
+          setFormMessage("Por favor, completa todos los campos.");
+          setMessageType("error");
+          return;
       }
 
-      const csrfToken = getCookie("XSRF-TOKEN");
+      setIsSubmitting(true);
+      setFormMessage("");
+      setMessageType("");
 
-      const loginResponse = await fetch(
-        `${API_URL}/api/login`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            "X-XSRF-TOKEN": csrfToken,
-          },
-          body: JSON.stringify({
-            username: formData.username.trim(),
-            password: formData.password,
-            remember: formData.remember,
-          }),
-        },
-      );
+      try {
+          const responseData = await iniciarSesionService({
+              username: formData.username.trim(),
+              password: formData.password,
+              remember: formData.remember,
+          });
 
-      const responseData = await loginResponse
-        .json()
-        .catch(() => ({}));
+          setFormMessage(
+              `Bienvenido, ${responseData.usuario.nombre_completo}.`
+          );
+          setMessageType("success");
 
-if (!loginResponse.ok) {
-  const validationMessage = responseData.errors
-    ? Object.values(responseData.errors).flat()[0]
-    : null;
+          iniciarSesion(responseData.usuario);
 
-  let errorMessage =
-    validationMessage ??
-    responseData.message ??
-    "No fue posible iniciar sesión.";
+          if (
+              responseData.usuario.rol === "Administrador" ||
+              responseData.usuario.rol === "ADMINISTRADOR"
+          ) {
+              navigate("/encargado-ti");
+          }
 
-  if (
-    loginResponse.status === 401 &&
-    Number.isInteger(responseData.intentos_restantes)
-  ) {
-    const remainingAttempts =
-      responseData.intentos_restantes;
-
-    const attemptsMessage =
-      remainingAttempts === 1
-        ? "Te queda 1 intento."
-        : `\nTe quedan ${remainingAttempts} intentos.`;
-
-    errorMessage = `${errorMessage} ${attemptsMessage}`;
-  }
-
-  throw new Error(errorMessage);
-}
-
-      setFormMessage(
-        `Bienvenido, ${responseData.usuario.nombre_completo}.`,
-      );
-      setMessageType("success");
-      iniciarSesion(responseData.usuario);
-
-      if(responseData.usuario.rol === "Administrador" || responseData.usuario.rol === "ADMINISTRADOR") {
-        navigate("/encargado-ti");
+          setFormData((previousData) => ({
+              ...previousData,
+              password: "",
+          }));
+      } catch (error) {
+          setFormMessage(
+              error.message || "No fue posible iniciar sesión."
+          );
+          setMessageType("error");
+      } finally {
+          setIsSubmitting(false);
       }
-
-      setFormData((previousData) => ({
-        ...previousData,
-        password: "",
-      }));
-    } catch (error) {
-      setFormMessage(
-        error instanceof Error
-          ? error.message
-          : "Ocurrió un error inesperado.",
-      );
-      setMessageType("error");
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   return (
