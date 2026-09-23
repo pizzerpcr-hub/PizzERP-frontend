@@ -1,20 +1,38 @@
-import Login  from "../src/pages/Login/Login.jsx";
-import ModuloTI from "./pages/Usuarios/Usuarios.jsx";
-import { Routes, Route } from "react-router-dom"; 
+import { Navigate, Route, Routes } from "react-router-dom";
 
+import Login from "./pages/Login/Login.jsx";
+import Usuarios from "./pages/Usuarios/Usuarios.jsx";
+import EncargadoTILayout from "./components/layout/EncargadoTILayout/EncargadoTILayout.jsx";
 
 function App() {
-  
+    return (
+        <Routes>
+            <Route
+                path="/"
+                element={<Login />}
+            />
 
-  return (
-    <>
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/usuarios" element={<ModuloTI />} />
-      </Routes>
+            <Route
+                path="/encargado-ti"
+                element={<EncargadoTILayout />}
+            >
+                <Route
+                    index
+                    element={
+                        <Navigate
+                            to="usuarios"
+                            replace
+                        />
+                    }
+                />
 
-    </>
-  )
+                <Route
+                    path="usuarios"
+                    element={<Usuarios />}
+                />
+            </Route>
+        </Routes>
+    );
 }
 
-export default App
+export default App;
