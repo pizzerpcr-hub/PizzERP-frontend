@@ -1,221 +1,4 @@
 /* =========================
-   Layout
-========================= */
-
-.management-shell {
-    min-height: 100vh;
-    min-height: 100dvh;
-    display: grid;
-    grid-template-columns: 256px minmax(0, 1fr);
-    background: #f7f6f4;
-}
-
-.management-main {
-    min-width: 0;
-    width: 100%;
-    max-width: 100%;
-    padding: clamp(28px, 4vw, 52px);
-}
-
-
-/* =========================
-   Sidebar
-========================= */
-
-.management-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    padding: 26px 16px;
-    color: #fff;
-    background: #2b1914;
-}
-
-.sidebar-logo {
-    display: block;
-    padding: 8px;
-    background: #050505;
-    border-radius: 10px;
-}
-
-.sidebar-logo img {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 5px;
-}
-
-.management-sidebar .sidebar-logo {
-    width: 100%;
-    max-width: 184px;
-    padding: 5px;
-    border-radius: 7px;
-}
-
-
-/* =========================
-   Branding
-========================= */
-
-.management-brand {
-    display: grid;
-    gap: 3px;
-    padding: 0 10px 4px;
-}
-
-.management-brand strong {
-    font-size: 14px;
-    letter-spacing: -0.01em;
-}
-
-.management-brand span {
-    color: rgba(255, 255, 255, 0.62);
-    font-size: 14px;
-}
-
-
-/* =========================
-   Navigation
-========================= */
-
-.management-nav {
-    display: grid;
-    gap: 4px;
-}
-
-.management-nav-label {
-    padding: 12px 10px 5px;
-    color: rgba(255, 255, 255, 0.42);
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-}
-
-.management-nav a {
-    position: relative;
-    display: flex;
-    align-items: center;
-    min-height: 40px;
-    padding: 9px 12px;
-
-    border-left: 3px solid transparent;
-    border-radius: 5px;
-
-    color: rgba(255, 255, 255, 0.72);
-    text-decoration: none;
-
-    font-size: 14px;
-    font-weight: 600;
-
-    transition:
-        color 0.18s,
-        background 0.18s,
-        border-color 0.18s;
-}
-
-.management-nav a:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.07);
-}
-
-.management-nav a.active {
-    color: #fff;
-    border-left-color: #f1bd76;
-    background: rgba(255, 255, 255, 0.17);
-}
-
-
-/* =========================
-   Account
-========================= */
-
-.management-account {
-    display: grid;
-    gap: 14px;
-    margin-top: auto;
-}
-
-.management-profile {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    margin-top: 0;
-    padding-top: 18px;
-
-    border-top: 1px solid rgba(255, 255, 255, 0.13);
-}
-
-.management-profile strong {
-    display: block;
-    font-size: 14px;
-}
-
-.management-profile small {
-    color: rgba(255, 255, 255, 0.62);
-    font-size: 14px;
-}
-
-.profile-avatar {
-    display: grid;
-    place-items: center;
-
-    width: 34px;
-    height: 34px;
-
-    border-radius: 50%;
-
-    background: #f2b85c;
-    color: #4b1f13;
-
-    font-size: 14px;
-    font-weight: 800;
-}
-
-.logout-button {
-    width: 172px;
-    max-width: 100%;
-    min-height: 42px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    justify-self: center;
-
-    gap: 8px;
-    padding: 0 14px;
-
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 7px;
-
-    background: rgba(255, 255, 255, 0.07);
-    color: #fff;
-
-    font-family: var(--font);
-    font-size: 14px;
-    font-weight: 600;
-
-    cursor: pointer;
-
-    transition:
-        background 0.2s,
-        border-color 0.2s,
-        transform 0.2s;
-}
-
-.logout-button span {
-    font-size: 18px;
-    line-height: 1;
-}
-
-.logout-button:hover {
-    border-color: #f4c262;
-    background: rgba(244, 194, 98, 0.16);
-    transform: translateY(-1px);
-}
-
-
-/* =========================
    Header
 ========================= */
 
@@ -236,8 +19,8 @@
     margin: 0;
     color: #a33e16;
     letter-spacing: 0.08em;
-    font-weight: 600;
     font-size: 18px;
+    font-weight: 600;
 }
 
 .management-header h1 {
@@ -263,7 +46,6 @@
     font-weight: 400;
 }
 
-
 /* =========================
    Buttons
 ========================= */
@@ -273,13 +55,17 @@
 .management-danger {
     min-height: 40px;
     padding: 9px 14px;
+
     border: 0;
     border-radius: 8px;
+
     font-family: var(--font);
     font-size: 14px;
     font-weight: 600;
+
     cursor: pointer;
     white-space: nowrap;
+
     transition:
         background 0.2s,
         border-color 0.2s,
@@ -290,7 +76,6 @@
 .management-primary {
     color: #fff;
     background: #a63c16;
-    
 }
 
 .management-primary:hover {
@@ -319,6 +104,7 @@
     min-width: auto;
     width: auto;
     padding: 9px 15px;
+
     box-shadow: 0 4px 10px rgba(166, 60, 22, 0.18);
 }
 
@@ -327,7 +113,6 @@
     transform: translateY(-1px);
 }
 
-
 /* =========================
    Notice
 ========================= */
@@ -335,11 +120,14 @@
 .management-notice {
     margin: 0 0 20px;
     padding: 11px 13px;
+
     border: 1px solid #ecdccf;
     border-left: 3px solid #b34b20;
     border-radius: 6px;
+
     background: #fffdf9;
     color: #6b4737;
+
     font-size: 14px;
 }
 
@@ -349,16 +137,18 @@
     color: #166534;
 }
 
-
 /* =========================
    Users panel
 ========================= */
 
 .management-panel {
     min-width: 0;
+
     padding: 20px;
+
     border: 1px solid #e4dfda;
     border-radius: 8px;
+
     background: #fff;
 }
 
@@ -366,23 +156,28 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
+
     gap: 14px;
     margin-bottom: 15px;
 }
 
 .management-panel-header h2 {
     margin: 0 0 10px;
+
     color: #38221a;
+
     font-size: 18px;
     font-weight: 600;
 }
 
 .management-panel-header p {
     margin: 5px 0 0;
-    color: #796c66;
-    font-size: 16px;
-}
 
+    color: #796c66;
+
+    font-size: 16px;
+    font-weight: 400;
+}
 
 /* =========================
    Search
@@ -391,25 +186,41 @@
 .search-box {
     display: flex;
     align-items: center;
+
     gap: 6px;
+
     min-width: 180px;
+
     padding: 8px 10px;
+
     border: 1px solid #ddd7d2;
     border-radius: 6px;
+
     color: #8d7c73;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+.search-box:focus-within {
+    border-color: #b74b1b;
+    box-shadow: 0 0 0 3px rgba(183, 75, 27, 0.08);
 }
 
 .search-box input {
     width: 100%;
     min-width: 0;
+
     border: 0;
     outline: 0;
+
     background: transparent;
     color: #3b2922;
+
     font-family: var(--font);
     font-size: 14px;
 }
-
 
 /* =========================
    Table
@@ -418,9 +229,12 @@
 .table-wrap {
     width: 100%;
     max-width: 100%;
+
     overflow-x: auto;
     overflow-y: hidden;
+
     -webkit-overflow-scrolling: touch;
+
     scrollbar-width: thin;
     scrollbar-color: #b78a72 #f3ece7;
 }
@@ -428,34 +242,42 @@
 .users-panel table {
     width: 100%;
     min-width: 640px;
+
     border-collapse: collapse;
+
     white-space: nowrap;
+
     font-size: 14px;
 }
 
 .users-panel th,
 .users-panel td {
     padding: 11px 10px;
+
     text-align: left;
     vertical-align: middle;
+
     border-bottom: 1px solid #d9dee7;
+
     white-space: nowrap;
 }
 
 .users-panel th {
     background: #faf9f7;
     color: #756860;
+
     font-size: 14px;
+    font-weight: 600;
 }
 
 .users-panel td {
     color: #49342c;
+    font-weight: 400;
 }
 
 .users-panel tbody tr:hover {
     background: #fffcf8;
 }
-
 
 /* =========================
    Roles and status
@@ -464,8 +286,11 @@
 .role-badge,
 .user-status {
     display: inline-flex;
+
     padding: 4px 8px;
+
     border-radius: 4px;
+
     font-size: 14px;
     font-weight: 600;
 }
@@ -495,7 +320,6 @@
     background: #dcfce7;
 }
 
-
 /* =========================
    User actions
 ========================= */
@@ -506,14 +330,22 @@
 
 .user-actions button {
     padding: 5px 7px;
+
     border: 1px solid #e2d5ce;
     border-radius: 5px;
+
     background: #fff;
     color: #87401f;
+
     font-family: var(--font);
     font-size: 14px;
     font-weight: 600;
+
     cursor: pointer;
+
+    transition:
+        border-color 0.2s,
+        background 0.2s;
 }
 
 .user-actions button:hover {
@@ -531,47 +363,92 @@
     color: #766962;
 }
 
+/* =========================
+   Loading
+========================= */
 
+.cargando-usuarios {
+    padding: 40px 20px;
 
+    text-align: center;
 
+    color: #666;
+
+    font-size: 15px;
+}
+
+.cargando-usuarios::before {
+    content: "";
+
+    display: block;
+
+    width: 24px;
+    height: 24px;
+
+    margin: 0 auto 12px;
+
+    border: 3px solid #ddd;
+    border-top-color: #05a2e6;
+
+    border-radius: 50%;
+
+    animation: cargarUsuarios 0.8s linear infinite;
+}
+
+@keyframes cargarUsuarios {
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 /* =========================
-   Dialog heading
+   Dialog
 ========================= */
 
 .dialog-heading {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
+
     gap: 12px;
     margin-bottom: 10px;
 }
 
 .dialog-heading .eyebrow {
     margin: 0;
+
     color: #a33e16;
+
     letter-spacing: 0.08em;
-    font-weight: 600;
+
     font-size: 18px;
+    font-weight: 600;
 }
 
 .dialog-heading h2 {
     margin: 0;
+
     color: #38221a;
+
     font-size: 18px;
     font-weight: 600;
 }
 
 .dialog-close {
     flex-shrink: 0;
+
     width: 30px;
     height: 30px;
+
     border: 0;
     border-radius: 50%;
+
     background: #f3ece7;
     color: #63443a;
+
     font-size: 21px;
     line-height: 1;
+
     cursor: pointer;
 }
 
@@ -579,19 +456,20 @@
     background: #e9ddd5;
 }
 
-
 /* =========================
    Dialog fields
 ========================= */
 
 .dialog-field {
     display: grid;
+
     gap: 7px;
     margin-bottom: 15px;
 }
 
 .dialog-field label {
     color: #543e34;
+
     font-size: 14px;
     font-weight: 600;
 }
@@ -600,25 +478,34 @@
 .dialog-field select {
     width: 100%;
     min-height: 42px;
+
     padding: 9px 10px;
+
     border: 1px solid #ddd3cd;
     border-radius: 8px;
+
     outline: none;
+
     background: #fff;
     color: #3b2922;
+
     font-family: var(--font);
     font-size: 14px;
+
+    box-sizing: border-box;
 }
 
 .dialog-field input:focus,
 .dialog-field select:focus {
     border-color: #b74b1b;
-    box-shadow: 0 0 0 3px rgba(183, 75, 27, 0.12);
-}
 
+    box-shadow:
+        0 0 0 3px rgba(183, 75, 27, 0.12);
+}
 
 .password-field {
     position: relative;
+
     display: flex;
     align-items: center;
 }
@@ -631,42 +518,21 @@
 .password-toggle {
     position: absolute;
     right: 10px;
+
     border: 0;
+
     background: transparent;
     color: #87401f;
+
     font-family: var(--font);
     font-size: 13px;
     font-weight: 600;
+
     cursor: pointer;
 }
 
 .password-toggle:hover {
     color: #a62c23;
-}
-
-.cargando-usuarios {
-    text-align: center;
-    padding: 40px 20px;
-    color: #666;
-    font-size: 15px;
-}
-
-.cargando-usuarios::before {
-    content: "";
-    display: block;
-    width: 24px;
-    height: 24px;
-    margin: 0 auto 12px;
-    border: 3px solid #ddd;
-    border-top-color: #05a2e6;
-    border-radius: 50%;
-    animation: cargarUsuarios 0.8s linear infinite;
-}
-
-@keyframes cargarUsuarios {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 /* =========================
@@ -675,11 +541,15 @@
 
 .dialog-message {
     display: none;
+
     margin: -4px 0 15px;
     padding: 9px 10px;
+
     border-radius: 6px;
+
     background: #fef2f2;
     color: #a62c23;
+
     font-size: 14px;
     font-weight: 600;
 }
@@ -690,50 +560,18 @@
 
 .dialog-hint {
     margin: -2px 0 0;
+
     color: #796c66;
+
     font-size: 14px;
     line-height: 1.45;
 }
 
-
 /* =========================
-   Mobile menu
+   Responsive
 ========================= */
-
-.mobile-menu-toggle {
-    display: none;
-}
-
-
-/* =========================
-   Tablet
-========================= */
-
-@media (max-width: 1050px) {
-
-    .management-shell {
-        grid-template-columns: 220px minmax(0, 1fr);
-    }
-
-    .management-main {
-        padding: 28px;
-    }
-}
 
 @media (max-width: 900px) {
-
-    .management-shell {
-        grid-template-columns: 208px minmax(0, 1fr);
-    }
-
-    .management-main {
-        padding: 28px 24px;
-    }
-
-    .management-sidebar {
-        padding-inline: 14px;
-    }
-
     .management-header {
         gap: 16px;
     }
@@ -751,102 +589,18 @@
     }
 }
 
-
-/* =========================
-   Mobile
-========================= */
-
 @media (max-width: 720px) {
-
-    .management-shell {
-        display: block;
-    }
-
-    .mobile-menu-toggle {
-        position: fixed;
-        z-index: 110;
-        top: 14px;
-        left: 14px;
-        display: grid;
-        align-content: center;
-        justify-items: center;
-        gap: 5px;
-        width: 46px;
-        height: 46px;
-        border: 1px solid #e4dfda;
-        border-radius: 8px;
-        background: #fff;
-        box-shadow: 0 4px 14px rgba(43, 25, 20, 0.12);
-        cursor: pointer;
-    }
-
-    .mobile-menu-toggle span {
-        width: 20px;
-        height: 2px;
-        border-radius: 2px;
-        background: #4a2a20;
-        transition:
-            transform 0.2s,
-            opacity 0.2s;
-    }
-
-    .management-main {
-        padding: 78px 24px 28px;
-    }
-
-    .management-sidebar {
-        position: fixed;
-        z-index: 100;
-        inset: 0;
-        display: flex;
-        min-height: 100dvh;
-        padding: 86px 24px 28px;
-        overflow-y: auto;
-        background: #2b1914;
-        transform: translateX(-100%);
-        transition: transform 0.25s ease;
-    }
-
-    .management-sidebar .sidebar-logo {
-        align-self: center;
-        width: min(184px, 60vw);
-    }
-
-    .management-brand {
-        display: grid;
-        text-align: center;
-    }
-
-    .management-nav {
-        grid-template-columns: 1fr;
-        width: 100%;
-        gap: 10px;
-    }
-
-    .management-nav-label {
-        display: block;
-    }
-
-    .management-nav a {
-        min-height: 50px;
-        justify-content: flex-start;
-        padding-inline: 16px;
-    }
-
-    .management-account {
-        width: 100%;
-    }
-
-    /* Texto y botón vuelven a apilarse */
     .management-header {
         flex-direction: column;
         align-items: stretch;
+
         gap: 16px;
     }
 
     .header-description {
         align-items: stretch;
         flex-direction: column;
+
         gap: 14px;
     }
 
@@ -867,73 +621,11 @@
     .search-box {
         width: 100%;
         min-width: 0;
+        box-sizing: border-box;
     }
-
-    body.mobile-menu-open {
-        overflow: hidden;
-    }
-
-    body.mobile-menu-open .management-sidebar {
-        transform: translateX(0);
-    }
-
-    body.mobile-menu-open .mobile-menu-toggle {
-        border-color: transparent;
-        background: transparent;
-        box-shadow: none;
-    }
-
-    body.mobile-menu-open .mobile-menu-toggle span {
-        background: #fff;
-    }
-
-    body.mobile-menu-open .mobile-menu-toggle span:nth-child(1) {
-        transform: translateY(7px) rotate(45deg);
-    }
-
-    body.mobile-menu-open .mobile-menu-toggle span:nth-child(2) {
-        opacity: 0;
-    }
-
-    body.mobile-menu-open .mobile-menu-toggle span:nth-child(3) {
-        transform: translateY(-7px) rotate(-45deg);
-    }
-
 }
 
-
-/* =========================
-   Small mobile
-========================= */
-
 @media (max-width: 480px) {
-
-    .management-main {
-        padding: 78px 14px 24px;
-    }
-
-    .management-sidebar {
-        gap: 12px;
-        padding: 86px 16px 24px;
-    }
-
-    .management-sidebar .sidebar-logo {
-        width: 116px;
-    }
-
-    .management-nav {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-
-    .management-nav a {
-        min-height: 44px;
-        justify-content: center;
-        padding: 10px 12px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 6px;
-    }
-
     .management-panel {
         padding: 16px 14px;
     }
@@ -965,35 +657,11 @@
     .users-panel table {
         min-width: 520px;
     }
-
-
-    .logout-button {
-        width: 100%;
-        min-height: 44px;
-    }
 }
 
-
-/* =========================
-   Very small screens
-========================= */
-
 @media (max-width: 359px) {
-
-    .management-main {
-        padding-inline: 12px;
-    }
-
-    .management-sidebar {
-        padding-inline: 12px;
-    }
-
     .management-panel {
         padding-inline: 12px;
-    }
-
-    .management-nav {
-        grid-template-columns: 1fr;
     }
 
     .management-header h1 {
@@ -1002,41 +670,5 @@
 
     .users-panel table {
         min-width: 480px;
-    }
-
-  
-}
-
-
-/* =========================
-   Landscape mobile
-========================= */
-
-@media (max-width: 720px) and (max-height: 600px) and (orientation: landscape) {
-
-    .management-sidebar {
-        min-height: auto;
-    }
-
-    .management-account {
-        margin-top: 0;
-    }
-
-    .management-profile {
-        padding-top: 12px;
-    }
-
-    .management-main {
-        padding-top: 76px;
-    }
-
-    .header-description {
-        flex-direction: row;
-        align-items: center;
-    }
-
-    .management-header .management-primary {
-        width: auto;
-        min-width: 170px;
     }
 }

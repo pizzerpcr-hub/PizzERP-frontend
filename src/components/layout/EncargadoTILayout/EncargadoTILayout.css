@@ -1,0 +1,71 @@
+.management-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+
+    background: #f7f6f4;
+}
+
+.management-main {
+    width: calc(100% - 258px);
+    min-width: 0;
+    min-height: 100vh;
+
+    margin-left: 258px;
+    padding: clamp(28px, 4vw, 52px);
+
+    box-sizing: border-box;
+}
+
+/* =========================
+   Tablet
+========================= */
+
+@media (max-width: 1050px) {
+    .management-main {
+        width: calc(100% - 220px);
+        margin-left: 220px;
+        padding: 28px;
+    }
+}
+
+/* =========================
+   Tablet pequeña
+========================= */
+
+@media (max-width: 900px) {
+    .management-main {
+        width: calc(100% - 208px);
+        margin-left: 208px;
+        padding: 28px 24px;
+    }
+}
+
+/* =========================
+   Móvil
+========================= */
+
+@media (max-width: 720px) {
+    .management-main {
+        width: 100%;
+        min-height: 100vh;
+
+        margin-left: 0;
+        padding: 78px 24px 28px;
+    }
+}
+
+/* =========================
+   Móvil pequeño
+========================= */
+
+@media (max-width: 480px) {
+    .management-main {
+        padding: 78px 14px 24px;
+    }
+}
+
+@media (max-width: 359px) {
+    .management-main {
+        padding-inline: 12px;
+    }
+}
