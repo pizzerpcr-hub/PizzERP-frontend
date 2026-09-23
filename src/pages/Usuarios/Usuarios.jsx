@@ -1,16 +1,17 @@
 import "./Usuarios.css";
 import { useEffect, useState } from "react";
-import logoMabet from "../../assets/images/logo-mabet.webp";
 import { useNavigate } from "react-router-dom";
 import RegistrarUsuarioForm from "../../components/forms/RegistrarUsuarioForm/RegistrarUsuarioForm";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 function Usuarios() {
     const navigate = useNavigate();
+
     const [mostrarForm, setMostrarForm] = useState(false);
     const [usuarios, setUsuarios] = useState([]);
-    const { usuario } = useAuth();
     const [cargandoUsuarios, setCargandoUsuarios] = useState(true);
+
+    const { usuario } = useAuth();
 
     const obtenerCookie = (nombre) => {
         const cookies = document.cookie.split(";");
@@ -22,11 +23,11 @@ function Usuarios() {
                 return decodeURIComponent(valor);
             }
         }
+
         return null;
     };
 
-
-    const registrarUsuario = async (usuario) => {
+    const registrarUsuario = async (usuarioNuevo) => {
         try {
             await fetch("/sanctum/csrf-cookie", {
                 method: "GET",
@@ -43,7 +44,7 @@ function Usuarios() {
                     Accept: "application/json",
                     "X-XSRF-TOKEN": xsrfToken,
                 },
-                body: JSON.stringify(usuario),
+                body: JSON.stringify(usuarioNuevo),
             });
 
             const data = await response.json();
@@ -61,9 +62,9 @@ function Usuarios() {
         }
     };
 
-    const handleFormSubmit = async (usuario) => {
+    const handleFormSubmit = async (usuarioNuevo) => {
         try {
-            const data = await registrarUsuario(usuario);
+            const data = await registrarUsuario(usuarioNuevo);
 
             setUsuarios((usuariosActuales) => [
                 ...usuariosActuales,
@@ -102,279 +103,174 @@ function Usuarios() {
     };
 
     useEffect(() => {
-          if (!usuario) {
-              return;
-          }
-
-          const cargarUsuarios = async () => {
-              try {
-                  setCargandoUsuarios(true);
-
-                  const data = await obtenerUsuarios();
-                  setUsuarios(data);
-              } catch (error) {
-                  console.error(error);
-              } finally {
-                  setCargandoUsuarios(false);
-              }
-          };
-
-          cargarUsuarios();
-      }, [usuario]);
-
-
-    useEffect(() => {
-          if (!usuario) {
-              navigate("/");
-              return;
-          }
-
-          if (usuario.rol?.toUpperCase() !== "ADMINISTRADOR") {
-              navigate("/");
-          }
-      }, [usuario, navigate]);
-
-      if (!usuario || usuario.rol?.toUpperCase() !== "ADMINISTRADOR") {
-          return null;
-      }
-
-    const cerrarSesion = async () => {
-        try {
-            await fetch("/sanctum/csrf-cookie", {
-                method: "GET",
-                credentials: "include",
-            });
-
-            const xsrfToken = obtenerCookie("XSRF-TOKEN");
-
-            const response = await fetch("/api/logout", {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    Accept: "application/json",
-                    "X-XSRF-TOKEN": xsrfToken,
-                },
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-
-                throw new Error(
-                    data.message || "Error al cerrar sesión."
-                );
-            }
-
+        if (!usuario) {
             navigate("/");
-        } catch (error) {
-            console.error("Error al cerrar sesión:", error);
+            return;
         }
-    };
+
+        const rol = usuario.rol?.toUpperCase();
+
+        if (
+            rol !== "ADMINISTRADOR" &&
+            rol !== "ENCARGADO DE TI"
+        ) {
+            navigate("/");
+            return;
+        }
+
+        const cargarUsuarios = async () => {
+            try {
+                setCargandoUsuarios(true);
+
+                const data = await obtenerUsuarios();
+                setUsuarios(data);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setCargandoUsuarios(false);
+            }
+        };
+
+        cargarUsuarios();
+    }, [usuario, navigate]);
+
+    if (!usuario) {
+        return null;
+    }
+
+    const rol = usuario.rol?.toUpperCase();
+
+    if (
+        rol !== "ADMINISTRADOR" &&
+        rol !== "ENCARGADO DE TI"
+    ) {
+        return null;
+    }
+
 
     return (
-        <div className="management-shell">
+        <>
+            <header className="management-header">
+                <div>
+                    <p className="eyebrow">
+                        Administración
+                    </p>
 
-            {/* Menú móvil */}
-            <button
-                className="mobile-menu-toggle"
-                id="mobileMenuToggle"
-                type="button"
-                aria-label="Abrir menú"
-                aria-controls="mobileNavigation"
-                aria-expanded="false"
-            >
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
+                    <h1>Usuarios</h1>
 
-            {/* Sidebar */}
-            <aside
-                className="management-sidebar"
-                id="mobileNavigation"
-                aria-label="Navegación de TI"
-            >
-                <a
-                    className="sidebar-logo"
-                    href="/usuarios"
-                    aria-label="PizzERP, inicio"
-                >
-                    <img
-                        src={logoMabet}
-                        alt="Logo de Pizzería Mabet"
-                    />
-                </a>
-
-                <div className="management-brand">
-                    <strong>PizzERP</strong>
-                    <span>Panel de tecnología</span>
-                </div>
-
-                <nav
-                    className="management-nav"
-                    aria-label="Módulos permitidos"
-                >
-                    <span className="management-nav-label">
-                        MÓDULOS DE TI
-                    </span>
-
-                    <a className="active" href="#">
-                        Usuarios
-                    </a>
-
-                    <a href="#">
-                        Bitácora de Movimientos
-                    </a>
-                </nav>
-
-                <div className="management-account">
-                    <div className="management-profile">
-                        <span className="profile-avatar">
-                            TI
-                        </span>
-
-                        <div>
-                            <strong>Encargado de TI</strong>
-                            <small>Rol: TI</small>
-                        </div>
-                    </div>
-
-                    <button
-                        className="logout-button"
-                        type="button"
-                        onClick={cerrarSesion}
-                    >
-                        <span aria-hidden="true"></span>
-                        Cerrar sesión
-                    </button>
-                </div>
-            </aside>
-
-            {/* Contenido principal */}
-            <main className="management-main">
-
-                <header className="management-header">
-                    <div>
-                        <p className="eyebrow">
-                            Administración
+                    <div className="header-description">
+                        <p>
+                            Registra y administra las cuentas del sistema.
                         </p>
 
-                        <h1>Usuarios</h1>
-
-                        <div className="header-description">
-                            <p>
-                                Registra y administra las cuentas del sistema.
-                            </p>
-
-                            <button
-                                className="management-primary"
-                                type="button"
-                                onClick={() => setMostrarForm(true)}
-                            >
-                                + Registrar usuario
-                            </button>
-                        </div>
+                        <button
+                            className="management-primary"
+                            type="button"
+                            onClick={() => setMostrarForm(true)}
+                        >
+                            + Registrar usuario
+                        </button>
                     </div>
-                </header>
+                </div>
+            </header>
 
-                <p
-                    className="management-notice"
-                    id="managementNotice"
-                    role="status"
-                    aria-live="polite"
-                    hidden
-                ></p>
+            <p
+                className="management-notice"
+                id="managementNotice"
+                role="status"
+                aria-live="polite"
+                hidden
+            ></p>
 
-                <section className="management-panel users-panel">
+            <section className="management-panel users-panel">
+                <div className="management-panel-header">
+                    <div>
+                        <h2>Usuarios registrados</h2>
 
-                    <div className="management-panel-header">
-                        <div>
-                            <h2>Usuarios registrados</h2>
-
-                            <p>
-                                Modifica los datos de una cuenta o elimina
-                                usuarios que ya no requieren acceso.
-                            </p>
-                        </div>
-
-                        <label className="search-box">
-                            ⌕
-
-                            <input
-                                id="userSearch"
-                                type="search"
-                                placeholder="Buscar usuario"
-                            />
-                        </label>
+                        <p>
+                            Modifica los datos de una cuenta o elimina
+                            usuarios que ya no requieren acceso.
+                        </p>
                     </div>
 
-                    <div className="table-wrap">
-                        <table>
-                            <thead>
+                    <label className="search-box">
+                        ⌕
+                        <input
+                            id="userSearch"
+                            type="search"
+                            placeholder="Buscar usuario"
+                        />
+                    </label>
+                </div>
+
+                <div className="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nombre Completo</th>
+                                <th>Usuario</th>
+                                <th>Rol asignado</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+
+                        {cargandoUsuarios ? (
+                            <tbody>
                                 <tr>
-                                    <th>Nombre Completo</th>
-                                    <th>Usuario</th>
-                                    <th>Rol asignado</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
+                                    <td
+                                        colSpan="5"
+                                        className="cargando-usuarios"
+                                    >
+                                    </td>
                                 </tr>
-                            </thead>
+                            </tbody>
+                        ) : (
+                            <tbody id="usersTable">
+                                {usuarios.map((usuario) => (
+                                    <tr key={usuario.id_usuario}>
+                                        <td>
+                                            {usuario.nombre_completo}
+                                        </td>
 
-                            {cargandoUsuarios ? (
-                                <tbody>
-                                    <tr>
-                                        <td colSpan="5" className="cargando-usuarios">  
+                                        <td>
+                                            {usuario.nombre_usuario}
+                                        </td>
+
+                                        <td>
+                                            {usuario.rol}
+                                        </td>
+
+                                        <td>
+                                            {usuario.estado}
+                                        </td>
+
+                                        <td className="user-actions">
+                                            <button
+                                                type="button"
+                                                className="management-primary"
+                                            >
+                                                Modificar
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="management-danger"
+                                            >
+                                                {usuario.estado === "ACTIVO" ||
+                                                usuario.estado === "Activo"
+                                                    ? "Eliminar"
+                                                    : "Activar"}
+                                            </button>
                                         </td>
                                     </tr>
-                                </tbody>
-                            ) : (
-                                <tbody id="usersTable">
-                                    {usuarios.map((usuario) => (
-                                        <tr key={usuario.id_usuario}>
-                                            <td>
-                                                {usuario.nombre_completo}
-                                            </td>
+                                ))}
+                            </tbody>
+                        )}
+                    </table>
+                </div>
+            </section>
 
-                                            <td>
-                                                {usuario.nombre_usuario}
-                                            </td>
-
-                                            <td>
-                                                {usuario.rol}
-                                            </td>
-
-                                            <td>
-                                                {usuario.estado}
-                                            </td>
-
-                                            <td className="user-actions">
-                                                <button
-                                                    type="button"
-                                                    className="management-primary"
-                                                >
-                                                    Modificar
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    className="management-danger"
-                                                >
-                                                    {usuario.estado === "ACTIVO" ||
-                                                    usuario.estado === "Activo"
-                                                        ? "Eliminar"
-                                                        : "Activar"}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            )}
-
-                        </table>
-                    </div>
-                </section>
-            </main>
-
-            {/* Formulario de registrar usuario */}
             {mostrarForm && (
                 <RegistrarUsuarioForm
                     onSubmit={handleFormSubmit}
@@ -382,13 +278,11 @@ function Usuarios() {
                 />
             )}
 
-            {/* Modal eliminar */}
             <dialog
                 className="user-dialog small"
                 id="deleteDialog"
             >
                 <form id="deleteForm">
-
                     <div className="dialog-heading">
                         <div>
                             <p className="eyebrow">
@@ -433,11 +327,9 @@ function Usuarios() {
                             Eliminar
                         </button>
                     </div>
-
                 </form>
             </dialog>
-
-        </div>
+        </>
     );
 }
 

@@ -177,7 +177,7 @@ if (!loginResponse.ok) {
     const attemptsMessage =
       remainingAttempts === 1
         ? "Te queda 1 intento."
-        : `Te quedan ${remainingAttempts} intentos.`;
+        : `\nTe quedan ${remainingAttempts} intentos.`;
 
     errorMessage = `${errorMessage} ${attemptsMessage}`;
   }
@@ -192,7 +192,7 @@ if (!loginResponse.ok) {
       iniciarSesion(responseData.usuario);
 
       if(responseData.usuario.rol === "Administrador" || responseData.usuario.rol === "ADMINISTRADOR") {
-        navigate("/usuarios");
+        navigate("/encargado-ti");
       }
 
       setFormData((previousData) => ({
@@ -218,7 +218,7 @@ if (!loginResponse.ok) {
         aria-label="Información de PizzERP"
       >
         <a
-          className="sidebar-logo"
+          className="login-logo"
           href="/"
           aria-label="PizzERP, inicio"
         >
