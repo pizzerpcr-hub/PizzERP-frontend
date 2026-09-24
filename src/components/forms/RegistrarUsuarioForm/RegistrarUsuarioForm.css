@@ -173,6 +173,11 @@
     display: block;
 }
 
+.dialog-field .dialog-field-message {
+    margin: 0;
+    font-weight: 500;
+}
+
 .dialog-hint {
     margin: -2px 0 0;
     color: #796c66;

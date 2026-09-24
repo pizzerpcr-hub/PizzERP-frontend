@@ -127,6 +127,15 @@
     pointer-events: none;
 }
 
+.user-dialog .management-toast-region {
+    position: static;
+    width: 100%;
+}
+
+.user-dialog .management-toast {
+    margin-bottom: 15px;
+}
+
 .management-toast {
     display: flex;
     align-items: flex-start;

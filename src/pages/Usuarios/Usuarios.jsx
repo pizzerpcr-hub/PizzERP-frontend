@@ -36,6 +36,45 @@ const ordenarUsuarios = (lista) =>
         ),
     );
 
+const obtenerErroresCampo = (error) => {
+    if (error.status !== 422) {
+        return null;
+    }
+
+    const erroresCampo = {};
+
+    for (const campo of ["nombre_usuario", "contrasena"]) {
+        const mensajes = error.errors?.[campo];
+        const mensaje = Array.isArray(mensajes) ? mensajes[0] : mensajes;
+
+        if (typeof mensaje === "string" && mensaje) {
+            erroresCampo[campo] = mensaje;
+        }
+    }
+
+    return Object.keys(erroresCampo).length ? erroresCampo : null;
+};
+
+const obtenerErrorNoAsociado = (error) => {
+    if (error.status !== 422 || !error.errors) {
+        return null;
+    }
+
+    for (const [campo, mensajes] of Object.entries(error.errors)) {
+        if (campo === "nombre_usuario" || campo === "contrasena") {
+            continue;
+        }
+
+        const mensaje = Array.isArray(mensajes) ? mensajes[0] : mensajes;
+
+        if (typeof mensaje === "string" && mensaje) {
+            return mensaje;
+        }
+    }
+
+    return null;
+};
+
 function Usuarios() {
     const [mostrarForm, setMostrarForm] = useState(false);
     const [usuarioEditando, setUsuarioEditando] = useState(null);
@@ -43,7 +82,6 @@ function Usuarios() {
     const [usuarios, setUsuarios] = useState([]);
     const [cargandoUsuarios, setCargandoUsuarios] = useState(true);
     const [enviando, setEnviando] = useState(false);
-    const [mensajeFormulario, setMensajeFormulario] = useState("");
     const [mensajeEstado, setMensajeEstado] = useState("");
     const [mensajeGeneral, setMensajeGeneral] = useState(null);
     const [busqueda, setBusqueda] = useState("");
@@ -52,6 +90,7 @@ function Usuarios() {
     const controladorListadoRef = useRef(null);
     const solicitudListadoRef = useRef(0);
     const cambiosPendientesRef = useRef(new Map());
+    const listadoVigenteRef = useRef(false);
 
     const {
         usuario,
@@ -92,6 +131,7 @@ function Usuarios() {
         const idSolicitud = solicitudListadoRef.current + 1;
         solicitudListadoRef.current = idSolicitud;
         controladorListadoRef.current?.abort();
+        listadoVigenteRef.current = false;
 
         const controller = new AbortController();
         controladorListadoRef.current = controller;
@@ -122,6 +162,7 @@ function Usuarios() {
                     }),
                 ),
             );
+            listadoVigenteRef.current = cambiosPendientesRef.current.size === 0;
             return listaUsuarios;
         } catch (error) {
             if (
@@ -242,6 +283,7 @@ function Usuarios() {
         solicitudListadoRef.current += 1;
         controladorListadoRef.current?.abort();
         controladorListadoRef.current = null;
+        listadoVigenteRef.current = false;
     };
 
     const iniciarCambioOptimista = (anterior, provisional) => {
@@ -279,6 +321,7 @@ function Usuarios() {
         solicitud,
         mensajeExito,
         sincronizarCuenta = false,
+        mostrarErroresDeCampo = false,
     ) => {
         if (!iniciarCambioOptimista(anterior, provisional)) {
             return false;
@@ -293,7 +336,7 @@ function Usuarios() {
                 respuesta = await solicitud();
             } catch (error) {
                 if (!montadoRef.current) {
-                    return;
+                    return null;
                 }
 
                 invalidarListado();
@@ -308,15 +351,30 @@ function Usuarios() {
                         ),
                     ),
                 );
+
+                const erroresCampo = mostrarErroresDeCampo
+                    ? obtenerErroresCampo(error)
+                    : null;
+
+                if (erroresCampo) {
+                    const mensajeGeneral = obtenerErrorNoAsociado(error);
+
+                    if (mensajeGeneral) {
+                        setMensajeGeneral({ tipo: "error", texto: mensajeGeneral });
+                    }
+
+                    return { erroresCampo };
+                }
+
                 setMensajeGeneral({
                     tipo: "error",
                     texto: error.message || "No fue posible guardar el cambio.",
                 });
-                return;
+                return null;
             }
 
             if (!montadoRef.current) {
-                return;
+                return null;
             }
 
             terminarCambioOptimista(anterior.id_usuario);
@@ -331,15 +389,14 @@ function Usuarios() {
             }
 
             void reconciliarDespuesDeCambio();
+            return { confirmado: true };
         };
 
-        void confirmar();
-        return true;
+        return confirmar();
     };
 
     const abrirRegistro = () => {
         setUsuarioEditando(null);
-        setMensajeFormulario("");
         setMensajeGeneral(null);
         setMostrarForm(true);
     };
@@ -350,7 +407,6 @@ function Usuarios() {
         }
 
         setUsuarioEditando(usuarioListado);
-        setMensajeFormulario("");
         setMensajeGeneral(null);
         setMostrarForm(true);
     };
@@ -362,12 +418,30 @@ function Usuarios() {
 
         setMostrarForm(false);
         setUsuarioEditando(null);
-        setMensajeFormulario("");
     };
 
     const handleFormSubmit = async (datosUsuario) => {
         const usuarioEnEdicion = usuarioEditando;
         const esEdicion = Boolean(usuarioEnEdicion);
+        const nombreUsuario = datosUsuario.nombre_usuario.trim().toUpperCase();
+
+        if (
+            listadoVigenteRef.current &&
+            usuarios.some(
+                (usuarioListado) =>
+                    String(usuarioListado.id_usuario) !==
+                        String(usuarioEnEdicion?.id_usuario) &&
+                    String(usuarioListado.nombre_usuario ?? "")
+                        .trim()
+                        .toUpperCase() === nombreUsuario,
+            )
+        ) {
+            return {
+                erroresCampo: {
+                    nombre_usuario: "El nombre de usuario ya está registrado.",
+                },
+            };
+        }
 
         if (esEdicion) {
             const anterior = usuarioPublico(
@@ -383,7 +457,7 @@ function Usuarios() {
                 nombre_usuario: datosUsuario.nombre_usuario,
                 rol: datosUsuario.rol,
             };
-            const cambioIniciado = ejecutarCambioOptimista(
+            const cambio = ejecutarCambioOptimista(
                 anterior,
                 provisional,
                 () =>
@@ -393,19 +467,24 @@ function Usuarios() {
                     ),
                 "Usuario actualizado correctamente.",
                 String(anterior.id_usuario) === String(usuario?.id_usuario),
+                true,
             );
 
-            if (cambioIniciado) {
-                setMostrarForm(false);
-                setUsuarioEditando(null);
-                setMensajeFormulario("");
+            if (!cambio) {
+                return null;
             }
 
-            return;
+            const resultado = await cambio;
+
+            if (montadoRef.current && resultado?.confirmado) {
+                setMostrarForm(false);
+                setUsuarioEditando(null);
+            }
+
+            return resultado;
         }
 
         setEnviando(true);
-        setMensajeFormulario("");
         setMensajeGeneral(null);
 
         let respuesta;
@@ -414,12 +493,25 @@ function Usuarios() {
             respuesta = await registrarUsuario(datosUsuario);
         } catch (error) {
             if (montadoRef.current) {
-                setMensajeFormulario(
-                    error.message || "No fue posible guardar el usuario.",
-                );
                 setEnviando(false);
+                const erroresCampo = obtenerErroresCampo(error);
+
+                if (erroresCampo) {
+                    const mensajeGeneral = obtenerErrorNoAsociado(error);
+
+                    if (mensajeGeneral) {
+                        setMensajeGeneral({ tipo: "error", texto: mensajeGeneral });
+                    }
+
+                    return { erroresCampo };
+                }
+
+                setMensajeGeneral({
+                    tipo: "error",
+                    texto: error.message || "No fue posible guardar el usuario.",
+                });
             }
-            return;
+            return null;
         }
 
         if (!montadoRef.current) {
@@ -429,6 +521,7 @@ function Usuarios() {
         const usuarioConfirmado = respuesta?.usuario;
 
         aplicarUsuarioConfirmado(usuarioConfirmado);
+        listadoVigenteRef.current = false;
         setCargandoUsuarios(false);
         setMostrarForm(false);
         setUsuarioEditando(null);
@@ -507,6 +600,31 @@ function Usuarios() {
         );
     }
 
+    const notificacionGeneral = (
+        <div
+            className="management-toast-region"
+            aria-live="polite"
+            aria-atomic="true"
+        >
+            {mensajeGeneral && (
+                <div
+                    className={`management-toast ${mensajeGeneral.tipo}`}
+                    role={mensajeGeneral.tipo === "exito" ? "status" : "alert"}
+                >
+                    <span>{mensajeGeneral.texto}</span>
+                    <button
+                        type="button"
+                        className="management-toast-close"
+                        aria-label="Cerrar notificación"
+                        onClick={() => setMensajeGeneral(null)}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+
     return (
         <>
             <header className="management-header">
@@ -529,28 +647,7 @@ function Usuarios() {
                 </div>
             </header>
 
-            <div
-                className="management-toast-region"
-                aria-live="polite"
-                aria-atomic="true"
-            >
-                {mensajeGeneral && (
-                    <div
-                        className={`management-toast ${mensajeGeneral.tipo}`}
-                        role={mensajeGeneral.tipo === "exito" ? "status" : "alert"}
-                    >
-                        <span>{mensajeGeneral.texto}</span>
-                        <button
-                            type="button"
-                            className="management-toast-close"
-                            aria-label="Cerrar notificación"
-                            onClick={() => setMensajeGeneral(null)}
-                        >
-                            ×
-                        </button>
-                    </div>
-                )}
-            </div>
+            {!mostrarForm && notificacionGeneral}
 
             <section className="management-panel users-panel">
                 <div className="management-panel-header">
@@ -592,9 +689,8 @@ function Usuarios() {
                     usuarioInicial={usuarioEditando}
                     onSubmit={handleFormSubmit}
                     onClose={cerrarFormulario}
-                    onClearError={() => setMensajeFormulario("")}
                     isSubmitting={enviando}
-                    mensajeError={mensajeFormulario}
+                    notificacion={notificacionGeneral}
                 />
             )}
 

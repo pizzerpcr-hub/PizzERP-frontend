@@ -25,14 +25,17 @@ function RegistrarUsuarioForm({
     usuarioInicial = null,
     onSubmit,
     onClose,
-    onClearError,
     isSubmitting = false,
-    mensajeError = "",
+    notificacion = null,
 }) {
     const dialogRef = useRef(null);
     const envioEnCursoRef = useRef(false);
     const [mostrarPassword, setMostrarPassword] = useState(false);
     const [errorValidacion, setErrorValidacion] = useState("");
+    const [avisosCampo, setAvisosCampo] = useState({
+        nombre_usuario: null,
+        contrasena: null,
+    });
     const [formData, setFormData] = useState(() =>
         obtenerDatosIniciales(usuarioInicial),
     );
@@ -58,9 +61,57 @@ function RegistrarUsuarioForm({
         setFormData(obtenerDatosIniciales(usuarioInicial));
         setMostrarPassword(false);
         setErrorValidacion("");
+        setAvisosCampo({ nombre_usuario: null, contrasena: null });
         /* eslint-enable react-hooks/set-state-in-effect */
         envioEnCursoRef.current = false;
     }, [modo, usuarioInicial]);
+
+    useEffect(() => {
+        const aviso = avisosCampo.nombre_usuario;
+
+        if (!aviso) {
+            return undefined;
+        }
+
+        const temporizador = window.setTimeout(() => {
+            setAvisosCampo((actuales) =>
+                actuales.nombre_usuario === aviso
+                    ? { ...actuales, nombre_usuario: null }
+                    : actuales,
+            );
+        }, 4000);
+
+        return () => window.clearTimeout(temporizador);
+    }, [avisosCampo.nombre_usuario]);
+
+    useEffect(() => {
+        const aviso = avisosCampo.contrasena;
+
+        if (!aviso) {
+            return undefined;
+        }
+
+        const temporizador = window.setTimeout(() => {
+            setAvisosCampo((actuales) =>
+                actuales.contrasena === aviso
+                    ? { ...actuales, contrasena: null }
+                    : actuales,
+            );
+        }, 4000);
+
+        return () => window.clearTimeout(temporizador);
+    }, [avisosCampo.contrasena]);
+
+    const mostrarErroresCampo = (errores) => {
+        setAvisosCampo((actuales) => ({
+            nombre_usuario: errores.nombre_usuario
+                ? { texto: errores.nombre_usuario }
+                : actuales.nombre_usuario,
+            contrasena: errores.contrasena
+                ? { texto: errores.contrasena }
+                : actuales.contrasena,
+        }));
+    };
 
     const handleChange = (event) => {
         const { name, value } = event.target;
@@ -69,8 +120,10 @@ function RegistrarUsuarioForm({
             ...datosActuales,
             [name]: name === "nombre_usuario" ? value.toUpperCase() : value,
         }));
+        if (name === "nombre_usuario" || name === "contrasena") {
+            setAvisosCampo((actuales) => ({ ...actuales, [name]: null }));
+        }
         setErrorValidacion("");
-        onClearError?.();
     };
 
     const cerrarDialogo = () => {
@@ -95,25 +148,29 @@ function RegistrarUsuarioForm({
         }
 
         const contrasena = formData.contrasena;
-
-        if (
+        const faltanDatos =
             !formData.nombre_completo.trim() ||
             !formData.nombre_usuario.trim() ||
-            !formData.rol
-        ) {
+            !formData.rol;
+        const faltaContrasena = !esEdicion && !contrasena;
+        const contrasenaInvalida =
+            Boolean(contrasena) &&
+            !/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(contrasena);
+
+        if (faltanDatos) {
             setErrorValidacion("Completa todos los campos obligatorios.");
-            return;
         }
 
-        if (!esEdicion && !contrasena) {
-            setErrorValidacion("La contraseña es obligatoria.");
-            return;
+        if (faltaContrasena) {
+            mostrarErroresCampo({ contrasena: "La contraseña es obligatoria." });
+        } else if (contrasenaInvalida) {
+            mostrarErroresCampo({
+                contrasena:
+                    "La contraseña debe tener al menos 8 caracteres, una letra y un número.",
+            });
         }
 
-        if (contrasena && !/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(contrasena)) {
-            setErrorValidacion(
-                "La contraseña debe tener al menos 8 caracteres, una letra y un número.",
-            );
+        if (faltanDatos || faltaContrasena || contrasenaInvalida) {
             return;
         }
 
@@ -130,13 +187,15 @@ function RegistrarUsuarioForm({
         envioEnCursoRef.current = true;
 
         try {
-            await onSubmit(datosUsuario);
+            const resultado = await onSubmit(datosUsuario);
+
+            if (resultado?.erroresCampo) {
+                mostrarErroresCampo(resultado.erroresCampo);
+            }
         } finally {
             envioEnCursoRef.current = false;
         }
     };
-
-    const mensaje = errorValidacion || mensajeError;
 
     return (
         <dialog
@@ -165,13 +224,15 @@ function RegistrarUsuarioForm({
                     </button>
                 </div>
 
+                {notificacion}
+
                 <p
                     id="userFormMessage"
-                    className={`dialog-message${mensaje ? " visible" : ""}`}
+                    className={`dialog-message${errorValidacion ? " visible" : ""}`}
                     role="alert"
                     aria-live="polite"
                 >
-                    {mensaje}
+                    {errorValidacion}
                 </p>
 
                 <div className="dialog-field">
@@ -201,7 +262,22 @@ function RegistrarUsuarioForm({
                         required
                         placeholder="Usuario"
                         autoComplete="username"
+                        aria-invalid={Boolean(avisosCampo.nombre_usuario)}
+                        aria-describedby={
+                            avisosCampo.nombre_usuario
+                                ? "formUsernameError"
+                                : undefined
+                        }
                     />
+                    {avisosCampo.nombre_usuario && (
+                        <p
+                            id="formUsernameError"
+                            className="dialog-message dialog-field-message visible"
+                            role="alert"
+                        >
+                            {avisosCampo.nombre_usuario.texto}
+                        </p>
+                    )}
                 </div>
 
                 <div className="dialog-field">
@@ -225,6 +301,12 @@ function RegistrarUsuarioForm({
                                     : "Mínimo 8 caracteres"
                             }
                             autoComplete="new-password"
+                            aria-invalid={Boolean(avisosCampo.contrasena)}
+                            aria-describedby={
+                                avisosCampo.contrasena
+                                    ? "formPasswordError"
+                                    : undefined
+                            }
                         />
 
                         <button
@@ -241,6 +323,15 @@ function RegistrarUsuarioForm({
                             {mostrarPassword ? "Ocultar" : "Mostrar"}
                         </button>
                     </div>
+                    {avisosCampo.contrasena && (
+                        <p
+                            id="formPasswordError"
+                            className="dialog-message dialog-field-message visible"
+                            role="alert"
+                        >
+                            {avisosCampo.contrasena.texto}
+                        </p>
+                    )}
                 </div>
 
                 <div className="dialog-field">

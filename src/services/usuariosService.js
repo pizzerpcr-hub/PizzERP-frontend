@@ -60,9 +60,16 @@ const enviarMutacion = async (
     const data = await leerRespuesta(response);
 
     if (!response.ok) {
-        throw new Error(
+        const error = new Error(
             obtenerMensajeError(data, mensajePredeterminado)
         );
+
+        if (response.status === 422) {
+            error.status = response.status;
+            error.errors = data.errors;
+        }
+
+        throw error;
     }
 
     return data;
