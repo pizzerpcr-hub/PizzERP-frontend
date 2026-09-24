@@ -3,12 +3,34 @@ import { NavLink, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
 import { useAuth } from "../../context/AuthContext.jsx";
+import {
+    normalizarRol,
+    obtenerEtiquetaRol,
+    obtenerInformacionPanel,
+} from "../../constants/roles.js";
 import { cerrarSesion as cerrarSesionService } from "../../services/loginService.js";
 
 function Sidebar({ items = [] }) {
     const navigate = useNavigate();
-    const { usuario } = useAuth();
+    const {
+        usuario,
+        cerrarSesion: limpiarSesion,
+    } = useAuth();
     const [menuAbierto, setMenuAbierto] = useState(false);
+
+    const rolNormalizado = normalizarRol(usuario?.rol);
+    const informacionPanel = obtenerInformacionPanel(rolNormalizado);
+    const nombreUsuario = usuario?.nombre_completo || "Usuario";
+    const iniciales = nombreUsuario
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((parte) => parte.charAt(0))
+        .join("")
+        .toUpperCase() || "US";
+    const tituloPanel = informacionPanel.panel;
+    const tituloModulos = informacionPanel.modulos;
 
     const cerrarMenuMovil = () => {
         setMenuAbierto(false);
@@ -38,11 +60,12 @@ function Sidebar({ items = [] }) {
     const cerrarSesion = async () => {
         try {
             await cerrarSesionService();
-
-            cerrarMenuMovil();
-            navigate("/");
         } catch (error) {
             console.error("Error al cerrar sesión:", error);
+        } finally {
+            limpiarSesion();
+            cerrarMenuMovil();
+            navigate("/");
         }
     };
 
@@ -68,7 +91,7 @@ function Sidebar({ items = [] }) {
             <aside
                 className="management-sidebar"
                 id="mobileNavigation"
-                aria-label="Navegación de TI"
+                aria-label={`Navegación de ${tituloPanel}`}
             >
                 <NavLink
                     className="sidebar-logo"
@@ -84,7 +107,7 @@ function Sidebar({ items = [] }) {
 
                 <div className="management-brand">
                     <strong>PizzERP</strong>
-                    <span>Panel de tecnología</span>
+                    <span>{tituloPanel}</span>
                 </div>
 
                 <nav
@@ -92,37 +115,46 @@ function Sidebar({ items = [] }) {
                     aria-label="Módulos permitidos"
                 >
                     <span className="management-nav-label">
-                        MÓDULOS DE TI
+                        {tituloModulos}
                     </span>
 
-                    {items.map((item) => (
-                        <NavLink
-                            key={item.ruta}
-                            to={item.ruta}
-                            onClick={cerrarMenuMovil}
-                            className={({ isActive }) =>
-                                isActive ? "active" : ""
-                            }
-                        >
-                            {item.label}
-                        </NavLink>
-                    ))}
+                    {items.map((item) =>
+                        item.disabled ? (
+                            <span
+                                key={item.label}
+                                className="management-nav-disabled"
+                                aria-disabled="true"
+                            >
+                                <span>{item.label}</span>
+                            </span>
+                        ) : (
+                            <NavLink
+                                key={item.ruta}
+                                to={item.ruta}
+                                onClick={cerrarMenuMovil}
+                                className={({ isActive }) =>
+                                    isActive ? "active" : ""
+                                }
+                            >
+                                {item.label}
+                            </NavLink>
+                        ),
+                    )}
                 </nav>
 
                 <div className="management-account">
                     <div className="management-profile">
                         <span className="profile-avatar">
-                            TI
+                            {iniciales}
                         </span>
 
                         <div>
                             <strong>
-                                {usuario?.nombre_completo ||
-                                    "Encargado de TI"}
+                                {nombreUsuario}
                             </strong>
 
                             <small>
-                                Rol: {"Encargado de TI"}
+                                Rol: {obtenerEtiquetaRol(rolNormalizado)}
                             </small>
                         </div>
                     </div>
@@ -132,7 +164,6 @@ function Sidebar({ items = [] }) {
                         type="button"
                         onClick={cerrarSesion}
                     >
-
                         Cerrar sesión
                     </button>
                 </div>

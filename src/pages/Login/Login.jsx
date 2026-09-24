@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import "./Login.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
-import { useNavigate } from "react-router-dom"; 
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
-import {verificarSesion,iniciarSesion as iniciarSesionService,} from "../../services/loginService.js";
+import { iniciarSesion as iniciarSesionService } from "../../services/loginService.js";
 
 
 
@@ -12,8 +12,7 @@ function Login() {
   const [formMessage, setFormMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { iniciarSesion } = useAuth();
-  const navigate = useNavigate();
+  const { usuario, cargandoSesion, iniciarSesion } = useAuth();
 
   const [formData, setFormData] = useState({
     username: "",
@@ -22,39 +21,6 @@ function Login() {
   });
 
   const currentYear = new Date().getFullYear();
-
-  useEffect(() => {
-        const controller = new AbortController();
-
-        const checkSession = async () => {
-            try {
-                const usuarioActual = await verificarSesion(
-                    controller.signal
-                );
-
-                if (!usuarioActual) {
-                    return;
-                }
-
-                setFormMessage(
-                    `Sesión activa: ${usuarioActual.nombre_completo}.`
-                );
-
-                setMessageType("success");
-            } catch (error) {
-                if (error.name !== "AbortError") {
-                    setFormMessage("");
-                    setMessageType("");
-                }
-            }
-        };
-
-        checkSession();
-
-        return () => {
-            controller.abort();
-        };
-    }, []);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -97,13 +63,6 @@ function Login() {
 
           iniciarSesion(responseData.usuario);
 
-          if (
-              responseData.usuario.rol === "Administrador" ||
-              responseData.usuario.rol === "ADMINISTRADOR"
-          ) {
-              navigate("/encargado-ti");
-          }
-
           setFormData((previousData) => ({
               ...previousData,
               password: "",
@@ -117,6 +76,21 @@ function Login() {
           setIsSubmitting(false);
       }
   };
+
+  if (cargandoSesion) {
+    return null;
+  }
+
+  if (usuario?.rol?.toUpperCase() === "ADMINISTRADOR") {
+    return <Navigate to="/encargado-ti/usuarios" replace />;
+  }
+
+  if (
+    usuario?.rol?.toUpperCase() === "TI" ||
+    usuario?.rol?.toUpperCase() === "ENCARGADO DE TI"
+  ) {
+    return <Navigate to="/encargado-ti" replace />;
+  }
 
   return (
     <main className="login-layout">

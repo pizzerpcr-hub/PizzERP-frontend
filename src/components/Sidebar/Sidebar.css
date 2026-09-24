@@ -105,7 +105,8 @@
     letter-spacing: 0.08em;
 }
 
-.management-nav a {
+.management-nav a,
+.management-nav-disabled {
     position: relative;
 
     display: flex;
@@ -128,6 +129,11 @@
         color 0.18s,
         background 0.18s,
         border-color 0.18s;
+}
+
+.management-nav-disabled {
+    color: rgba(255, 255, 255, 0.42);
+    cursor: not-allowed;
 }
 
 .management-nav a:hover {
@@ -377,7 +383,8 @@
         padding: 8px 10px 4px;
     }
 
-    .management-nav a {
+    .management-nav a,
+    .management-nav-disabled {
         min-height: 50px;
 
         justify-content: flex-start;
@@ -497,7 +504,8 @@
         font-size: 12px;
     }
 
-    .management-nav a {
+    .management-nav a,
+    .management-nav-disabled {
         min-height: 44px;
 
         justify-content: center;

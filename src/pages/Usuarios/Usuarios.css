@@ -115,27 +115,60 @@
 }
 
 /* =========================
-   Notice
+   General notifications
 ========================= */
 
-.management-notice {
-    margin: 0 0 20px;
-    padding: 11px 13px;
-
-    border: 1px solid #ecdccf;
-    border-left: 3px solid #b34b20;
-    border-radius: 6px;
-
-    background: #fffdf9;
-    color: #6b4737;
-
-    font-size: 14px;
+.management-toast-region {
+    position: fixed;
+    top: max(16px, env(safe-area-inset-top));
+    right: 16px;
+    z-index: 1100;
+    width: min(360px, calc(100vw - 32px));
+    pointer-events: none;
 }
 
-.management-notice.updated {
-    border-color: #b7e5c1;
-    background: #edfaef;
-    color: #166534;
+.management-toast {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid #d8d2cc;
+    border-left: 3px solid #8b8178;
+    border-radius: 6px;
+    background: #faf9f7;
+    color: #4b403a;
+    font-size: 14px;
+    line-height: 1.4;
+    pointer-events: auto;
+}
+
+.management-toast.exito {
+    border-left-color: #657f6b;
+}
+
+.management-toast.error {
+    border-left-color: #a66b62;
+}
+
+.management-toast.advertencia {
+    border-left-color: #a0835e;
+}
+
+.management-toast-close {
+    flex-shrink: 0;
+    padding: 0 2px;
+    border: 0;
+    background: transparent;
+    color: #625953;
+    font: inherit;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.management-toast-close:hover {
+    color: #302924;
 }
 
 /* =========================
@@ -151,6 +184,16 @@
     border-radius: 8px;
 
     background: #fff;
+}
+
+.access-denied h1 {
+    margin-top: 0;
+    color: #38221a;
+}
+
+.access-denied p {
+    margin-bottom: 0;
+    color: #796c66;
 }
 
 .management-panel-header {
@@ -286,39 +329,38 @@
 
 .role-badge,
 .user-status {
-    display: inline-flex;
-
-    padding: 4px 8px;
-
-    border-radius: 4px;
-
-    font-size: 14px;
-    font-weight: 600;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    font: inherit;
+    box-shadow: none;
+    filter: none;
+    text-shadow: none;
 }
 
 .role-badge.administrador {
-    color: #7f1d1d;
-    background: #fee2e2;
+    color: #704044;
 }
 
 .role-badge.caja {
-    color: #92400e;
-    background: #fef3c7;
+    color: #755322;
 }
 
 .role-badge.cocina {
-    color: #155e75;
-    background: #dff4fb;
+    color: #315d6a;
 }
 
 .role-badge.ti {
-    color: #5b21b6;
-    background: #ede9fe;
+    color: #594c78;
 }
 
 .user-status {
-    color: #166534;
-    background: #dcfce7;
+    color: #365f46;
+}
+
+.user-status.inactivo {
+    color: #7a4545;
 }
 
 /* =========================
@@ -354,6 +396,16 @@
     background: #fff8f4;
 }
 
+.user-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.user-actions button:disabled:hover {
+    border-color: #e2d5ce;
+    background: #fff;
+}
+
 .user-actions button + button {
     margin-left: 4px;
     color: #a62c23;
@@ -368,14 +420,11 @@
    Loading
 ========================= */
 
-.cargando-usuarios {
-    padding: 40px 20px;
+.users-panel td.cargando-usuarios {
+    height: 84px;
+    padding: 0 20px;
 
     text-align: center;
-
-    color: #666;
-
-    font-size: 15px;
 }
 
 .cargando-usuarios::before {
@@ -386,7 +435,7 @@
     width: 24px;
     height: 24px;
 
-    margin: 0 auto 12px;
+    margin: 0 auto;
 
     border: 3px solid #ddd;
     border-top-color: #05a2e6;
@@ -394,6 +443,16 @@
     border-radius: 50%;
 
     animation: cargarUsuarios 0.8s linear infinite;
+}
+
+.cargando-usuarios-texto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 @keyframes cargarUsuarios {
@@ -455,6 +514,17 @@
 
 .dialog-close:hover {
     background: #e9ddd5;
+}
+
+.dialog-close:disabled,
+.dialog-actions button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.status-dialog-copy {
+    color: #5f4a42;
+    line-height: 1.5;
 }
 
 /* =========================
@@ -627,6 +697,12 @@
 }
 
 @media (max-width: 480px) {
+    .management-toast-region {
+        top: max(12px, env(safe-area-inset-top));
+        right: 12px;
+        width: calc(100vw - 24px);
+    }
+
     .management-panel {
         padding: 16px 14px;
     }

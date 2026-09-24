@@ -1,4 +1,5 @@
 const API_URL = "";
+const MENSAJE_LOGIN_FALLIDO = "No fue posible iniciar sesión.\nVerifica tus credenciales.";
 
 const obtenerCookie = (nombre) => {
     const cookie = document.cookie
@@ -44,75 +45,60 @@ export const verificarSesion = async (signal) => {
 };
 
 export const iniciarSesion = async (datosLogin) => {
-    try {
-        const csrfResponse = await fetch(
-            `${API_URL}/sanctum/csrf-cookie`,
-            {
-                credentials: "include",
-                headers: {
-                    Accept: "application/json",
-                },
-            }
-        );
-
-        if (!csrfResponse.ok) {
-            throw new Error(
-                "No fue posible iniciar la conexión segura."
-            );
+    const csrfResponse = await fetch(
+        `${API_URL}/sanctum/csrf-cookie`,
+        {
+            credentials: "include",
+            headers: {
+                Accept: "application/json",
+            },
         }
+    );
 
-        const csrfToken = obtenerCookie("XSRF-TOKEN");
-
-        const loginResponse = await fetch(
-            `${API_URL}/api/login`,
-            {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                    "X-XSRF-TOKEN": csrfToken,
-                },
-                body: JSON.stringify(datosLogin),
-            }
+    if (!csrfResponse.ok) {
+        throw new Error(
+            "No fue posible iniciar la conexión segura."
         );
-
-        const responseData = await loginResponse
-            .json()
-            .catch(() => ({}));
-
-        if (!loginResponse.ok) {
-            const validationMessage = responseData.errors
-                ? Object.values(responseData.errors).flat()[0]
-                : null;
-
-            let errorMessage =
-                validationMessage ??
-                responseData.message ??
-                "No fue posible iniciar sesión.";
-
-            if (
-                loginResponse.status === 401 &&
-                Number.isInteger(responseData.intentos_restantes)
-            ) {
-                const remainingAttempts =
-                    responseData.intentos_restantes;
-
-                const attemptsMessage =
-                    remainingAttempts === 1
-                        ? "Te queda 1 intento."
-                        : `Te quedan ${remainingAttempts} intentos.`;
-
-                errorMessage = `${errorMessage} ${attemptsMessage}`;
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        return responseData;
-    } catch (error) {
-        throw error;
     }
+
+    const csrfToken = obtenerCookie("XSRF-TOKEN");
+
+    const loginResponse = await fetch(
+        `${API_URL}/api/login`,
+        {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+                "X-XSRF-TOKEN": csrfToken,
+            },
+            body: JSON.stringify(datosLogin),
+        }
+    );
+
+    const responseData = await loginResponse
+        .json()
+        .catch(() => ({}));
+
+    if (!loginResponse.ok) {
+        if (loginResponse.status === 401) {
+            throw new Error(MENSAJE_LOGIN_FALLIDO);
+        }
+
+        const validationMessage = responseData.errors
+            ? Object.values(responseData.errors).flat()[0]
+            : null;
+
+        const errorMessage =
+            validationMessage ??
+            responseData.message ??
+            MENSAJE_LOGIN_FALLIDO;
+
+        throw new Error(errorMessage);
+    }
+
+    return responseData;
 };
 
 

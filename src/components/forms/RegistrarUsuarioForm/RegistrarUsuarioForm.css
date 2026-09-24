@@ -146,6 +146,13 @@
     color: #a62c23;
 }
 
+.dialog-field input:disabled,
+.dialog-field select:disabled,
+.password-toggle:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
 
 /* =========================
    Dialog messages
