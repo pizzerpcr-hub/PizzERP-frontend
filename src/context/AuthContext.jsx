@@ -5,18 +5,24 @@ import {
     useState,
 } from "react";
 
-import { verificarSesion } from "../services/loginService.js";
+import {
+    verificarSesion,
+    cerrarSesion as cerrarSesionService,
+} from "../services/loginService.js";
+
 import echo from "../services/echo.js";
+import "../styles/cerrarSesion.css";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
     const [usuario, setUsuario] = useState(null);
     const [cargandoSesion, setCargandoSesion] = useState(true);
+    const [cerrandoSesion, setCerrandoSesion] = useState(false);
+    const [mensajeCierre, setMensajeCierre] = useState(
+        "Cerrando sesión...",
+    );
 
-    /*
-     * Restaurar sesión al cargar la aplicación.
-     */
     useEffect(() => {
         const controller = new AbortController();
 
@@ -50,7 +56,6 @@ export function AuthProvider({ children }) {
         };
     }, []);
 
-    
     useEffect(() => {
         if (cargandoSesion || !usuario?.id_usuario) {
             return undefined;
@@ -65,7 +70,6 @@ export function AuthProvider({ children }) {
                 return;
             }
 
-            
             const esUsuarioActual =
                 String(usuarioActualizado.id_usuario) ===
                 String(usuario.id_usuario);
@@ -78,12 +82,17 @@ export function AuthProvider({ children }) {
                 usuarioActualizado.estado ?? "",
             ).toUpperCase();
 
-            /*
-             * Si el usuario fue desactivado,
-             * cerramos inmediatamente su sesión.
-             */
             if (estado === "INACTIVO") {
-                setUsuario(null);
+                setMensajeCierre(
+                    "Tu cuenta ha sido desactivada.",
+                );
+
+                setCerrandoSesion(true);
+
+                window.setTimeout(() => {
+                    setUsuario(null);
+                    setCerrandoSesion(false);
+                }, 1200);
             }
         };
 
@@ -101,8 +110,35 @@ export function AuthProvider({ children }) {
         setUsuario(datosUsuario);
     };
 
-    const cerrarSesion = () => {
-        setUsuario(null);
+    
+    const cerrarSesion = (onFinalizado) => {
+        setMensajeCierre("");
+        setCerrandoSesion(true);
+
+        const TIEMPO_MINIMO_MS = 900;
+        const inicio = Date.now();
+
+        cerrarSesionService()
+            .catch((error) => {
+                // Un 401 significa que la sesión ya había expirado:
+                // es un caso esperado, no lo tratamos como error real.
+                if (error.status !== 401) {
+                    console.error("Error al cerrar sesión:", error);
+                }
+            })
+            .finally(() => {
+                const transcurrido = Date.now() - inicio;
+                const esperaRestante = Math.max(
+                    TIEMPO_MINIMO_MS - transcurrido,
+                    0,
+                );
+
+                window.setTimeout(() => {
+                    setUsuario(null);
+                    setCerrandoSesion(false);
+                    onFinalizado?.();
+                }, esperaRestante);
+            });
     };
 
     const actualizarUsuario = (datosUsuario) => {
@@ -120,13 +156,25 @@ export function AuthProvider({ children }) {
             }}
         >
             {children}
+
+            {cerrandoSesion && (
+                <div className="session-closing-screen">
+                    <div className="session-closing-content">
+                        <div
+                            className="session-closing-spinner"
+                            aria-hidden="true"
+                        />
+
+                        <h1>Cerrando sesión</h1>
+
+                        <p>{mensajeCierre}</p>
+                    </div>
+                </div>
+            )}
         </AuthContext.Provider>
     );
 }
 
-
 export function useAuth() {
     return useContext(AuthContext);
 }
-
-

@@ -103,45 +103,43 @@ export const iniciarSesion = async (datosLogin) => {
 
 
 export const cerrarSesion = async () => {
-    try {
-        await fetch("/sanctum/csrf-cookie", {
-            method: "GET",
-            credentials: "include",
-        });
+    await fetch("/sanctum/csrf-cookie", {
+        method: "GET",
+        credentials: "include",
+    });
 
-        const cookies = document.cookie.split(";");
+    const cookies = document.cookie.split(";");
 
-        let xsrfToken = null;
+    let xsrfToken = null;
 
-        for (const cookie of cookies) {
-            const [clave, valor] = cookie.trim().split("=");
+    for (const cookie of cookies) {
+        const [clave, valor] = cookie.trim().split("=");
 
-            if (clave === "XSRF-TOKEN") {
-                xsrfToken = decodeURIComponent(valor);
-                break;
-            }
+        if (clave === "XSRF-TOKEN") {
+            xsrfToken = decodeURIComponent(valor);
+            break;
         }
+    }
 
-        const response = await fetch("/api/logout", {
-            method: "POST",
-            credentials: "include",
-            headers: {
-                Accept: "application/json",
-                "X-XSRF-TOKEN": xsrfToken,
-            },
-        });
+    const response = await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+            Accept: "application/json",
+            "X-XSRF-TOKEN": xsrfToken,
+        },
+    });
 
-        const data = await response.json().catch(() => ({}));
+    const data = await response.json().catch(() => ({}));
 
-        if (!response.ok) {
-            throw new Error(
-                data.message || "Error al cerrar sesión."
-            );
-        }
-
-        return data;
-    } catch (error) {
-        console.error("Error al cerrar sesión:", error);
+    if (!response.ok) {
+       
+        const error = new Error(
+            data.message || "Error al cerrar sesión."
+        );
+        error.status = response.status;
         throw error;
     }
+
+    return data;
 };
