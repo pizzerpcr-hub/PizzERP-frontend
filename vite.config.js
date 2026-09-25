@@ -5,8 +5,7 @@ import { cwd } from "node:process";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, cwd(), "");
 
-  const backendUrl =
-    env.BACKEND_URL || "http://localhost:8000";
+  const backendUrl = env.BACKEND_URL || "http://localhost:8000";
 
   return {
     plugins: [react()],

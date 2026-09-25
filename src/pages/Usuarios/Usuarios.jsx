@@ -5,17 +5,23 @@ import {
     useRef,
     useState,
 } from "react";
-import CambiarEstadoUsuarioDialog from "../../components/usuarios/CambiarEstadoUsuarioDialog.jsx";
-import UsuariosTable from "../../components/usuarios/UsuariosTable.jsx";
+
+import CambiarEstadoUsuarioDialog from "../../components/TablaUsuarios/CambiarEstadoUsuarioDialog.jsx";
+import UsuariosTable from "../../components/TablaUsuarios/UsuariosTable.jsx";
 import RegistrarUsuarioForm from "../../components/forms/RegistrarUsuarioForm/RegistrarUsuarioForm.jsx";
+
 import { normalizarRol } from "../../constants/roles.js";
 import { useAuth } from "../../context/AuthContext.jsx";
+
 import {
     actualizarUsuario as actualizarUsuarioService,
     cambiarEstadoUsuario,
     obtenerUsuarios,
     registrarUsuario,
 } from "../../services/usuariosService.js";
+
+import echo from "../../services/echo.js";
+
 import "./Usuarios.css";
 
 const MENSAJE_RECARGA_FALLIDA =
@@ -30,7 +36,7 @@ const usuarioPublico = (usuarioListado) => ({
 });
 
 const ordenarUsuarios = (lista) =>
-    lista.sort((primero, segundo) =>
+    [...lista].sort((primero, segundo) =>
         String(primero.nombre_completo ?? "").localeCompare(
             String(segundo.nombre_completo ?? ""),
         ),
@@ -79,27 +85,36 @@ function Usuarios() {
     const [mostrarForm, setMostrarForm] = useState(false);
     const [usuarioEditando, setUsuarioEditando] = useState(null);
     const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
+
     const [usuarios, setUsuarios] = useState([]);
     const [cargandoUsuarios, setCargandoUsuarios] = useState(true);
+
     const [enviando, setEnviando] = useState(false);
+
     const [mensajeEstado, setMensajeEstado] = useState("");
     const [mensajeGeneral, setMensajeGeneral] = useState(null);
+
     const [busqueda, setBusqueda] = useState("");
-    const [usuariosPendientes, setUsuariosPendientes] = useState(new Set());
+
+    const [usuariosPendientes, setUsuariosPendientes] = useState(
+        new Set(),
+    );
+
     const montadoRef = useRef(false);
     const controladorListadoRef = useRef(null);
     const solicitudListadoRef = useRef(0);
+
     const cambiosPendientesRef = useRef(new Map());
     const listadoVigenteRef = useRef(false);
 
-    const {
-        usuario,
-        cargandoSesion,
-        actualizarUsuario,
-    } = useAuth();
+    const { usuario, cargandoSesion, actualizarUsuario } = useAuth();
+
     const rolActual = normalizarRol(usuario?.rol);
     const esAdministrador = rolActual === "ADMINISTRADOR";
 
+    /*
+     * Controla el ciclo de vida del componente.
+     */
     useEffect(() => {
         montadoRef.current = true;
 
@@ -110,6 +125,9 @@ function Usuarios() {
         };
     }, []);
 
+    /*
+     * Oculta automáticamente las notificaciones.
+     */
     useEffect(() => {
         if (
             mensajeGeneral?.tipo !== "exito" &&
@@ -127,67 +145,87 @@ function Usuarios() {
         return () => window.clearTimeout(temporizador);
     }, [mensajeGeneral]);
 
-    const cargarUsuarios = useCallback(async ({ mostrarCarga = false } = {}) => {
-        const idSolicitud = solicitudListadoRef.current + 1;
-        solicitudListadoRef.current = idSolicitud;
-        controladorListadoRef.current?.abort();
-        listadoVigenteRef.current = false;
+    /*
+     * Carga el listado de usuarios.
+     */
+    const cargarUsuarios = useCallback(
+        async ({ mostrarCarga = false } = {}) => {
+            const idSolicitud = solicitudListadoRef.current + 1;
 
-        const controller = new AbortController();
-        controladorListadoRef.current = controller;
+            solicitudListadoRef.current = idSolicitud;
 
-        if (mostrarCarga && montadoRef.current) {
-            setCargandoUsuarios(true);
-        }
+            controladorListadoRef.current?.abort();
 
-        try {
-            const listaUsuarios = await obtenerUsuarios(controller.signal);
+            listadoVigenteRef.current = false;
 
-            if (
-                !montadoRef.current ||
-                controller.signal.aborted ||
-                idSolicitud !== solicitudListadoRef.current
-            ) {
-                return null;
+            const controller = new AbortController();
+
+            controladorListadoRef.current = controller;
+
+            if (mostrarCarga && montadoRef.current) {
+                setCargandoUsuarios(true);
             }
 
-            setUsuarios(
-                ordenarUsuarios(
-                    listaUsuarios.map((usuarioListado) => {
-                        const id = String(usuarioListado.id_usuario);
-                        return (
-                            cambiosPendientesRef.current.get(id)?.provisional ??
-                            usuarioPublico(usuarioListado)
-                        );
-                    }),
-                ),
-            );
-            listadoVigenteRef.current = cambiosPendientesRef.current.size === 0;
-            return listaUsuarios;
-        } catch (error) {
-            if (
-                controller.signal.aborted ||
-                !montadoRef.current ||
-                idSolicitud !== solicitudListadoRef.current
-            ) {
-                return null;
-            }
+            try {
+                const listaUsuarios = await obtenerUsuarios(
+                    controller.signal,
+                );
 
-            throw error;
-        } finally {
-            if (
-                montadoRef.current &&
-                idSolicitud === solicitudListadoRef.current
-            ) {
-                setCargandoUsuarios(false);
-            }
+                if (
+                    !montadoRef.current ||
+                    controller.signal.aborted ||
+                    idSolicitud !== solicitudListadoRef.current
+                ) {
+                    return null;
+                }
 
-            if (controladorListadoRef.current === controller) {
-                controladorListadoRef.current = null;
-            }
-        }
-    }, []);
+                setUsuarios(
+                    ordenarUsuarios(
+                        listaUsuarios.map((usuarioListado) => {
+                            const id = String(usuarioListado.id_usuario);
 
+                            return (
+                                cambiosPendientesRef.current.get(id)
+                                    ?.provisional ??
+                                usuarioPublico(usuarioListado)
+                            );
+                        }),
+                    ),
+                );
+
+                listadoVigenteRef.current =
+                    cambiosPendientesRef.current.size === 0;
+
+                return listaUsuarios;
+            } catch (error) {
+                if (
+                    controller.signal.aborted ||
+                    !montadoRef.current ||
+                    idSolicitud !== solicitudListadoRef.current
+                ) {
+                    return null;
+                }
+
+                throw error;
+            } finally {
+                if (
+                    montadoRef.current &&
+                    idSolicitud === solicitudListadoRef.current
+                ) {
+                    setCargandoUsuarios(false);
+                }
+
+                if (controladorListadoRef.current === controller) {
+                    controladorListadoRef.current = null;
+                }
+            }
+        },
+        [],
+    );
+
+    /*
+     * Carga inicial.
+     */
     useEffect(() => {
         if (cargandoSesion || !esAdministrador) {
             return undefined;
@@ -195,7 +233,9 @@ function Usuarios() {
 
         const cargar = async () => {
             try {
-                await cargarUsuarios({ mostrarCarga: true });
+                await cargarUsuarios({
+                    mostrarCarga: true,
+                });
             } catch (error) {
                 if (montadoRef.current) {
                     setMensajeGeneral({
@@ -215,6 +255,57 @@ function Usuarios() {
         };
     }, [cargandoSesion, cargarUsuarios, esAdministrador]);
 
+    
+    useEffect(() => {
+        if (cargandoSesion || !esAdministrador) {
+            return undefined;
+        }
+
+        const canal = echo.channel("usuarios");
+
+        /*
+         * Usuario creado.
+         */
+        canal.listen(".user.created", (evento) => {
+            
+            if (!montadoRef.current || !evento?.usuario) {
+                return;
+            }
+
+            aplicarUsuarioConfirmado(evento.usuario);
+        });
+
+        /*
+         * Usuario editado.
+         */
+        canal.listen(".user.changed", (evento) => {
+            
+            if (!montadoRef.current || !evento?.usuario) {
+                return;
+            }
+
+            aplicarUsuarioConfirmado(evento.usuario);
+        });
+
+        
+        canal.listen(".user.status-changed", (evento) => {
+            
+
+            if (!montadoRef.current || !evento?.usuario) {
+                return;
+            }
+
+            aplicarUsuarioConfirmado(evento.usuario);
+        });
+
+        return () => {
+            echo.leaveChannel("usuarios");
+        };
+    }, [cargandoSesion, esAdministrador]);
+
+    /*
+     * Filtrado de usuarios.
+     */
     const usuariosFiltrados = useMemo(() => {
         const termino = busqueda.trim().toLocaleLowerCase();
 
@@ -229,47 +320,65 @@ function Usuarios() {
                 usuarioListado.rol,
                 usuarioListado.estado,
             ].some((valor) =>
-                String(valor ?? "").toLocaleLowerCase().includes(termino),
+                String(valor ?? "")
+                    .toLocaleLowerCase()
+                    .includes(termino),
             ),
         );
     }, [busqueda, usuarios]);
 
-    const reconciliarDespuesDeCambio = useCallback(
-        async () => {
-            try {
-                await cargarUsuarios();
-            } catch {
-                if (montadoRef.current) {
-                    setMensajeGeneral((mensajeActual) =>
-                        mensajeActual?.tipo === "error"
-                            ? mensajeActual
-                            : {
-                                  tipo: "advertencia",
-                                  texto: MENSAJE_RECARGA_FALLIDA,
-                              },
-                    );
-                }
+    /*
+     * Recarga de respaldo después de un cambio.
+     */
+    const reconciliarDespuesDeCambio = useCallback(async () => {
+        try {
+            await cargarUsuarios();
+        } catch {
+            if (montadoRef.current) {
+                setMensajeGeneral((mensajeActual) =>
+                    mensajeActual?.tipo === "error"
+                        ? mensajeActual
+                        : {
+                              tipo: "advertencia",
+                              texto: MENSAJE_RECARGA_FALLIDA,
+                          },
+                );
             }
-        },
-        [cargarUsuarios],
-    );
+        }
+    }, [cargarUsuarios]);
 
-    const aplicarUsuarioConfirmado = (usuarioConfirmado) => {
-        if (!usuarioConfirmado || usuarioConfirmado.id_usuario == null) {
+    /*
+     * Aplica un usuario recibido desde el backend/Reverb.
+     *
+     * Si ya existe:
+     * actualiza sus datos.
+     *
+     * Si no existe:
+     * lo agrega.
+     */
+    const aplicarUsuarioConfirmado = useCallback((usuarioConfirmado) => {
+        if (
+            !usuarioConfirmado ||
+            usuarioConfirmado.id_usuario == null
+        ) {
             return;
         }
 
         const usuarioSeguro = usuarioPublico(usuarioConfirmado);
 
+        const idConfirmado = String(usuarioSeguro.id_usuario);
+
         setUsuarios((usuariosActuales) => {
-            const idConfirmado = String(usuarioSeguro.id_usuario);
             const existe = usuariosActuales.some(
                 (usuarioListado) =>
-                    String(usuarioListado.id_usuario) === idConfirmado,
+                    String(usuarioListado.id_usuario) ===
+                    idConfirmado,
             );
+
             const usuariosActualizados = existe
                 ? usuariosActuales.map((usuarioListado) =>
-                      String(usuarioListado.id_usuario) === idConfirmado
+                      String(usuarioListado.id_usuario) ===
+                      idConfirmado
                           ? usuarioSeguro
                           : usuarioListado,
                   )
@@ -277,15 +386,24 @@ function Usuarios() {
 
             return ordenarUsuarios(usuariosActualizados);
         });
-    };
+    }, []);
 
+    /*
+     * Invalida solicitudes de listado actuales.
+     */
     const invalidarListado = () => {
         solicitudListadoRef.current += 1;
+
         controladorListadoRef.current?.abort();
+
         controladorListadoRef.current = null;
+
         listadoVigenteRef.current = false;
     };
 
+    /*
+     * Inicia un cambio optimista.
+     */
     const iniciarCambioOptimista = (anterior, provisional) => {
         const id = String(anterior.id_usuario);
 
@@ -294,8 +412,15 @@ function Usuarios() {
         }
 
         invalidarListado();
-        cambiosPendientesRef.current.set(id, { provisional });
-        setUsuariosPendientes(new Set(cambiosPendientesRef.current.keys()));
+
+        cambiosPendientesRef.current.set(id, {
+            provisional,
+        });
+
+        setUsuariosPendientes(
+            new Set(cambiosPendientesRef.current.keys()),
+        );
+
         setUsuarios((usuariosActuales) =>
             ordenarUsuarios(
                 usuariosActuales.map((usuarioListado) =>
@@ -305,16 +430,26 @@ function Usuarios() {
                 ),
             ),
         );
+
         setCargandoUsuarios(false);
 
         return true;
     };
 
+    /*
+     * Finaliza un cambio optimista.
+     */
     const terminarCambioOptimista = (id) => {
         cambiosPendientesRef.current.delete(String(id));
-        setUsuariosPendientes(new Set(cambiosPendientesRef.current.keys()));
+
+        setUsuariosPendientes(
+            new Set(cambiosPendientesRef.current.keys()),
+        );
     };
 
+    /*
+     * Ejecuta una operación con actualización optimista.
+     */
     const ejecutarCambioOptimista = (
         anterior,
         provisional,
@@ -340,7 +475,9 @@ function Usuarios() {
                 }
 
                 invalidarListado();
+
                 terminarCambioOptimista(anterior.id_usuario);
+
                 setUsuarios((usuariosActuales) =>
                     ordenarUsuarios(
                         usuariosActuales.map((usuarioListado) =>
@@ -357,19 +494,28 @@ function Usuarios() {
                     : null;
 
                 if (erroresCampo) {
-                    const mensajeGeneral = obtenerErrorNoAsociado(error);
+                    const mensajeGeneral =
+                        obtenerErrorNoAsociado(error);
 
                     if (mensajeGeneral) {
-                        setMensajeGeneral({ tipo: "error", texto: mensajeGeneral });
+                        setMensajeGeneral({
+                            tipo: "error",
+                            texto: mensajeGeneral,
+                        });
                     }
 
-                    return { erroresCampo };
+                    return {
+                        erroresCampo,
+                    };
                 }
 
                 setMensajeGeneral({
                     tipo: "error",
-                    texto: error.message || "No fue posible guardar el cambio.",
+                    texto:
+                        error.message ||
+                        "No fue posible guardar el cambio.",
                 });
+
                 return null;
             }
 
@@ -378,9 +524,18 @@ function Usuarios() {
             }
 
             terminarCambioOptimista(anterior.id_usuario);
-            aplicarUsuarioConfirmado(respuesta?.usuario);
-            setMensajeGeneral({ tipo: "exito", texto: mensajeExito });
 
+            aplicarUsuarioConfirmado(respuesta?.usuario);
+
+            setMensajeGeneral({
+                tipo: "exito",
+                texto: mensajeExito,
+            });
+
+            /*
+             * Si el usuario modificó su propia cuenta,
+             * actualizamos también la sesión local.
+             */
             if (sincronizarCuenta && respuesta?.usuario) {
                 actualizarUsuario({
                     ...usuario,
@@ -388,21 +543,37 @@ function Usuarios() {
                 });
             }
 
+            /*
+             * Reconciliación de respaldo.
+             */
             void reconciliarDespuesDeCambio();
-            return { confirmado: true };
+
+            return {
+                confirmado: true,
+            };
         };
 
         return confirmar();
     };
 
+    /*
+     * Abrir formulario de registro.
+     */
     const abrirRegistro = () => {
         setUsuarioEditando(null);
         setMensajeGeneral(null);
         setMostrarForm(true);
     };
 
+    /*
+     * Abrir formulario de edición.
+     */
     const abrirEdicion = (usuarioListado) => {
-        if (cambiosPendientesRef.current.has(String(usuarioListado.id_usuario))) {
+        if (
+            cambiosPendientesRef.current.has(
+                String(usuarioListado.id_usuario),
+            )
+        ) {
             return;
         }
 
@@ -411,6 +582,9 @@ function Usuarios() {
         setMostrarForm(true);
     };
 
+    /*
+     * Cerrar formulario.
+     */
     const cerrarFormulario = () => {
         if (enviando) {
             return;
@@ -420,17 +594,28 @@ function Usuarios() {
         setUsuarioEditando(null);
     };
 
+    /*
+     * Registrar o editar usuario.
+     */
     const handleFormSubmit = async (datosUsuario) => {
         const usuarioEnEdicion = usuarioEditando;
         const esEdicion = Boolean(usuarioEnEdicion);
-        const nombreUsuario = datosUsuario.nombre_usuario.trim().toUpperCase();
 
+        const nombreUsuario = datosUsuario.nombre_usuario
+            .trim()
+            .toUpperCase();
+
+        /*
+         * Validación local para evitar nombres duplicados.
+         */
         if (
             listadoVigenteRef.current &&
             usuarios.some(
                 (usuarioListado) =>
                     String(usuarioListado.id_usuario) !==
-                        String(usuarioEnEdicion?.id_usuario) &&
+                        String(
+                            usuarioEnEdicion?.id_usuario,
+                        ) &&
                     String(usuarioListado.nombre_usuario ?? "")
                         .trim()
                         .toUpperCase() === nombreUsuario,
@@ -438,11 +623,15 @@ function Usuarios() {
         ) {
             return {
                 erroresCampo: {
-                    nombre_usuario: "El nombre de usuario ya está registrado.",
+                    nombre_usuario:
+                        "El nombre de usuario ya está registrado.",
                 },
             };
         }
 
+        /*
+         * EDICIÓN
+         */
         if (esEdicion) {
             const anterior = usuarioPublico(
                 usuarios.find(
@@ -451,12 +640,16 @@ function Usuarios() {
                         String(usuarioEnEdicion.id_usuario),
                 ) ?? usuarioEnEdicion,
             );
+
             const provisional = {
                 ...anterior,
-                nombre_completo: datosUsuario.nombre_completo,
-                nombre_usuario: datosUsuario.nombre_usuario,
+                nombre_completo:
+                    datosUsuario.nombre_completo,
+                nombre_usuario:
+                    datosUsuario.nombre_usuario,
                 rol: datosUsuario.rol,
             };
+
             const cambio = ejecutarCambioOptimista(
                 anterior,
                 provisional,
@@ -466,7 +659,8 @@ function Usuarios() {
                         datosUsuario,
                     ),
                 "Usuario actualizado correctamente.",
-                String(anterior.id_usuario) === String(usuario?.id_usuario),
+                String(anterior.id_usuario) ===
+                    String(usuario?.id_usuario),
                 true,
             );
 
@@ -476,7 +670,10 @@ function Usuarios() {
 
             const resultado = await cambio;
 
-            if (montadoRef.current && resultado?.confirmado) {
+            if (
+                montadoRef.current &&
+                resultado?.confirmado
+            ) {
                 setMostrarForm(false);
                 setUsuarioEditando(null);
             }
@@ -484,6 +681,9 @@ function Usuarios() {
             return resultado;
         }
 
+        /*
+         * REGISTRO
+         */
         setEnviando(true);
         setMensajeGeneral(null);
 
@@ -494,23 +694,34 @@ function Usuarios() {
         } catch (error) {
             if (montadoRef.current) {
                 setEnviando(false);
-                const erroresCampo = obtenerErroresCampo(error);
+
+                const erroresCampo =
+                    obtenerErroresCampo(error);
 
                 if (erroresCampo) {
-                    const mensajeGeneral = obtenerErrorNoAsociado(error);
+                    const mensajeGeneral =
+                        obtenerErrorNoAsociado(error);
 
                     if (mensajeGeneral) {
-                        setMensajeGeneral({ tipo: "error", texto: mensajeGeneral });
+                        setMensajeGeneral({
+                            tipo: "error",
+                            texto: mensajeGeneral,
+                        });
                     }
 
-                    return { erroresCampo };
+                    return {
+                        erroresCampo,
+                    };
                 }
 
                 setMensajeGeneral({
                     tipo: "error",
-                    texto: error.message || "No fue posible guardar el usuario.",
+                    texto:
+                        error.message ||
+                        "No fue posible guardar el usuario.",
                 });
             }
+
             return null;
         }
 
@@ -521,11 +732,14 @@ function Usuarios() {
         const usuarioConfirmado = respuesta?.usuario;
 
         aplicarUsuarioConfirmado(usuarioConfirmado);
+
         listadoVigenteRef.current = false;
+
         setCargandoUsuarios(false);
         setMostrarForm(false);
         setUsuarioEditando(null);
         setEnviando(false);
+
         setMensajeGeneral({
             tipo: "exito",
             texto: "Usuario registrado correctamente.",
@@ -534,8 +748,15 @@ function Usuarios() {
         void reconciliarDespuesDeCambio();
     };
 
+    /*
+     * Abrir diálogo de cambio de estado.
+     */
     const abrirCambioEstado = (usuarioListado) => {
-        if (cambiosPendientesRef.current.has(String(usuarioListado.id_usuario))) {
+        if (
+            cambiosPendientesRef.current.has(
+                String(usuarioListado.id_usuario),
+            )
+        ) {
             return;
         }
 
@@ -544,6 +765,9 @@ function Usuarios() {
         setMensajeGeneral(null);
     };
 
+    /*
+     * Cerrar diálogo de cambio de estado.
+     */
     const cerrarCambioEstado = () => {
         if (enviando) {
             return;
@@ -553,6 +777,9 @@ function Usuarios() {
         setMensajeEstado("");
     };
 
+    /*
+     * Activar/desactivar usuario.
+     */
     const handleCambioEstado = async () => {
         const usuarioObjetivo = usuarioSeleccionado;
 
@@ -567,16 +794,32 @@ function Usuarios() {
                     String(usuarioObjetivo.id_usuario),
             ) ?? usuarioObjetivo,
         );
-        const estadoActual = String(anterior.estado ?? "").toUpperCase();
-        const nuevoEstado = estadoActual === "ACTIVO" ? "INACTIVO" : "ACTIVO";
-        const cambioIniciado = ejecutarCambioOptimista(
-            anterior,
-            { ...anterior, estado: nuevoEstado },
-            () => cambiarEstadoUsuario(anterior.id_usuario, nuevoEstado),
-            nuevoEstado === "ACTIVO"
-                ? "Usuario reactivado correctamente."
-                : "Usuario desactivado correctamente.",
-        );
+
+        const estadoActual = String(
+            anterior.estado ?? "",
+        ).toUpperCase();
+
+        const nuevoEstado =
+            estadoActual === "ACTIVO"
+                ? "INACTIVO"
+                : "ACTIVO";
+
+        const cambioIniciado =
+            ejecutarCambioOptimista(
+                anterior,
+                {
+                    ...anterior,
+                    estado: nuevoEstado,
+                },
+                () =>
+                    cambiarEstadoUsuario(
+                        anterior.id_usuario,
+                        nuevoEstado,
+                    ),
+                nuevoEstado === "ACTIVO"
+                    ? "Usuario reactivado correctamente."
+                    : "Usuario desactivado correctamente.",
+            );
 
         if (cambioIniciado) {
             setUsuarioSeleccionado(null);
@@ -584,22 +827,35 @@ function Usuarios() {
         }
     };
 
+    /*
+     * Mientras se comprueba la sesión.
+     */
     if (cargandoSesion) {
         return null;
     }
 
+    /*
+     * Restricción de acceso.
+     */
     if (!esAdministrador) {
         return (
-            <section className="management-panel access-denied" role="alert">
+            <section
+                className="management-panel access-denied"
+                role="alert"
+            >
                 <h1>Acceso no autorizado</h1>
+
                 <p>
-                    La gestión de usuarios está disponible únicamente para
-                    administradores.
+                    La gestión de usuarios está disponible
+                    únicamente para administradores.
                 </p>
             </section>
         );
     }
 
+    /*
+     * Notificación general.
+     */
     const notificacionGeneral = (
         <div
             className="management-toast-region"
@@ -609,14 +865,21 @@ function Usuarios() {
             {mensajeGeneral && (
                 <div
                     className={`management-toast ${mensajeGeneral.tipo}`}
-                    role={mensajeGeneral.tipo === "exito" ? "status" : "alert"}
+                    role={
+                        mensajeGeneral.tipo === "exito"
+                            ? "status"
+                            : "alert"
+                    }
                 >
                     <span>{mensajeGeneral.texto}</span>
+
                     <button
                         type="button"
                         className="management-toast-close"
                         aria-label="Cerrar notificación"
-                        onClick={() => setMensajeGeneral(null)}
+                        onClick={() =>
+                            setMensajeGeneral(null)
+                        }
                     >
                         ×
                     </button>
@@ -629,12 +892,17 @@ function Usuarios() {
         <>
             <header className="management-header">
                 <div>
-                    <p className="eyebrow">Administración</p>
+                    <p className="eyebrow">
+                        Administración
+                    </p>
 
                     <h1>Usuarios</h1>
 
                     <div className="header-description">
-                        <p>Registra y administra las cuentas del sistema.</p>
+                        <p>
+                            Registra y administra las cuentas
+                            del sistema.
+                        </p>
 
                         <button
                             className="management-primary"
@@ -655,19 +923,25 @@ function Usuarios() {
                         <h2>Usuarios registrados</h2>
 
                         <p>
-                            Modifica los datos de una cuenta o cambia su acceso
-                            mediante activación y desactivación.
+                            Modifica los datos de una cuenta o
+                            cambia su acceso mediante activación
+                            y desactivación.
                         </p>
                     </div>
 
                     <label className="search-box">
                         ⌕
+
                         <input
                             id="userSearch"
                             type="search"
                             placeholder="Buscar usuario"
                             value={busqueda}
-                            onChange={(event) => setBusqueda(event.target.value)}
+                            onChange={(event) =>
+                                setBusqueda(
+                                    event.target.value,
+                                )
+                            }
                         />
                     </label>
                 </div>
@@ -685,7 +959,11 @@ function Usuarios() {
 
             {mostrarForm && (
                 <RegistrarUsuarioForm
-                    modo={usuarioEditando ? "editar" : "crear"}
+                    modo={
+                        usuarioEditando
+                            ? "editar"
+                            : "crear"
+                    }
                     usuarioInicial={usuarioEditando}
                     onSubmit={handleFormSubmit}
                     onClose={cerrarFormulario}
@@ -695,7 +973,9 @@ function Usuarios() {
             )}
 
             <CambiarEstadoUsuarioDialog
-                usuarioSeleccionado={usuarioSeleccionado}
+                usuarioSeleccionado={
+                    usuarioSeleccionado
+                }
                 error={mensajeEstado}
                 isSubmitting={enviando}
                 onConfirm={handleCambioEstado}

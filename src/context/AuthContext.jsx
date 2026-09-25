@@ -4,7 +4,9 @@ import {
     useEffect,
     useState,
 } from "react";
+
 import { verificarSesion } from "../services/loginService.js";
+import echo from "../services/echo.js";
 
 const AuthContext = createContext();
 
@@ -12,13 +14,16 @@ export function AuthProvider({ children }) {
     const [usuario, setUsuario] = useState(null);
     const [cargandoSesion, setCargandoSesion] = useState(true);
 
+    /*
+     * Restaurar sesión al cargar la aplicación.
+     */
     useEffect(() => {
         const controller = new AbortController();
 
         const restaurarSesion = async () => {
             try {
                 const usuarioActual = await verificarSesion(
-                    controller.signal
+                    controller.signal,
                 );
 
                 if (!controller.signal.aborted) {
@@ -44,6 +49,53 @@ export function AuthProvider({ children }) {
             controller.abort();
         };
     }, []);
+
+    
+    useEffect(() => {
+        if (cargandoSesion || !usuario?.id_usuario) {
+            return undefined;
+        }
+
+        const canal = echo.channel("usuarios");
+
+        const manejarCambioEstado = (evento) => {
+            const usuarioActualizado = evento?.usuario;
+
+            if (!usuarioActualizado?.id_usuario) {
+                return;
+            }
+
+            
+            const esUsuarioActual =
+                String(usuarioActualizado.id_usuario) ===
+                String(usuario.id_usuario);
+
+            if (!esUsuarioActual) {
+                return;
+            }
+
+            const estado = String(
+                usuarioActualizado.estado ?? "",
+            ).toUpperCase();
+
+            /*
+             * Si el usuario fue desactivado,
+             * cerramos inmediatamente su sesión.
+             */
+            if (estado === "INACTIVO") {
+                setUsuario(null);
+            }
+        };
+
+        canal.listen(
+            ".user.status-changed",
+            manejarCambioEstado,
+        );
+
+        return () => {
+            echo.leaveChannel("usuarios");
+        };
+    }, [cargandoSesion, usuario?.id_usuario]);
 
     const iniciarSesion = (datosUsuario) => {
         setUsuario(datosUsuario);
@@ -72,7 +124,9 @@ export function AuthProvider({ children }) {
     );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
+
 export function useAuth() {
     return useContext(AuthContext);
 }
+
+
