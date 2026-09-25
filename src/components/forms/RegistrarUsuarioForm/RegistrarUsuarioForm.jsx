@@ -41,6 +41,7 @@ function RegistrarUsuarioForm({
     );
 
     const esEdicion = modo === "editar";
+    const [puntosGuardando, setPuntosGuardando] = useState("");
 
     useEffect(() => {
         const dialog = dialogRef.current;
@@ -101,6 +102,26 @@ function RegistrarUsuarioForm({
 
         return () => window.clearTimeout(temporizador);
     }, [avisosCampo.contrasena]);
+
+
+    useEffect(() => {
+        if (!isSubmitting) {
+            setPuntosGuardando("");
+            return undefined;
+        }
+
+        const secuencia = [".", "..", "...", ""];
+        let indice = 0;
+
+        setPuntosGuardando(secuencia[indice]); 
+
+        const intervalo = window.setInterval(() => {
+            indice = (indice + 1) % secuencia.length;
+            setPuntosGuardando(secuencia[indice]);
+        }, 500);
+
+        return () => window.clearInterval(intervalo);
+    }, [isSubmitting]);
 
     const mostrarErroresCampo = (errores) => {
         setAvisosCampo((actuales) => ({
@@ -376,10 +397,10 @@ function RegistrarUsuarioForm({
                         disabled={isSubmitting}
                     >
                         {isSubmitting
-                            ? "Guardando..."
+                            ? `Guardando${puntosGuardando}`
                             : esEdicion
-                              ? "Guardar cambios"
-                              : "Guardar usuario"}
+                            ? "Guardar cambios"
+                            : "Guardar usuario"}
                     </button>
                 </div>
             </form>

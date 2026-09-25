@@ -630,8 +630,8 @@ function Usuarios() {
         }
 
         /*
-         * EDICIÓN
-         */
+        * EDICIÓN
+        */
         if (esEdicion) {
             const anterior = usuarioPublico(
                 usuarios.find(
@@ -650,6 +650,8 @@ function Usuarios() {
                 rol: datosUsuario.rol,
             };
 
+            setEnviando(true);
+
             const cambio = ejecutarCambioOptimista(
                 anterior,
                 provisional,
@@ -665,17 +667,22 @@ function Usuarios() {
             );
 
             if (!cambio) {
+                if (montadoRef.current) {
+                    setEnviando(false);
+                }
+
                 return null;
             }
 
             const resultado = await cambio;
 
-            if (
-                montadoRef.current &&
-                resultado?.confirmado
-            ) {
-                setMostrarForm(false);
-                setUsuarioEditando(null);
+            if (montadoRef.current) {
+                setEnviando(false);
+
+                if (resultado?.confirmado) {
+                    setMostrarForm(false);
+                    setUsuarioEditando(null);
+                }
             }
 
             return resultado;
