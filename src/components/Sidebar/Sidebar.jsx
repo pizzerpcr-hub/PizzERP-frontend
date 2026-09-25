@@ -8,7 +8,6 @@ import {
     obtenerEtiquetaRol,
     obtenerInformacionPanel,
 } from "../../constants/roles.js";
-import { cerrarSesion as cerrarSesionService } from "../../services/loginService.js";
 
 function Sidebar({ items = [] }) {
     const navigate = useNavigate();
@@ -57,16 +56,13 @@ function Sidebar({ items = [] }) {
         };
     }, []);
 
-    const cerrarSesion = async () => {
-        try {
-            await cerrarSesionService();
-        } catch (error) {
-            console.error("Error al cerrar sesión:", error);
-        } finally {
-            limpiarSesion();
+    // Dispara el logout de inmediato (sin nada async antes),
+    // y solo navega / cierra el menú cuando el overlay ya terminó.
+    const manejarClicCerrarSesion = () => {
+        limpiarSesion(() => {
             cerrarMenuMovil();
             navigate("/");
-        }
+        });
     };
 
     return (
@@ -162,7 +158,7 @@ function Sidebar({ items = [] }) {
                     <button
                         className="logout-button"
                         type="button"
-                        onClick={cerrarSesion}
+                        onClick={manejarClicCerrarSesion}
                     >
                         Cerrar sesión
                     </button>
