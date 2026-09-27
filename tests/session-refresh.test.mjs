@@ -21,7 +21,7 @@ for (const rol of ['CAJA', 'COCINA', 'TI', 'ADMINISTRADOR']) {
         const stop = observarSesion({...env, consultar: async () => ({rol,estado:'ACTIVO'}), actualizar: value => actual = value});
         await env.tick();
         assert.equal(actual.rol, rol);
-        assert.equal(obtenerRutaInicio(actual), {CAJA:'/caja',COCINA:'/cocina',TI:'/encargado-ti/usuarios',ADMINISTRADOR:'/encargado-ti/usuarios'}[rol]);
+        assert.equal(obtenerRutaInicio(actual), {CAJA:'/caja',COCINA:'/cocina',TI:'/encargado-ti/usuarios',ADMINISTRADOR:'/administrador/usuarios'}[rol]);
         stop();
     });
 }
