@@ -5,9 +5,9 @@ import "/src/styles/general.css";
 import App from './App.jsx'
 
 createRoot(document.getElementById('root')).render(
-    <AuthProvider>
-      <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
         <App />
-      </BrowserRouter>
-    </AuthProvider>,
+      </AuthProvider>
+    </BrowserRouter>,
 )
