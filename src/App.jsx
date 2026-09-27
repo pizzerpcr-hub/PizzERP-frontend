@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Login from "./pages/Login/Login.jsx";
 import Usuarios from "./pages/Usuarios/Usuarios.jsx";
 import EncargadoTILayout from "./components/layout/EncargadoTILayout/EncargadoTILayout.jsx";
+import AdminLayout from "./components/layout/AdminLayout/AdminLayout.jsx";
 import PanelTemporal from "./components/layout/PanelTemporal/PanelTemporal.jsx";
 
 function App() {
@@ -18,6 +19,28 @@ function App() {
             <Route
                 path="/encargado-ti"
                 element={<EncargadoTILayout />}
+            >
+                <Route
+                    index
+                    element={
+                        <Navigate
+                            to="usuarios"
+                            replace
+                        />
+                    }
+                />
+
+                <Route
+                    path="usuarios"
+                    element={<Usuarios />}
+                />
+            </Route>
+
+
+
+            <Route
+                path="/administrador"
+                element={<AdminLayout />}
             >
                 <Route
                     index

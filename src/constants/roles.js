@@ -18,7 +18,7 @@ const INFORMACION_PANEL = {
         modulos: "MÓDULOS DE ADMINISTRACIÓN",
     },
     TI: {
-        panel: "Panel de tecnología",
+        panel: "Panel Administrativo de TI",
         modulos: "MÓDULOS DE TI",
     },
     CAJA: {
@@ -46,7 +46,7 @@ export const puedeGestionarUsuarios = (usuario) =>
 export const obtenerRutaInicio = (usuario) => {
     if (String(usuario?.estado ?? "").trim().toUpperCase() !== "ACTIVO") return null;
     const rutas = {
-        ADMINISTRADOR: "/encargado-ti/usuarios",
+        ADMINISTRADOR: "/administrador/usuarios",
         TI: "/encargado-ti/usuarios",
         CAJA: "/caja",
         COCINA: "/cocina",

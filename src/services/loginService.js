@@ -1,5 +1,7 @@
 const API_URL = "";
 const MENSAJE_LOGIN_FALLIDO = "No fue posible iniciar sesión.\nVerifica tus credenciales.";
+const MENSAJE_SESION_FALLIDA = "No fue posible verificar la sesión.";
+const MENSAJE_LOGOUT_FALLIDO = "Error al cerrar sesión.";
 
 const obtenerCookie = (nombre) => {
     const cookie = document.cookie
@@ -13,6 +15,27 @@ const obtenerCookie = (nombre) => {
     return decodeURIComponent(
         cookie.split("=").slice(1).join("=")
     );
+};
+
+/*
+ * Extrae el mensaje real del backend a partir de una respuesta
+ * de error (validación 422/429 con 'errors', o 'message' directo).
+ * Si no hay nada útil, devuelve el mensaje de respaldo.
+ */
+const obtenerMensajeError = (responseData, mensajeRespaldo) => {
+    const primerErrorDeValidacion = responseData?.errors
+        ? Object.values(responseData.errors).flat()[0]
+        : null;
+
+    if (typeof primerErrorDeValidacion === "string" && primerErrorDeValidacion) {
+        return primerErrorDeValidacion;
+    }
+
+    if (typeof responseData?.message === "string" && responseData.message) {
+        return responseData.message;
+    }
+
+    return mensajeRespaldo;
 };
 
 export const verificarSesion = async (signal) => {
@@ -29,8 +52,21 @@ export const verificarSesion = async (signal) => {
         );
 
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) return null;
-            throw new Error("No fue posible verificar la sesión.");
+            /*
+             * 401/403 son un caso esperado (no hay sesión válida),
+             * no un error que deba mostrarse al usuario.
+             */
+            if (response.status === 401 || response.status === 403) {
+                return null;
+            }
+
+            const responseData = await response
+                .json()
+                .catch(() => ({}));
+
+            throw new Error(
+                obtenerMensajeError(responseData, MENSAJE_SESION_FALLIDA),
+            );
         }
 
         const responseData = await response.json();
@@ -83,25 +119,21 @@ export const iniciarSesion = async (datosLogin) => {
         .catch(() => ({}));
 
     if (!loginResponse.ok) {
-        if (loginResponse.status === 401) {
-            throw new Error(MENSAJE_LOGIN_FALLIDO);
-        }
+        const error = new Error(
+            obtenerMensajeError(responseData, MENSAJE_LOGIN_FALLIDO),
+        );
 
-        const validationMessage = responseData.errors
-            ? Object.values(responseData.errors).flat()[0]
-            : null;
+        // Segundos restantes de bloqueo por IP, si aplica (429).
+        error.retryAfter =
+            typeof responseData?.retry_after === "number"
+                ? responseData.retry_after
+                : null;
 
-        const errorMessage =
-            validationMessage ??
-            responseData.message ??
-            MENSAJE_LOGIN_FALLIDO;
-
-        throw new Error(errorMessage);
+        throw error;
     }
 
     return responseData;
 };
-
 
 export const cerrarSesion = async () => {
     const csrfResponse = await fetch("/sanctum/csrf-cookie", {
@@ -139,9 +171,8 @@ export const cerrarSesion = async () => {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-       
         const error = new Error(
-            data.message || "Error al cerrar sesión."
+            obtenerMensajeError(data, MENSAJE_LOGOUT_FALLIDO),
         );
         error.status = response.status;
         throw error;

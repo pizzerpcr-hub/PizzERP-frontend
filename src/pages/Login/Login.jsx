@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./Login.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
 import { Navigate } from "react-router-dom";
@@ -6,13 +6,20 @@ import { useAuth } from "../../context/useAuth.js";
 import { obtenerRutaInicio } from "../../constants/roles.js";
 import { iniciarSesion as iniciarSesionService } from "../../services/loginService.js";
 
+const formatearTiempo = (segundosTotales) => {
+    const minutos = Math.floor(segundosTotales / 60);
+    const segundos = segundosTotales % 60;
 
+    return `${minutos}:${String(segundos).padStart(2, "0")}`;
+};
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [segundosRestantes, setSegundosRestantes] = useState(0);
+  const mensajeBaseRef = useRef("");
   const {
     usuario, cargandoSesion, iniciarSesion,
   } = useAuth();
@@ -25,6 +32,37 @@ function Login() {
 
   const currentYear = new Date().getFullYear();
 
+  const bloqueado = segundosRestantes > 0;
+
+  /*
+   * Cuenta regresiva mientras dura el bloqueo por intentos.
+   */
+  useEffect(() => {
+      if (segundosRestantes <= 0) {
+          return undefined;
+      }
+
+      const intervalo = window.setInterval(() => {
+          setSegundosRestantes((actuales) => {
+              const siguiente = actuales - 1;
+
+              if (siguiente <= 0) {
+                  setFormMessage("");
+                  setMessageType("");
+                  return 0;
+              }
+
+              setFormMessage(
+                  `${mensajeBaseRef.current} Intenta nuevamente en ${formatearTiempo(siguiente)}.`,
+              );
+
+              return siguiente;
+          });
+      }, 1000);
+
+      return () => window.clearInterval(intervalo);
+  }, [segundosRestantes > 0]);
+
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
 
@@ -33,7 +71,7 @@ function Login() {
       [name]: type === "checkbox" ? checked : value,
     }));
 
-    if (formMessage) {
+    if (formMessage && !bloqueado) {
       setFormMessage("");
       setMessageType("");
     }
@@ -41,6 +79,10 @@ function Login() {
 
   const handleSubmit = async (event) => {
       event.preventDefault();
+
+      if (bloqueado) {
+          return;
+      }
 
       if (!formData.username.trim() || !formData.password) {
           setFormMessage("Por favor, completa todos los campos.");
@@ -71,10 +113,21 @@ function Login() {
               password: "",
           }));
       } catch (error) {
-          setFormMessage(
-              error.message || "No fue posible iniciar sesión."
-          );
           setMessageType("error");
+
+          if (typeof error.retryAfter === "number" && error.retryAfter > 0) {
+              mensajeBaseRef.current = error.message;
+
+              setFormMessage(
+                  `${error.message} Intenta nuevamente en ${formatearTiempo(error.retryAfter)}.`,
+              );
+
+              setSegundosRestantes(error.retryAfter);
+          } else {
+              setFormMessage(
+                  error.message || "No fue posible iniciar sesión."
+              );
+          }
       } finally {
           setIsSubmitting(false);
       }
@@ -95,7 +148,7 @@ function Login() {
         className="login-sidebar"
         aria-label="Información de PizzERP"
       >
-        <a
+        <a 
           className="login-logo"
           href="/"
           aria-label="PizzERP, inicio"
@@ -164,7 +217,7 @@ function Login() {
                 placeholder="Ingresa tu usuario"
                 value={formData.username}
                 onChange={handleChange}
-                disabled={isSubmitting}
+                disabled={isSubmitting || bloqueado}
                 required
               />
             </div>
@@ -188,7 +241,7 @@ function Login() {
                   minLength={8}
                   value={formData.password}
                   onChange={handleChange}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || bloqueado}
                   required
                 />
 
@@ -206,7 +259,7 @@ function Login() {
                       (previousValue) => !previousValue,
                     )
                   }
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || bloqueado}
                 >
                   {showPassword ? "Ocultar" : "Mostrar"}
                 </button>
@@ -219,7 +272,7 @@ function Login() {
                 name="remember"
                 checked={formData.remember}
                 onChange={handleChange}
-                disabled={isSubmitting}
+                disabled={isSubmitting || bloqueado}
               />
 
               <span>Recordarme en este equipo</span>
@@ -228,9 +281,11 @@ function Login() {
             <button
               className="login-button"
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || bloqueado}
             >
-              {isSubmitting
+              {bloqueado
+                ? `Espera ${formatearTiempo(segundosRestantes)}`
+                : isSubmitting
                 ? "Verificando..."
                 : "Ingresar al sistema"}
             </button>
