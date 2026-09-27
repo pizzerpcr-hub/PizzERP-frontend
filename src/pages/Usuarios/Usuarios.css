@@ -34,6 +34,7 @@
 
 .header-description {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 20px;
@@ -41,6 +42,7 @@
 }
 
 .header-description p {
+    flex: 1 1 300px;
     margin: 7px 0 0;
     color: #746761;
     font-size: 16px;
@@ -280,6 +282,7 @@
 ========================= */
 
 .table-wrap {
+    min-width: 0;
     width: 100%;
     max-width: 100%;
 
@@ -346,6 +349,10 @@
     box-shadow: none;
     filter: none;
     text-shadow: none;
+}
+
+.usuario-field-label {
+    display: none;
 }
 
 .role-badge.administrador {
@@ -670,6 +677,9 @@
 }
 
 @media (max-width: 720px) {
+    .header-description p {
+        flex-basis: auto;
+    }
     .management-header {
         flex-direction: column;
         align-items: stretch;
@@ -756,5 +766,89 @@
 
     .users-panel table {
         min-width: 480px;
+    }
+}
+
+@media (max-width: 900px) {
+    .users-panel .usuarios-table {
+        display: block;
+        min-width: 0;
+        white-space: normal;
+    }
+
+    .usuarios-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+
+    .usuarios-table tbody {
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+    }
+
+    .usuarios-table tr {
+        display: block;
+        min-width: 0;
+    }
+
+    .usuarios-table .usuario-card {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 16px;
+        padding: 16px;
+        border: 1px solid #e4dfda;
+        border-radius: 8px;
+    }
+
+    .users-panel .usuarios-table td {
+        display: block;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .usuario-card-nombre,
+    .usuario-card-username,
+    .usuario-card .user-actions {
+        grid-column: 1 / -1;
+    }
+
+    .usuario-card-nombre > span:last-child {
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .usuario-field-label {
+        display: block;
+        margin-bottom: 4px;
+        color: #756860;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .users-panel .usuario-card .user-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding-top: 12px;
+        border-top: 1px solid #e4dfda;
+    }
+
+    .usuario-card .user-actions button {
+        min-height: 40px;
+        max-width: 100%;
+        margin: 0;
+        white-space: normal;
+    }
+
+    .users-panel .usuarios-table td.cargando-usuarios {
+        display: grid;
+        place-content: center;
     }
 }

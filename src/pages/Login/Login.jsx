@@ -2,7 +2,8 @@ import { useState } from "react";
 import "./Login.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext.jsx";
+import { useAuth } from "../../context/useAuth.js";
+import { obtenerRutaInicio } from "../../constants/roles.js";
 import { iniciarSesion as iniciarSesionService } from "../../services/loginService.js";
 
 
@@ -12,7 +13,9 @@ function Login() {
   const [formMessage, setFormMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { usuario, cargandoSesion, iniciarSesion } = useAuth();
+  const {
+    usuario, cargandoSesion, iniciarSesion,
+  } = useAuth();
 
   const [formData, setFormData] = useState({
     username: "",
@@ -81,15 +84,9 @@ function Login() {
     return null;
   }
 
-  if (usuario?.rol?.toUpperCase() === "ADMINISTRADOR") {
-    return <Navigate to="/encargado-ti/usuarios" replace />;
-  }
-
-  if (
-    usuario?.rol?.toUpperCase() === "TI" ||
-    usuario?.rol?.toUpperCase() === "ENCARGADO DE TI"
-  ) {
-    return <Navigate to="/encargado-ti" replace />;
+  const rutaInicio = obtenerRutaInicio(usuario);
+  if (rutaInicio) {
+    return <Navigate to={rutaInicio} replace />;
   }
 
   return (

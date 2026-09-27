@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
-import { useAuth } from "../../context/AuthContext.jsx";
+import { useAuth } from "../../context/useAuth.js";
 import {
     normalizarRol,
     obtenerEtiquetaRol,
@@ -11,11 +11,13 @@ import {
 
 function Sidebar({ items = [] }) {
     const navigate = useNavigate();
+    const ubicacion = useLocation();
     const {
         usuario,
         cerrarSesion: limpiarSesion,
     } = useAuth();
     const [menuAbierto, setMenuAbierto] = useState(false);
+    const botonMenu = useRef(null);
 
     const rolNormalizado = normalizarRol(usuario?.rol);
     const informacionPanel = obtenerInformacionPanel(rolNormalizado);
@@ -51,7 +53,25 @@ function Sidebar({ items = [] }) {
     };
 
     useEffect(() => {
+        const escritorio = window.matchMedia("(min-width: 1101px)");
+        const cerrar = () => {
+            setMenuAbierto(false);
+            document.body.classList.remove("mobile-menu-open");
+        };
+        const alCambiarAncho = () => {
+            if (escritorio.matches) cerrar();
+        };
+        const alPulsarTecla = (event) => {
+            if (event.key === "Escape" && document.body.classList.contains("mobile-menu-open")) {
+                cerrar();
+                botonMenu.current?.focus();
+            }
+        };
+        escritorio.addEventListener("change", alCambiarAncho);
+        document.addEventListener("keydown", alPulsarTecla);
         return () => {
+            escritorio.removeEventListener("change", alCambiarAncho);
+            document.removeEventListener("keydown", alPulsarTecla);
             document.body.classList.remove("mobile-menu-open");
         };
     }, []);
@@ -61,13 +81,15 @@ function Sidebar({ items = [] }) {
     const manejarClicCerrarSesion = () => {
         limpiarSesion(() => {
             cerrarMenuMovil();
-            navigate("/");
+            navigate("/", { replace: true });
         });
     };
 
     return (
         <>
+            <div className="mobile-menu-bar" aria-hidden="true" />
             <button
+                ref={botonMenu}
                 className="mobile-menu-toggle"
                 type="button"
                 aria-label={
@@ -84,6 +106,18 @@ function Sidebar({ items = [] }) {
                 <span></span>
             </button>
 
+            {menuAbierto && (
+                <button
+                    className="mobile-menu-backdrop"
+                    type="button"
+                    aria-label="Cerrar menú al tocar fuera"
+                    onClick={() => {
+                        cerrarMenuMovil();
+                        botonMenu.current?.focus();
+                    }}
+                />
+            )}
+
             <aside
                 className="management-sidebar"
                 id="mobileNavigation"
@@ -91,9 +125,12 @@ function Sidebar({ items = [] }) {
             >
                 <NavLink
                     className="sidebar-logo"
-                    to="/encargado-ti"
-                    aria-label="PizzERP, inicio"
-                    onClick={cerrarMenuMovil}
+                    to={ubicacion}
+                    aria-label="PizzERP, recargar página actual"
+                    onClick={(evento) => {
+                        evento.preventDefault();
+                        window.location.reload();
+                    }}
                 >
                     <img
                         src={logoMabet}

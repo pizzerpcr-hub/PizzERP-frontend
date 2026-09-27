@@ -13,6 +13,9 @@ const obtenerCookie = (nombre) => {
 };
 
 const leerRespuesta = async (response) => {
+    if (response.status === 401 || response.status === 403) {
+        window.dispatchEvent(new Event("pizzerp:session-check"));
+    }
     return response.json().catch(() => ({}));
 };
 

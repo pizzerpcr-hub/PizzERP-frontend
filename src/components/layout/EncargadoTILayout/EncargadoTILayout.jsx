@@ -1,13 +1,13 @@
 import { Navigate, Outlet } from "react-router-dom";
 import Sidebar from "../../Sidebar/Sidebar.jsx";
-import { useAuth } from "../../../context/AuthContext.jsx";
-import { normalizarRol } from "../../../constants/roles.js";
+import { useAuth } from "../../../context/useAuth.js";
+import { puedeGestionarUsuarios } from "../../../constants/roles.js";
 import "./EncargadoTILayout.css";
 
 function EncargadoTILayout() {
     const { usuario, cargandoSesion } = useAuth();
     const navItems = [
-        ...(normalizarRol(usuario?.rol) === "ADMINISTRADOR"
+        ...(puedeGestionarUsuarios(usuario)
             ? [
                   {
                       label: "Usuarios",
@@ -25,7 +25,7 @@ function EncargadoTILayout() {
         return null;
     }
 
-    if (!usuario) {
+    if (!puedeGestionarUsuarios(usuario)) {
         return <Navigate to="/" replace />;
     }
 

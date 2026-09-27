@@ -20,6 +20,21 @@ const obtenerDatosIniciales = (usuarioInicial) => ({
     rol: normalizarRol(usuarioInicial?.rol),
 });
 
+function TextoGuardando() {
+    const [indice, setIndice] = useState(0);
+    const secuencia = [".", "..", "...", ""];
+
+    useEffect(() => {
+        const intervalo = window.setInterval(() => {
+            setIndice((actual) => (actual + 1) % 4);
+        }, 500);
+
+        return () => window.clearInterval(intervalo);
+    }, []);
+
+    return <>Guardando{secuencia[indice]}</>;
+}
+
 function RegistrarUsuarioForm({
     modo = "crear",
     usuarioInicial = null,
@@ -41,7 +56,6 @@ function RegistrarUsuarioForm({
     );
 
     const esEdicion = modo === "editar";
-    const [puntosGuardando, setPuntosGuardando] = useState("");
 
     useEffect(() => {
         const dialog = dialogRef.current;
@@ -102,27 +116,6 @@ function RegistrarUsuarioForm({
 
         return () => window.clearTimeout(temporizador);
     }, [avisosCampo.contrasena]);
-
-
-    useEffect(() => {
-        if (!isSubmitting) {
-            setPuntosGuardando("");
-            return undefined;
-        }
-
-        const secuencia = [".", "..", "...", ""];
-        let indice = 0;
-
-        setPuntosGuardando(secuencia[indice]); 
-
-        const intervalo = window.setInterval(() => {
-            indice = (indice + 1) % secuencia.length;
-            setPuntosGuardando(secuencia[indice]);
-        }, 500);
-
-        return () => window.clearInterval(intervalo);
-    }, [isSubmitting]);
-
     const mostrarErroresCampo = (errores) => {
         setAvisosCampo((actuales) => ({
             nombre_usuario: errores.nombre_usuario
@@ -318,7 +311,7 @@ function RegistrarUsuarioForm({
                             minLength="8"
                             placeholder={
                                 esEdicion
-                                    ? "Vacía para conservar la actual"
+                                    ? "Sin cambios"
                                     : "Mínimo 8 caracteres"
                             }
                             autoComplete="new-password"
@@ -397,7 +390,7 @@ function RegistrarUsuarioForm({
                         disabled={isSubmitting}
                     >
                         {isSubmitting
-                            ? `Guardando${puntosGuardando}`
+                            ? <TextoGuardando />
                             : esEdicion
                             ? "Guardar cambios"
                             : "Guardar usuario"}

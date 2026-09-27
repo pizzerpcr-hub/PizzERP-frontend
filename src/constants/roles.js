@@ -39,6 +39,21 @@ const PANEL_DESCONOCIDO = {
 export const normalizarRol = (rol) =>
     String(rol ?? "").trim().toUpperCase();
 
+export const puedeGestionarUsuarios = (usuario) =>
+    String(usuario?.estado ?? "").trim().toUpperCase() === "ACTIVO" &&
+    ["ADMINISTRADOR", "TI"].includes(normalizarRol(usuario?.rol));
+
+export const obtenerRutaInicio = (usuario) => {
+    if (String(usuario?.estado ?? "").trim().toUpperCase() !== "ACTIVO") return null;
+    const rutas = {
+        ADMINISTRADOR: "/encargado-ti/usuarios",
+        TI: "/encargado-ti/usuarios",
+        CAJA: "/caja",
+        COCINA: "/cocina",
+    };
+    return rutas[normalizarRol(usuario?.rol)] ?? null;
+};
+
 export const obtenerEtiquetaRol = (rol) => {
     const rolNormalizado = normalizarRol(rol);
 

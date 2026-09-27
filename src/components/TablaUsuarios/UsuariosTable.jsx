@@ -14,9 +14,9 @@ function UsuariosTable({
 }) {
     return (
         <div className="table-wrap">
-            <table>
-                <thead>
-                    <tr>
+            <table className="usuarios-table" role="table" aria-label="Usuarios registrados">
+                <thead role="rowgroup">
+                    <tr role="row">
                         <th>Nombre Completo</th>
                         <th>Usuario</th>
                         <th>Rol asignado</th>
@@ -26,9 +26,9 @@ function UsuariosTable({
                 </thead>
 
                 {cargando ? (
-                    <tbody>
-                        <tr>
-                            <td colSpan="5" className="cargando-usuarios">
+                    <tbody role="rowgroup">
+                        <tr role="row">
+                            <td role="cell" colSpan="5" className="cargando-usuarios">
                                 <span className="cargando-usuarios-texto" role="status">
                                     Cargando usuarios
                                 </span>
@@ -36,10 +36,10 @@ function UsuariosTable({
                         </tr>
                     </tbody>
                 ) : (
-                    <tbody id="usersTable">
+                    <tbody id="usersTable" role="rowgroup">
                         {usuarios.length === 0 ? (
-                            <tr>
-                                <td colSpan="5" className="empty-row">
+                            <tr role="row">
+                                <td role="cell" colSpan="5" className="empty-row">
                                     {hayBusqueda
                                         ? "No se encontraron usuarios."
                                         : "No hay usuarios registrados."}
@@ -65,14 +65,19 @@ function UsuariosTable({
                                 );
 
                                 return (
-                                    <tr key={usuarioListado.id_usuario}>
-                                        <td>{usuarioListado.nombre_completo}</td>
-
-                                        <td>
-                                            {usuarioListado.nombre_usuario?.toUpperCase()}
+                                    <tr role="row" className="usuario-card" key={usuarioListado.id_usuario}>
+                                        <td role="cell" className="usuario-card-nombre">
+                                            <span className="usuario-field-label" aria-hidden="true">Nombre completo</span>
+                                            <span>{usuarioListado.nombre_completo}</span>
                                         </td>
 
-                                        <td>
+                                        <td role="cell" className="usuario-card-username">
+                                            <span className="usuario-field-label" aria-hidden="true">Usuario</span>
+                                            <span>{usuarioListado.nombre_usuario?.toUpperCase()}</span>
+                                        </td>
+
+                                        <td role="cell">
+                                            <span className="usuario-field-label" aria-hidden="true">Rol asignado</span>
                                             <span
                                                 className={`role-badge ${rolNormalizado.toLowerCase()}`}
                                             >
@@ -82,7 +87,8 @@ function UsuariosTable({
                                             </span>
                                         </td>
 
-                                        <td>
+                                        <td role="cell">
+                                            <span className="usuario-field-label" aria-hidden="true">Estado</span>
                                             <span
                                                 className={`user-status ${estadoNormalizado.toLowerCase()}`}
                                             >
@@ -90,7 +96,7 @@ function UsuariosTable({
                                             </span>
                                         </td>
 
-                                        <td className="user-actions">
+                                        <td role="cell" className="user-actions">
                                             <button
                                                 type="button"
                                                 onClick={() =>

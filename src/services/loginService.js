@@ -29,7 +29,8 @@ export const verificarSesion = async (signal) => {
         );
 
         if (!response.ok) {
-            return null;
+            if (response.status === 401 || response.status === 403) return null;
+            throw new Error("No fue posible verificar la sesión.");
         }
 
         const responseData = await response.json();
@@ -103,10 +104,15 @@ export const iniciarSesion = async (datosLogin) => {
 
 
 export const cerrarSesion = async () => {
-    await fetch("/sanctum/csrf-cookie", {
+    const csrfResponse = await fetch("/sanctum/csrf-cookie", {
         method: "GET",
         credentials: "include",
+        headers: { Accept: "application/json" },
     });
+
+    if (!csrfResponse.ok) {
+        throw new Error("No fue posible preparar el cierre de sesión. Intentá nuevamente.");
+    }
 
     const cookies = document.cookie.split(";");
 

@@ -10,8 +10,8 @@ import CambiarEstadoUsuarioDialog from "../../components/TablaUsuarios/CambiarEs
 import UsuariosTable from "../../components/TablaUsuarios/UsuariosTable.jsx";
 import RegistrarUsuarioForm from "../../components/forms/RegistrarUsuarioForm/RegistrarUsuarioForm.jsx";
 
-import { normalizarRol } from "../../constants/roles.js";
-import { useAuth } from "../../context/AuthContext.jsx";
+import { puedeGestionarUsuarios } from "../../constants/roles.js";
+import { useAuth } from "../../context/useAuth.js";
 
 import {
     actualizarUsuario as actualizarUsuarioService,
@@ -20,7 +20,8 @@ import {
     registrarUsuario,
 } from "../../services/usuariosService.js";
 
-import echo from "../../services/echo.js";
+import { verificarSesion } from "../../services/loginService.js";
+import { observarUsuarios } from "../../services/observarUsuarios.js";
 
 import "./Usuarios.css";
 
@@ -109,8 +110,7 @@ function Usuarios() {
 
     const { usuario, cargandoSesion, actualizarUsuario } = useAuth();
 
-    const rolActual = normalizarRol(usuario?.rol);
-    const esAdministrador = rolActual === "ADMINISTRADOR";
+    const tieneAccesoUsuarios = puedeGestionarUsuarios(usuario);
 
     /*
      * Controla el ciclo de vida del componente.
@@ -227,7 +227,7 @@ function Usuarios() {
      * Carga inicial.
      */
     useEffect(() => {
-        if (cargandoSesion || !esAdministrador) {
+        if (cargandoSesion || !tieneAccesoUsuarios) {
             return undefined;
         }
 
@@ -253,55 +253,7 @@ function Usuarios() {
         return () => {
             controladorListadoRef.current?.abort();
         };
-    }, [cargandoSesion, cargarUsuarios, esAdministrador]);
-
-    
-    useEffect(() => {
-        if (cargandoSesion || !esAdministrador) {
-            return undefined;
-        }
-
-        const canal = echo.channel("usuarios");
-
-        /*
-         * Usuario creado.
-         */
-        canal.listen(".user.created", (evento) => {
-            
-            if (!montadoRef.current || !evento?.usuario) {
-                return;
-            }
-
-            aplicarUsuarioConfirmado(evento.usuario);
-        });
-
-        /*
-         * Usuario editado.
-         */
-        canal.listen(".user.changed", (evento) => {
-            
-            if (!montadoRef.current || !evento?.usuario) {
-                return;
-            }
-
-            aplicarUsuarioConfirmado(evento.usuario);
-        });
-
-        
-        canal.listen(".user.status-changed", (evento) => {
-            
-
-            if (!montadoRef.current || !evento?.usuario) {
-                return;
-            }
-
-            aplicarUsuarioConfirmado(evento.usuario);
-        });
-
-        return () => {
-            echo.leaveChannel("usuarios");
-        };
-    }, [cargandoSesion, esAdministrador]);
+    }, [cargandoSesion, cargarUsuarios, tieneAccesoUsuarios]);
 
     /*
      * Filtrado de usuarios.
@@ -348,7 +300,7 @@ function Usuarios() {
     }, [cargarUsuarios]);
 
     /*
-     * Aplica un usuario recibido desde el backend/Reverb.
+     * Aplica un usuario recibido desde el backend.
      *
      * Si ya existe:
      * actualiza sus datos.
@@ -387,6 +339,30 @@ function Usuarios() {
             return ordenarUsuarios(usuariosActualizados);
         });
     }, []);
+
+    useEffect(() => {
+        if (cargandoSesion || !tieneAccesoUsuarios) return undefined;
+        return observarUsuarios({
+            consultar: verificarSesion,
+            revocar: (actualizado) => {
+                solicitudListadoRef.current += 1;
+                controladorListadoRef.current?.abort();
+                setUsuarios([]);
+                actualizarUsuario(actualizado);
+            },
+            recargar: async (actualizado) => {
+                if (!montadoRef.current || document.visibilityState === "hidden") return;
+                if (["id_usuario", "nombre_completo", "nombre_usuario", "rol", "estado"]
+                    .some((campo) => usuario?.[campo] !== actualizado[campo])) {
+                    actualizarUsuario(actualizado);
+                    return;
+                }
+                // Do not race a mutation or its confirmation/rollback with a background GET.
+                if (cambiosPendientesRef.current.size || controladorListadoRef.current) return;
+                await cargarUsuarios();
+            },
+        });
+    }, [cargandoSesion, tieneAccesoUsuarios, usuario, actualizarUsuario, cargarUsuarios]);
 
     /*
      * Invalida solicitudes de listado actuales.
@@ -844,7 +820,7 @@ function Usuarios() {
     /*
      * Restricción de acceso.
      */
-    if (!esAdministrador) {
+    if (!tieneAccesoUsuarios) {
         return (
             <section
                 className="management-panel access-denied"
@@ -854,7 +830,7 @@ function Usuarios() {
 
                 <p>
                     La gestión de usuarios está disponible
-                    únicamente para administradores.
+                    únicamente para administradores y personal de TI activos.
                 </p>
             </section>
         );

@@ -14,6 +14,10 @@ export default defineConfig(({ mode }) => {
       host: "0.0.0.0",
 
       proxy: {
+        "/broadcasting": {
+          target: backendUrl,
+          changeOrigin: true,
+        },
         "/api": {
           target: backendUrl,
           changeOrigin: true,

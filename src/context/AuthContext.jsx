@@ -1,7 +1,7 @@
 import {
-    createContext,
-    useContext,
+    useCallback,
     useEffect,
+    useRef,
     useState,
 } from "react";
 
@@ -10,18 +10,29 @@ import {
     cerrarSesion as cerrarSesionService,
 } from "../services/loginService.js";
 
-import echo from "../services/echo.js";
+import { AuthContext } from "./useAuth.js";
+import { observarSesion } from "../services/observarSesion.js";
 import "../styles/cerrarSesion.css";
-
-const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
     const [usuario, setUsuario] = useState(null);
     const [cargandoSesion, setCargandoSesion] = useState(true);
     const [cerrandoSesion, setCerrandoSesion] = useState(false);
+    const montado = useRef(true);
+    const cierreTimer = useRef(null);
+    const cierreEnCurso = useRef(false);
+    const [errorCierre, setErrorCierre] = useState("");
     const [mensajeCierre, setMensajeCierre] = useState(
         "Cerrando sesión...",
     );
+
+    useEffect(() => {
+        montado.current = true;
+        return () => {
+            montado.current = false;
+            window.clearTimeout(cierreTimer.current);
+        };
+    }, []);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -57,61 +68,26 @@ export function AuthProvider({ children }) {
     }, []);
 
     useEffect(() => {
-        if (cargandoSesion || !usuario?.id_usuario) {
-            return undefined;
-        }
-
-        const canal = echo.channel("usuarios");
-
-        const manejarCambioEstado = (evento) => {
-            const usuarioActualizado = evento?.usuario;
-
-            if (!usuarioActualizado?.id_usuario) {
-                return;
-            }
-
-            const esUsuarioActual =
-                String(usuarioActualizado.id_usuario) ===
-                String(usuario.id_usuario);
-
-            if (!esUsuarioActual) {
-                return;
-            }
-
-            const estado = String(
-                usuarioActualizado.estado ?? "",
-            ).toUpperCase();
-
-            if (estado === "INACTIVO") {
-                setMensajeCierre(
-                    "Tu cuenta ha sido desactivada.",
-                );
-
-                setCerrandoSesion(true);
-
-                window.setTimeout(() => {
-                    setUsuario(null);
-                    setCerrandoSesion(false);
-                }, 1200);
-            }
-        };
-
-        canal.listen(
-            ".user.status-changed",
-            manejarCambioEstado,
-        );
-
-        return () => {
-            echo.leaveChannel("usuarios");
-        };
-    }, [cargandoSesion, usuario?.id_usuario]);
+        if (!usuario?.id_usuario || cerrandoSesion) return undefined;
+        return observarSesion({
+            consultar: verificarSesion,
+            actualizar: (actualizado) => setUsuario((actual) => {
+                if (!actualizado) return null;
+                const campos = ["id_usuario", "nombre_completo", "nombre_usuario", "rol", "estado"];
+                return campos.every((campo) => actual?.[campo] === actualizado[campo])
+                    ? actual : actualizado;
+            }),
+        });
+    }, [usuario, cerrandoSesion]);
 
     const iniciarSesion = (datosUsuario) => {
         setUsuario(datosUsuario);
     };
 
-    
     const cerrarSesion = (onFinalizado) => {
+        if (cierreEnCurso.current) return;
+        cierreEnCurso.current = true;
+        setErrorCierre("");
         setMensajeCierre("");
         setCerrandoSesion(true);
 
@@ -119,31 +95,33 @@ export function AuthProvider({ children }) {
         const inicio = Date.now();
 
         cerrarSesionService()
-            .catch((error) => {
-                // Un 401 significa que la sesión ya había expirado:
-                // es un caso esperado, no lo tratamos como error real.
-                if (error.status !== 401) {
-                    console.error("Error al cerrar sesión:", error);
-                }
-            })
-            .finally(() => {
+            .then(() => {
+                if (!montado.current) return;
                 const transcurrido = Date.now() - inicio;
                 const esperaRestante = Math.max(
                     TIEMPO_MINIMO_MS - transcurrido,
                     0,
                 );
 
-                window.setTimeout(() => {
+                cierreTimer.current = window.setTimeout(() => {
+                    if (!montado.current) return;
+                    cierreEnCurso.current = false;
                     setUsuario(null);
                     setCerrandoSesion(false);
                     onFinalizado?.();
                 }, esperaRestante);
+            })
+            .catch(() => {
+                cierreEnCurso.current = false;
+                if (!montado.current) return;
+                setCerrandoSesion(false);
+                setErrorCierre("No fue posible confirmar el cierre de sesión. Revisá tu conexión e intentá nuevamente.");
             });
     };
 
-    const actualizarUsuario = (datosUsuario) => {
+    const actualizarUsuario = useCallback((datosUsuario) => {
         setUsuario(datosUsuario);
-    };
+    }, []);
 
     return (
         <AuthContext.Provider
@@ -156,6 +134,18 @@ export function AuthProvider({ children }) {
             }}
         >
             {children}
+
+            {errorCierre && (
+                <div className="session-closing-screen">
+                    <div className="session-closing-content" role="alert">
+                        <h1>No fue posible cerrar sesión</h1>
+                        <p>{errorCierre}</p>
+                        <button type="button" onClick={() => setErrorCierre("")}>
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {cerrandoSesion && (
                 <div className="session-closing-screen">
@@ -173,8 +163,4 @@ export function AuthProvider({ children }) {
             )}
         </AuthContext.Provider>
     );
-}
-
-export function useAuth() {
-    return useContext(AuthContext);
 }
