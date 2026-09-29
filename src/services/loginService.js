@@ -17,10 +17,11 @@ const obtenerCookie = (nombre) => {
     );
 };
 
-/*
- * Extrae el mensaje real del backend a partir de una respuesta
- * de error (validación 422/429 con 'errors', o 'message' directo).
- * Si no hay nada útil, devuelve el mensaje de respaldo.
+/**
+ * Obtiene el primer error de validación o el mensaje general del servidor.
+ * @param {object} responseData - Cuerpo de la respuesta fallida.
+ * @param {string} mensajeRespaldo - Texto usado si no llegó un mensaje útil.
+ * @returns {string} Mensaje que se muestra al usuario.
  */
 const obtenerMensajeError = (responseData, mensajeRespaldo) => {
     const primerErrorDeValidacion = responseData?.errors
@@ -38,47 +39,40 @@ const obtenerMensajeError = (responseData, mensajeRespaldo) => {
     return mensajeRespaldo;
 };
 
+/**
+ * Consulta la sesión actual; una respuesta 401 o 403 indica ausencia de acceso.
+ * @param {AbortSignal} signal - Permite cancelar la consulta.
+ * @returns {Promise<object | null>} Usuario activo o null si no hay sesión válida.
+ */
 export const verificarSesion = async (signal) => {
-    try {
-        const response = await fetch(
-            `${API_URL}/api/user`,
-            {
-                credentials: "include",
-                headers: {
-                    Accept: "application/json",
-                },
-                signal,
-            }
+    const response = await fetch(
+        `${API_URL}/api/user`,
+        {
+            credentials: "include",
+            headers: {
+                Accept: "application/json",
+            },
+            signal,
+        }
+    );
+
+    if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            return null;
+        }
+
+        const responseData = await response
+            .json()
+            .catch(() => ({}));
+
+        throw new Error(
+            obtenerMensajeError(responseData, MENSAJE_SESION_FALLIDA),
         );
-
-        if (!response.ok) {
-            /*
-             * 401/403 son un caso esperado (no hay sesión válida),
-             * no un error que deba mostrarse al usuario.
-             */
-            if (response.status === 401 || response.status === 403) {
-                return null;
-            }
-
-            const responseData = await response
-                .json()
-                .catch(() => ({}));
-
-            throw new Error(
-                obtenerMensajeError(responseData, MENSAJE_SESION_FALLIDA),
-            );
-        }
-
-        const responseData = await response.json();
-
-        return responseData.usuario;
-    } catch (error) {
-        if (error.name === "AbortError") {
-            throw error;
-        }
-
-        throw error;
     }
+
+    const responseData = await response.json();
+
+    return responseData.usuario;
 };
 
 export const iniciarSesion = async (datosLogin) => {

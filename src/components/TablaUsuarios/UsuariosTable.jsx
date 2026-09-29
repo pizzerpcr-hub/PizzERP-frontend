@@ -79,7 +79,7 @@ function UsuariosTable({
                                         <td role="cell">
                                             <span className="usuario-field-label" aria-hidden="true">Rol asignado</span>
                                             <span
-                                                className={`role-badge ${rolNormalizado.toLowerCase()}`}
+                                                className="role-badge"
                                             >
                                                 {obtenerEtiquetaRol(
                                                     rolNormalizado,
@@ -90,7 +90,7 @@ function UsuariosTable({
                                         <td role="cell">
                                             <span className="usuario-field-label" aria-hidden="true">Estado</span>
                                             <span
-                                                className={`user-status ${estadoNormalizado.toLowerCase()}`}
+                                                className="user-status"
                                             >
                                                 {estadoNormalizado}
                                             </span>

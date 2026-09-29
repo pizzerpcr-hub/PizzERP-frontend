@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
+import "../forms/RegistrarUsuarioForm/RegistrarUsuarioForm.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
 import { useAuth } from "../../context/useAuth.js";
 import {
@@ -17,7 +18,15 @@ function Sidebar({ items = [] }) {
         cerrarSesion: limpiarSesion,
     } = useAuth();
     const [menuAbierto, setMenuAbierto] = useState(false);
+    const [confirmarCierre, setConfirmarCierre] = useState(false);
     const botonMenu = useRef(null);
+    const dialogCierreRef = useRef(null);
+
+    useEffect(() => {
+        const dialog = dialogCierreRef.current;
+        if (confirmarCierre) dialog?.showModal();
+        else if (dialog?.open) dialog.close();
+    }, [confirmarCierre]);
 
     const rolNormalizado = normalizarRol(usuario?.rol);
     const informacionPanel = obtenerInformacionPanel(rolNormalizado);
@@ -76,9 +85,12 @@ function Sidebar({ items = [] }) {
         };
     }, []);
 
-    // Dispara el logout de inmediato (sin nada async antes),
-    // y solo navega / cierra el menú cuando el overlay ya terminó.
+    /**
+     * Espera la confirmación del servidor antes de navegar al login.
+     * @returns {void}
+     */
     const manejarClicCerrarSesion = () => {
+        setConfirmarCierre(false);
         limpiarSesion(() => {
             cerrarMenuMovil();
             navigate("/", { replace: true });
@@ -195,12 +207,34 @@ function Sidebar({ items = [] }) {
                     <button
                         className="logout-button"
                         type="button"
-                        onClick={manejarClicCerrarSesion}
+                        onClick={() => setConfirmarCierre(true)}
                     >
                         Cerrar sesión
                     </button>
                 </div>
             </aside>
+
+            <dialog
+                ref={dialogCierreRef}
+                className="user-dialog small logout-confirmation"
+                onCancel={(event) => {
+                    event.preventDefault();
+                    setConfirmarCierre(false);
+                }}
+            >
+                <div className="logout-confirmation-content">
+                    <div className="dialog-heading">
+                        <div>
+                            <p className="eyebrow">Cerrar sesión</p>
+                            <h2>¿Deseas cerrar sesión?</h2>
+                        </div>
+                    </div>
+                    <div className="dialog-actions">
+                        <button className="management-secondary" type="button" onClick={() => setConfirmarCierre(false)}>Cancelar</button>
+                        <button className="management-danger" type="button" onClick={manejarClicCerrarSesion}>Confirmar</button>
+                    </div>
+                </div>
+            </dialog>
         </>
     );
 }
