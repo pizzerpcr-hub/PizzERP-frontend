@@ -149,7 +149,7 @@ export function AuthProvider({ children }) {
 
     // WebSocket permite revocar el acceso sin esperar la siguiente consulta.
     useEffect(() => {
-        if (!usuario?.id_usuario || cerrandoSesion) {
+        if (!usuario?.id_usuario || cerrandoSesion || !echo) {
             return undefined;
         }
 

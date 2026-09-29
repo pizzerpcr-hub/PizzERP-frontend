@@ -3,7 +3,7 @@ import Pusher from "pusher-js";
 
 window.Pusher = Pusher;
 
-const echo = new Echo({
+const echo = import.meta.env.VITE_REVERB_APP_KEY ? new Echo({
     broadcaster: "reverb",
     key: import.meta.env.VITE_REVERB_APP_KEY,
     wsHost: import.meta.env.VITE_REVERB_HOST,
@@ -48,6 +48,6 @@ const echo = new Echo({
             }
         },
     }),
-});
+}) : null;
 
 export default echo;
