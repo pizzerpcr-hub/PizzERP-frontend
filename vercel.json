@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://pizzerp-backend.onrender.com/api/:path*"
+    },
+    {
+      "source": "/sanctum/:path*",
+      "destination": "https://pizzerp-backend.onrender.com/sanctum/:path*"
+    },
+    {
+      "source": "/broadcasting/:path*",
+      "destination": "https://pizzerp-backend.onrender.com/broadcasting/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
