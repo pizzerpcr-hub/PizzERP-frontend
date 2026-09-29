@@ -9,6 +9,7 @@ import {
 import CambiarEstadoUsuarioDialog from "../../components/TablaUsuarios/CambiarEstadoUsuarioDialog.jsx";
 import UsuariosTable from "../../components/TablaUsuarios/UsuariosTable.jsx";
 import RegistrarUsuarioForm from "../../components/forms/RegistrarUsuarioForm/RegistrarUsuarioForm.jsx";
+import ModificarUsuarioForm from "../../components/forms/ModificarUsuarioForm/ModificarUsuarioForm.jsx";
 
 import { puedeGestionarUsuarios } from "../../constants/roles.js";
 import { useAuth } from "../../context/useAuth.js";
@@ -50,7 +51,7 @@ const obtenerErroresCampo = (error) => {
 
     const erroresCampo = {};
 
-    for (const campo of ["nombre_usuario", "contrasena"]) {
+    for (const campo of ["nombre_completo", "nombre_usuario", "contrasena", "rol"]) {
         const mensajes = error.errors?.[campo];
         const mensaje = Array.isArray(mensajes) ? mensajes[0] : mensajes;
 
@@ -60,26 +61,6 @@ const obtenerErroresCampo = (error) => {
     }
 
     return Object.keys(erroresCampo).length ? erroresCampo : null;
-};
-
-const obtenerErrorNoAsociado = (error) => {
-    if (error.status !== 422 || !error.errors) {
-        return null;
-    }
-
-    for (const [campo, mensajes] of Object.entries(error.errors)) {
-        if (campo === "nombre_usuario" || campo === "contrasena") {
-            continue;
-        }
-
-        const mensaje = Array.isArray(mensajes) ? mensajes[0] : mensajes;
-
-        if (typeof mensaje === "string" && mensaje) {
-            return mensaje;
-        }
-    }
-
-    return null;
 };
 
 function Usuarios() {
@@ -92,7 +73,6 @@ function Usuarios() {
 
     const [enviando, setEnviando] = useState(false);
 
-    const [mensajeEstado, setMensajeEstado] = useState("");
     const [mensajeGeneral, setMensajeGeneral] = useState(null);
 
     const [busqueda, setBusqueda] = useState("");
@@ -112,9 +92,6 @@ function Usuarios() {
 
     const tieneAccesoUsuarios = puedeGestionarUsuarios(usuario);
 
-    /*
-     * Controla el ciclo de vida del componente.
-     */
     useEffect(() => {
         montadoRef.current = true;
 
@@ -125,9 +102,6 @@ function Usuarios() {
         };
     }, []);
 
-    /*
-     * Oculta automáticamente las notificaciones.
-     */
     useEffect(() => {
         if (
             mensajeGeneral?.tipo !== "exito" &&
@@ -140,13 +114,15 @@ function Usuarios() {
             setMensajeGeneral((mensajeActual) =>
                 mensajeActual === mensajeGeneral ? null : mensajeActual,
             );
-        }, mensajeGeneral.tipo === "error" ? 5000 : 4000);
+        }, 5000);
 
         return () => window.clearTimeout(temporizador);
     }, [mensajeGeneral]);
 
-    /*
-     * Carga el listado de usuarios.
+    /**
+     * Consulta el listado y descarta respuestas de solicitudes anteriores.
+     * @param {{ mostrarCarga?: boolean }} opciones - Indica si se muestra la carga.
+     * @returns {Promise<Array<object> | null>} Usuarios recibidos, o null si se descartó la consulta.
      */
     const cargarUsuarios = useCallback(
         async ({ mostrarCarga = false } = {}) => {
@@ -223,9 +199,6 @@ function Usuarios() {
         [],
     );
 
-    /*
-     * Carga inicial.
-     */
     useEffect(() => {
         if (cargandoSesion || !tieneAccesoUsuarios) {
             return undefined;
@@ -255,9 +228,6 @@ function Usuarios() {
         };
     }, [cargandoSesion, cargarUsuarios, tieneAccesoUsuarios]);
 
-    /*
-     * Filtrado de usuarios.
-     */
     const usuariosFiltrados = useMemo(() => {
         const termino = busqueda.trim().toLocaleLowerCase();
 
@@ -279,8 +249,9 @@ function Usuarios() {
         );
     }, [busqueda, usuarios]);
 
-    /*
-     * Recarga de respaldo después de un cambio.
+    /**
+     * Reconcilia la tabla con el servidor tras un cambio optimista.
+     * @returns {Promise<void>} Finaliza después de actualizar o mostrar el fallo de recarga.
      */
     const reconciliarDespuesDeCambio = useCallback(async () => {
         try {
@@ -299,14 +270,10 @@ function Usuarios() {
         }
     }, [cargarUsuarios]);
 
-    /*
-     * Aplica un usuario recibido desde el backend.
-     *
-     * Si ya existe:
-     * actualiza sus datos.
-     *
-     * Si no existe:
-     * lo agrega.
+    /**
+     * Actualiza o incorpora el usuario confirmado por el servidor.
+     * @param {object} usuarioConfirmado - Usuario devuelto por la operación.
+     * @returns {void}
      */
     const aplicarUsuarioConfirmado = useCallback((usuarioConfirmado) => {
         if (
@@ -357,16 +324,13 @@ function Usuarios() {
                     actualizarUsuario(actualizado);
                     return;
                 }
-                // Do not race a mutation or its confirmation/rollback with a background GET.
+                // La consulta de fondo no debe reemplazar un cambio pendiente.
                 if (cambiosPendientesRef.current.size || controladorListadoRef.current) return;
                 await cargarUsuarios();
             },
         });
     }, [cargandoSesion, tieneAccesoUsuarios, usuario, actualizarUsuario, cargarUsuarios]);
 
-    /*
-     * Invalida solicitudes de listado actuales.
-     */
     const invalidarListado = () => {
         solicitudListadoRef.current += 1;
 
@@ -377,8 +341,11 @@ function Usuarios() {
         listadoVigenteRef.current = false;
     };
 
-    /*
-     * Inicia un cambio optimista.
+    /**
+     * Muestra un cambio provisional y registra la operación pendiente.
+     * @param {object} anterior - Usuario antes del cambio.
+     * @param {object} provisional - Usuario mostrado mientras responde el servidor.
+     * @returns {boolean} Si se inició el cambio.
      */
     const iniciarCambioOptimista = (anterior, provisional) => {
         const id = String(anterior.id_usuario);
@@ -412,9 +379,6 @@ function Usuarios() {
         return true;
     };
 
-    /*
-     * Finaliza un cambio optimista.
-     */
     const terminarCambioOptimista = (id) => {
         cambiosPendientesRef.current.delete(String(id));
 
@@ -423,8 +387,15 @@ function Usuarios() {
         );
     };
 
-    /*
-     * Ejecuta una operación con actualización optimista.
+    /**
+     * Confirma un cambio provisional o restaura el usuario anterior si falla.
+     * @param {object} anterior - Datos previos del usuario.
+     * @param {object} provisional - Datos mostrados durante la solicitud.
+     * @param {Function} solicitud - Operación que envía el cambio al servidor.
+     * @param {string} mensajeExito - Texto del aviso de confirmación.
+     * @param {boolean} sincronizarCuenta - Actualiza la sesión si cambia la cuenta actual.
+     * @param {boolean} mostrarErroresDeCampo - Devuelve errores de validación al formulario.
+     * @returns {Promise<object | null> | false} Resultado del servidor o false si ya hay un cambio pendiente.
      */
     const ejecutarCambioOptimista = (
         anterior,
@@ -470,15 +441,10 @@ function Usuarios() {
                     : null;
 
                 if (erroresCampo) {
-                    const mensajeGeneral =
-                        obtenerErrorNoAsociado(error);
-
-                    if (mensajeGeneral) {
-                        setMensajeGeneral({
-                            tipo: "error",
-                            texto: mensajeGeneral,
-                        });
-                    }
+                    setMensajeGeneral({
+                        tipo: "error",
+                        texto: "No se pudo guardar el usuario. Intenta de nuevo.",
+                    });
 
                     return {
                         erroresCampo,
@@ -488,8 +454,9 @@ function Usuarios() {
                 setMensajeGeneral({
                     tipo: "error",
                     texto:
-                        error.message ||
-                        "No fue posible guardar el cambio.",
+                        mostrarErroresDeCampo
+                            ? "No se pudo guardar el usuario. Intenta de nuevo."
+                            : error.message || "No fue posible guardar el cambio.",
                 });
 
                 return null;
@@ -508,10 +475,6 @@ function Usuarios() {
                 texto: mensajeExito,
             });
 
-            /*
-             * Si el usuario modificó su propia cuenta,
-             * actualizamos también la sesión local.
-             */
             if (sincronizarCuenta && respuesta?.usuario) {
                 actualizarUsuario({
                     ...usuario,
@@ -519,9 +482,6 @@ function Usuarios() {
                 });
             }
 
-            /*
-             * Reconciliación de respaldo.
-             */
             void reconciliarDespuesDeCambio();
 
             return {
@@ -532,18 +492,12 @@ function Usuarios() {
         return confirmar();
     };
 
-    /*
-     * Abrir formulario de registro.
-     */
     const abrirRegistro = () => {
         setUsuarioEditando(null);
         setMensajeGeneral(null);
         setMostrarForm(true);
     };
 
-    /*
-     * Abrir formulario de edición.
-     */
     const abrirEdicion = (usuarioListado) => {
         if (
             cambiosPendientesRef.current.has(
@@ -558,9 +512,6 @@ function Usuarios() {
         setMostrarForm(true);
     };
 
-    /*
-     * Cerrar formulario.
-     */
     const cerrarFormulario = () => {
         if (enviando) {
             return;
@@ -570,8 +521,10 @@ function Usuarios() {
         setUsuarioEditando(null);
     };
 
-    /*
-     * Registrar o editar usuario.
+    /**
+     * Guarda los datos del formulario y actualiza la tabla tras la respuesta.
+     * @param {object} datosUsuario - Campos validados del formulario.
+     * @returns {Promise<object | null | void>} Resultado de validación o confirmación.
      */
     const handleFormSubmit = async (datosUsuario) => {
         const usuarioEnEdicion = usuarioEditando;
@@ -581,9 +534,7 @@ function Usuarios() {
             .trim()
             .toUpperCase();
 
-        /*
-         * Validación local para evitar nombres duplicados.
-         */
+        // La validación local solo es fiable mientras el listado esté vigente.
         if (
             listadoVigenteRef.current &&
             usuarios.some(
@@ -605,9 +556,6 @@ function Usuarios() {
             };
         }
 
-        /*
-        * EDICIÓN
-        */
         if (esEdicion) {
             const anterior = usuarioPublico(
                 usuarios.find(
@@ -664,9 +612,6 @@ function Usuarios() {
             return resultado;
         }
 
-        /*
-         * REGISTRO
-         */
         setEnviando(true);
         setMensajeGeneral(null);
 
@@ -682,15 +627,10 @@ function Usuarios() {
                     obtenerErroresCampo(error);
 
                 if (erroresCampo) {
-                    const mensajeGeneral =
-                        obtenerErrorNoAsociado(error);
-
-                    if (mensajeGeneral) {
-                        setMensajeGeneral({
-                            tipo: "error",
-                            texto: mensajeGeneral,
-                        });
-                    }
+                    setMensajeGeneral({
+                        tipo: "error",
+                        texto: "No se pudo guardar el usuario. Intenta de nuevo.",
+                    });
 
                     return {
                         erroresCampo,
@@ -700,8 +640,7 @@ function Usuarios() {
                 setMensajeGeneral({
                     tipo: "error",
                     texto:
-                        error.message ||
-                        "No fue posible guardar el usuario.",
+                        "No se pudo guardar el usuario. Intenta de nuevo.",
                 });
             }
 
@@ -731,9 +670,6 @@ function Usuarios() {
         void reconciliarDespuesDeCambio();
     };
 
-    /*
-     * Abrir diálogo de cambio de estado.
-     */
     const abrirCambioEstado = (usuarioListado) => {
         if (
             cambiosPendientesRef.current.has(
@@ -744,24 +680,20 @@ function Usuarios() {
         }
 
         setUsuarioSeleccionado(usuarioListado);
-        setMensajeEstado("");
         setMensajeGeneral(null);
     };
 
-    /*
-     * Cerrar diálogo de cambio de estado.
-     */
     const cerrarCambioEstado = () => {
         if (enviando) {
             return;
         }
 
         setUsuarioSeleccionado(null);
-        setMensajeEstado("");
     };
 
-    /*
-     * Activar/desactivar usuario.
+    /**
+     * Solicita el estado contrario al actual con actualización provisional.
+     * @returns {Promise<void>} Termina al iniciar o descartar el cambio.
      */
     const handleCambioEstado = async () => {
         const usuarioObjetivo = usuarioSeleccionado;
@@ -806,20 +738,13 @@ function Usuarios() {
 
         if (cambioIniciado) {
             setUsuarioSeleccionado(null);
-            setMensajeEstado("");
         }
     };
 
-    /*
-     * Mientras se comprueba la sesión.
-     */
     if (cargandoSesion) {
         return null;
     }
 
-    /*
-     * Restricción de acceso.
-     */
     if (!tieneAccesoUsuarios) {
         return (
             <section
@@ -836,9 +761,6 @@ function Usuarios() {
         );
     }
 
-    /*
-     * Notificación general.
-     */
     const notificacionGeneral = (
         <div
             className="management-toast-region"
@@ -870,6 +792,10 @@ function Usuarios() {
             )}
         </div>
     );
+
+    const FormularioUsuario = usuarioEditando
+        ? ModificarUsuarioForm
+        : RegistrarUsuarioForm;
 
     return (
         <>
@@ -941,12 +867,7 @@ function Usuarios() {
             </section>
 
             {mostrarForm && (
-                <RegistrarUsuarioForm
-                    modo={
-                        usuarioEditando
-                            ? "editar"
-                            : "crear"
-                    }
+                <FormularioUsuario
                     usuarioInicial={usuarioEditando}
                     onSubmit={handleFormSubmit}
                     onClose={cerrarFormulario}
@@ -959,7 +880,6 @@ function Usuarios() {
                 usuarioSeleccionado={
                     usuarioSeleccionado
                 }
-                error={mensajeEstado}
                 isSubmitting={enviando}
                 onConfirm={handleCambioEstado}
                 onClose={cerrarCambioEstado}

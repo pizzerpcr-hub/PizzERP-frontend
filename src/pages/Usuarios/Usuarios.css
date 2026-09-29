@@ -148,10 +148,15 @@
     border-left: 3px solid #8b8178;
     border-radius: 6px;
     background: #faf9f7;
-    color: #4b403a;
+    color: #382e29;
     font-size: 14px;
     line-height: 1.4;
     pointer-events: auto;
+}
+
+.management-toast span {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .management-toast.exito {
@@ -349,34 +354,11 @@
     box-shadow: none;
     filter: none;
     text-shadow: none;
+    color: inherit;
 }
 
 .usuario-field-label {
     display: none;
-}
-
-.role-badge.administrador {
-    color: #704044;
-}
-
-.role-badge.caja {
-    color: #755322;
-}
-
-.role-badge.cocina {
-    color: #315d6a;
-}
-
-.role-badge.ti {
-    color: #594c78;
-}
-
-.user-status {
-    color: #365f46;
-}
-
-.user-status.inactivo {
-    color: #7a4545;
 }
 
 /* =========================
@@ -648,7 +630,7 @@
 .dialog-hint {
     margin: -2px 0 0;
 
-    color: #796c66;
+    color: #6f625d;
 
     font-size: 14px;
     line-height: 1.45;
@@ -749,10 +731,6 @@
     .management-panel-header p {
         font-size: 14px;
     }
-
-    .users-panel table {
-        min-width: 520px;
-    }
 }
 
 @media (max-width: 359px) {
@@ -762,10 +740,6 @@
 
     .management-header h1 {
         font-size: 22px;
-    }
-
-    .users-panel table {
-        min-width: 480px;
     }
 }
 
@@ -850,5 +824,11 @@
     .users-panel .usuarios-table td.cargando-usuarios {
         display: grid;
         place-content: center;
+    }
+}
+
+@media (max-width: 420px) {
+    .usuarios-table .usuario-card {
+        grid-template-columns: 1fr;
     }
 }

@@ -43,6 +43,14 @@ const solicitarCsrf = async () => {
     return obtenerCookie("XSRF-TOKEN");
 };
 
+/**
+ * Envía una escritura autenticada y conserva los errores de validación por campo.
+ * @param {string} ruta - Ruta de la API.
+ * @param {string} metodo - Método HTTP.
+ * @param {object} datos - Datos enviados al servidor.
+ * @param {string} mensajePredeterminado - Texto usado si la respuesta no incluye error.
+ * @returns {Promise<object>} Cuerpo de la respuesta confirmada.
+ */
 const enviarMutacion = async (
     ruta,
     metodo,

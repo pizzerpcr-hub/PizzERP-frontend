@@ -34,9 +34,6 @@ function Login() {
 
   const bloqueado = segundosRestantes > 0;
 
-  /*
-   * Cuenta regresiva mientras dura el bloqueo por intentos.
-   */
   useEffect(() => {
       if (segundosRestantes <= 0) {
           return undefined;
@@ -71,7 +68,7 @@ function Login() {
       [name]: type === "checkbox" ? checked : value,
     }));
 
-    if (formMessage && !bloqueado) {
+    if (formMessage && !bloqueado && name !== "remember") {
       setFormMessage("");
       setMessageType("");
     }
@@ -217,6 +214,7 @@ function Login() {
                 placeholder="Ingresa tu usuario"
                 value={formData.username}
                 onChange={handleChange}
+                aria-invalid={messageType === "error"}
                 disabled={isSubmitting || bloqueado}
                 required
               />
@@ -241,6 +239,7 @@ function Login() {
                   minLength={8}
                   value={formData.password}
                   onChange={handleChange}
+                  aria-invalid={messageType === "error"}
                   disabled={isSubmitting || bloqueado}
                   required
                 />

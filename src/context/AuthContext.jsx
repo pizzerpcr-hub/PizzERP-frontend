@@ -30,10 +30,6 @@ export function AuthProvider({ children }) {
     const cierreTimer = useRef(null);
     const cierreEnCurso = useRef(false);
 
-    /*
-     * Controla el montaje del provider y limpia
-     * cualquier temporizador pendiente.
-     */
     useEffect(() => {
         montado.current = true;
 
@@ -43,9 +39,6 @@ export function AuthProvider({ children }) {
         };
     }, []);
 
-    /*
-     * Restaurar sesión al cargar la aplicación.
-     */
     useEffect(() => {
         const controller = new AbortController();
 
@@ -79,9 +72,9 @@ export function AuthProvider({ children }) {
         };
     }, []);
 
-    /*
-     * Cierra la sesión automáticamente cuando el backend
-     * determina que el usuario ya no puede acceder.
+    /**
+     * Muestra el aviso de revocación y retira la sesión tras una pausa breve.
+     * @returns {void}
      */
     const cerrarPorPermisos = useCallback(() => {
         if (!montado.current || cierreEnCurso.current) {
@@ -95,15 +88,8 @@ export function AuthProvider({ children }) {
             "Tu cuenta ha sido desactivada o ya no tienes permisos para acceder al sistema.",
         );
 
-        /*
-         * La pantalla aparece inmediatamente.
-         */
         setCerrandoSesion(true);
 
-        /*
-         * Después de mostrar el mensaje se elimina la sesión
-         * local y se regresa al login.
-         */
         cierreTimer.current = window.setTimeout(() => {
             if (!montado.current) {
                 return;
@@ -117,10 +103,7 @@ export function AuthProvider({ children }) {
         }, 1500);
     }, []);
 
-    /*
-     * Vigila si el usuario sigue teniendo una sesión válida.
-     * (Respaldo por polling, cada 30s o al recuperar foco/visibilidad.)
-     */
+    // La consulta periódica respalda la notificación inmediata por WebSocket.
     useEffect(() => {
         if (
             !usuario?.id_usuario ||
@@ -133,19 +116,11 @@ export function AuthProvider({ children }) {
             consultar: verificarSesion,
 
             actualizar: (actualizado) => {
-                /*
-                 * 401 o 403 desde /api/user terminan aquí
-                 * porque verificarSesion() devuelve null.
-                 */
                 if (!actualizado) {
                     cerrarPorPermisos();
                     return;
                 }
 
-                /*
-                 * Si el usuario sigue activo, solamente
-                 * actualizamos los datos que hayan cambiado.
-                 */
                 setUsuario((actual) => {
                     const campos = [
                         "id_usuario",
@@ -172,11 +147,7 @@ export function AuthProvider({ children }) {
         cerrarPorPermisos,
     ]);
 
-    /*
-     * Reacciona de inmediato cuando el backend notifica, vía
-     * WebSocket, que el usuario fue desactivado — sin esperar
-     * al polling de respaldo de observarSesion.
-     */
+    // WebSocket permite revocar el acceso sin esperar la siguiente consulta.
     useEffect(() => {
         if (!usuario?.id_usuario || cerrandoSesion) {
             return undefined;
@@ -215,15 +186,14 @@ export function AuthProvider({ children }) {
         };
     }, [usuario?.id_usuario, cerrandoSesion, cerrarPorPermisos]);
 
-    /*
-     * Establece el usuario después de iniciar sesión.
-     */
     const iniciarSesion = useCallback((datosUsuario) => {
         setUsuario(datosUsuario);
     }, []);
 
-    /*
-     * Cierre de sesión manual.
+    /**
+     * Cierra la sesión en el servidor y ejecuta la acción posterior al terminar.
+     * @param {Function} onFinalizado - Acción posterior a un cierre confirmado.
+     * @returns {void}
      */
     const cerrarSesion = useCallback((onFinalizado) => {
         if (cierreEnCurso.current) {
@@ -233,7 +203,7 @@ export function AuthProvider({ children }) {
         cierreEnCurso.current = true;
 
         setErrorCierre("");
-        setMensajeCierre("Cerrando sesión...");
+        setMensajeCierre("Un momento, estamos cerrando tu sesión.");
         setCerrandoSesion(true);
 
         const TIEMPO_MINIMO_MS = 900;
@@ -280,9 +250,6 @@ export function AuthProvider({ children }) {
             });
     }, []);
 
-    /*
-     * Actualiza los datos del usuario desde otros componentes.
-     */
     const actualizarUsuario = useCallback((datosUsuario) => {
         setUsuario(datosUsuario);
     }, []);

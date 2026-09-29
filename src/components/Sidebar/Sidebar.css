@@ -183,6 +183,11 @@
     font-weight: 600;
 }
 
+.management-profile > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .management-profile small {
     color: rgba(255, 255, 255, 0.62);
 
@@ -573,5 +578,61 @@
     .logout-button {
         width: 100%;
         min-height: 44px;
+    }
+}
+.logout-confirmation-content {
+    padding: 25px;
+}
+
+.logout-confirmation .dialog-heading {
+    margin-bottom: 0;
+}
+
+.logout-confirmation .dialog-heading h2 {
+    margin-top: 3px;
+}
+
+.logout-confirmation .dialog-actions {
+    flex-direction: row;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.logout-confirmation .dialog-actions button {
+    flex: 0 1 140px;
+    width: auto;
+    min-width: 0;
+    min-height: 40px;
+    padding: 9px 14px;
+    border: 0;
+    border-radius: 8px;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.logout-confirmation .management-secondary {
+    color: #57392f;
+    background: #f1e9e3;
+}
+
+.logout-confirmation .management-secondary:hover {
+    background: #e9ddd5;
+}
+
+.logout-confirmation .management-danger {
+    color: #fff;
+    background: #b42318;
+}
+
+.logout-confirmation .management-danger:hover {
+    background: #991b1b;
+}
+
+@media (max-width: 480px) {
+    .logout-confirmation-content {
+        padding: 24px 20px;
     }
 }

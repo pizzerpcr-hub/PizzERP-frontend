@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 
 function CambiarEstadoUsuarioDialog({
     usuarioSeleccionado,
-    error,
     isSubmitting,
     onConfirm,
     onClose,
@@ -87,7 +86,7 @@ function CambiarEstadoUsuarioDialog({
 
                         <h2>
                             {reactivando
-                                ? "¿Confirmar reactivación?"
+                                ? "¿Confirmar activación?"
                                 : "¿Confirmar desactivación?"}
                         </h2>
                     </div>
@@ -102,16 +101,6 @@ function CambiarEstadoUsuarioDialog({
                         ×
                     </button>
                 </div>
-
-                {error && (
-                    <p
-                        className="dialog-message visible"
-                        role="alert"
-                        aria-live="polite"
-                    >
-                        {error}
-                    </p>
-                )}
 
                 <p className="status-dialog-copy">
                     {reactivando
@@ -141,7 +130,7 @@ function CambiarEstadoUsuarioDialog({
                         {isSubmitting
                             ? "Guardando..."
                             : reactivando
-                              ? "Reactivar"
+                              ? "Activar"
                               : "Desactivar"}
                     </button>
                 </div>
