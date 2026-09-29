@@ -153,7 +153,8 @@ export function AuthProvider({ children }) {
             return undefined;
         }
 
-        const canal = echo.channel("usuarios");
+        const nombreCanal = `usuario.${usuario.id_usuario}`;
+        const canal = echo.private(nombreCanal);
 
         const manejarCambioEstado = (evento) => {
             const usuarioActualizado = evento?.usuario;
@@ -182,7 +183,7 @@ export function AuthProvider({ children }) {
         canal.listen(".user.status-changed", manejarCambioEstado);
 
         return () => {
-            echo.leaveChannel("usuarios");
+            echo.leave(nombreCanal);
         };
     }, [usuario?.id_usuario, cerrandoSesion, cerrarPorPermisos]);
 

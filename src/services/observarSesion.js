@@ -19,7 +19,7 @@ export const observarSesion = ({ consultar, actualizar, ventana = window, docume
             if (pendiente === controller) pendiente = null;
         }
     };
-    const intervalo = ventana.setInterval(revisar, 30000);
+    const intervalo = ventana.setInterval(revisar, 10000);
     ventana.addEventListener("focus", revisar);
     ventana.addEventListener("pizzerp:session-check", revisar);
     documento.addEventListener("visibilitychange", revisar);
