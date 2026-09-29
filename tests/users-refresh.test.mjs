@@ -8,7 +8,7 @@ function entorno() {
     documento.visibilityState = "visible";
     let tick, cancelado = false;
     ventana.setInterval = (callback, ms) => {
-        assert.equal(ms, 30000);
+        assert.equal(ms, 10000);
         tick = callback;
         return 1;
     };
