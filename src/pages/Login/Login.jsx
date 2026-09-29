@@ -1,11 +1,28 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./Login.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../../context/useAuth.js";
+import { obtenerRutaInicio } from "../../constants/roles.js";
+import { iniciarSesion as iniciarSesionService } from "../../services/loginService.js";
+
+const formatearTiempo = (segundosTotales) => {
+    const minutos = Math.floor(segundosTotales / 60);
+    const segundos = segundosTotales % 60;
+
+    return `${minutos}:${String(segundos).padStart(2, "0")}`;
+};
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [segundosRestantes, setSegundosRestantes] = useState(0);
+  const mensajeBaseRef = useRef("");
+  const {
+    usuario, cargandoSesion, iniciarSesion,
+  } = useAuth();
 
   const [formData, setFormData] = useState({
     username: "",
@@ -15,41 +32,112 @@ function Login() {
 
   const currentYear = new Date().getFullYear();
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const bloqueado = segundosRestantes > 0;
 
-    setFormData((prev) => ({
-      ...prev,
+  useEffect(() => {
+      if (segundosRestantes <= 0) {
+          return undefined;
+      }
+
+      const intervalo = window.setInterval(() => {
+          setSegundosRestantes((actuales) => {
+              const siguiente = actuales - 1;
+
+              if (siguiente <= 0) {
+                  setFormMessage("");
+                  setMessageType("");
+                  return 0;
+              }
+
+              setFormMessage(
+                  `${mensajeBaseRef.current} Intenta nuevamente en ${formatearTiempo(siguiente)}.`,
+              );
+
+              return siguiente;
+          });
+      }, 1000);
+
+      return () => window.clearInterval(intervalo);
+  }, [segundosRestantes > 0]);
+
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
+
+    setFormData((previousData) => ({
+      ...previousData,
       [name]: type === "checkbox" ? checked : value,
     }));
 
-    if (formMessage) {
+    if (formMessage && !bloqueado && name !== "remember") {
       setFormMessage("");
       setMessageType("");
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+      event.preventDefault();
 
-    if (!formData.username.trim() || !formData.password.trim()) {
-      setFormMessage("Ingresa tu usuario y contraseña.");
-      setMessageType("error");
-      return;
-    }
+      if (bloqueado) {
+          return;
+      }
 
-    if (formData.password.length < 4) {
-      setFormMessage("La contraseña debe tener al menos 4 caracteres.");
-      setMessageType("error");
-      return;
-    }
+      if (!formData.username.trim() || !formData.password) {
+          setFormMessage("Por favor, completa todos los campos.");
+          setMessageType("error");
+          return;
+      }
 
-    // Aquí posteriormente conectarías el backend/API.
-    setFormMessage("Datos ingresados correctamente.");
-    setMessageType("success");
+      setIsSubmitting(true);
+      setFormMessage("");
+      setMessageType("");
 
-    console.log("Login:", formData);
+      try {
+          const responseData = await iniciarSesionService({
+              username: formData.username.trim(),
+              password: formData.password,
+              remember: formData.remember,
+          });
+
+          setFormMessage(
+              `Bienvenido, ${responseData.usuario.nombre_completo}.`
+          );
+          setMessageType("success");
+
+          iniciarSesion(responseData.usuario);
+
+          setFormData((previousData) => ({
+              ...previousData,
+              password: "",
+          }));
+      } catch (error) {
+          setMessageType("error");
+
+          if (typeof error.retryAfter === "number" && error.retryAfter > 0) {
+              mensajeBaseRef.current = error.message;
+
+              setFormMessage(
+                  `${error.message} Intenta nuevamente en ${formatearTiempo(error.retryAfter)}.`,
+              );
+
+              setSegundosRestantes(error.retryAfter);
+          } else {
+              setFormMessage(
+                  error.message || "No fue posible iniciar sesión."
+              );
+          }
+      } finally {
+          setIsSubmitting(false);
+      }
   };
+
+  if (cargandoSesion) {
+    return null;
+  }
+
+  const rutaInicio = obtenerRutaInicio(usuario);
+  if (rutaInicio) {
+    return <Navigate to={rutaInicio} replace />;
+  }
 
   return (
     <main className="login-layout">
@@ -57,13 +145,13 @@ function Login() {
         className="login-sidebar"
         aria-label="Información de PizzERP"
       >
-        <a
-          className="sidebar-logo"
-          href="#"
+        <a 
+          className="login-logo"
+          href="/"
           aria-label="PizzERP, inicio"
         >
           <img
-            src= {logoMabet}
+            src={logoMabet}
             alt="Logo de Pizzería Mabet"
           />
         </a>
@@ -74,8 +162,8 @@ function Login() {
           <h1>Todo el negocio, en un solo lugar.</h1>
 
           <p>
-            Administra pedidos, ventas e inventario con PizzERP de forma
-            simple y segura.
+            Administra pedidos, ventas e inventario con PizzERP
+            de forma simple y segura.
           </p>
         </div>
 
@@ -101,6 +189,7 @@ function Login() {
             id="loginForm"
             onSubmit={handleSubmit}
             noValidate
+            aria-busy={isSubmitting}
           >
             {formMessage && (
               <p
@@ -125,6 +214,8 @@ function Login() {
                 placeholder="Ingresa tu usuario"
                 value={formData.username}
                 onChange={handleChange}
+                aria-invalid={messageType === "error"}
+                disabled={isSubmitting || bloqueado}
                 required
               />
             </div>
@@ -140,12 +231,16 @@ function Login() {
                 <input
                   id="password"
                   name="password"
-                  type={showPassword ? "text" : "password"}
+                  type={
+                    showPassword ? "text" : "password"
+                  }
                   autoComplete="current-password"
                   placeholder="Ingresa tu contraseña"
-                  minLength={4}
+                  minLength={8}
                   value={formData.password}
                   onChange={handleChange}
+                  aria-invalid={messageType === "error"}
+                  disabled={isSubmitting || bloqueado}
                   required
                 />
 
@@ -159,8 +254,11 @@ function Login() {
                   }
                   aria-pressed={showPassword}
                   onClick={() =>
-                    setShowPassword((prev) => !prev)
+                    setShowPassword(
+                      (previousValue) => !previousValue,
+                    )
                   }
+                  disabled={isSubmitting || bloqueado}
                 >
                   {showPassword ? "Ocultar" : "Mostrar"}
                 </button>
@@ -173,6 +271,7 @@ function Login() {
                 name="remember"
                 checked={formData.remember}
                 onChange={handleChange}
+                disabled={isSubmitting || bloqueado}
               />
 
               <span>Recordarme en este equipo</span>
@@ -181,8 +280,13 @@ function Login() {
             <button
               className="login-button"
               type="submit"
+              disabled={isSubmitting || bloqueado}
             >
-              Ingresar al sistema
+              {bloqueado
+                ? `Espera ${formatearTiempo(segundosRestantes)}`
+                : isSubmitting
+                ? "Verificando..."
+                : "Ingresar al sistema"}
             </button>
           </form>
 

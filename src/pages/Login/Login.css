@@ -37,7 +37,7 @@
     );
 }
 
-.sidebar-logo {
+.login-logo {
   display: block;
 
   width: min(250px, 100%);
@@ -50,7 +50,7 @@
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.25);
 }
 
-.sidebar-logo img {
+.login-logo img {
   display: block;
 
   width: 100%;
@@ -99,7 +99,7 @@
 }
 
 .sidebar-footer {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.8);
 
   font-size: 14px;
 }
@@ -148,7 +148,7 @@
 ========================= */
 
 .welcome {
-  margin-bottom: 34px;
+  margin-bottom: 16px;
 }
 
 .welcome .eyebrow {
@@ -226,13 +226,18 @@
 }
 
 .form-field input::placeholder {
-  color: #a69b96;
+  color: #71645f;
 }
 
 .form-field input:focus {
   border-color: #b74b1b;
 
   box-shadow: 0 0 0 3px rgba(183, 75, 27, 0.14);
+}
+
+.form-field input[aria-invalid="true"],
+.form-field input[aria-invalid="true"]:focus {
+  border-color: #b42318;
 }
 
 .label-row {
@@ -313,7 +318,8 @@
 .form-message {
   min-height: 0;
 
-  margin: -10px 0 -4px;
+  margin: -10px 0 -6px;
+  white-space: pre-line;
 
   font-size: 14px;
   font-weight: 600;
@@ -366,7 +372,8 @@
 .login-button:disabled {
   cursor: wait;
 
-  opacity: 0.75;
+  background: #a63c16;
+  opacity: 0.9;
 
   transform: none;
 }
@@ -438,7 +445,7 @@
     padding: 26px 28px 34px;
   }
 
-  .sidebar-logo {
+  .login-logo {
     width: 170px;
   }
 
@@ -470,7 +477,7 @@
     padding: 22px 20px 28px;
   }
 
-  .sidebar-logo {
+  .login-logo {
     width: 155px;
     padding: 6px;
   }
@@ -558,7 +565,7 @@
    Landscape mobile
 ========================= */
 
-@media (max-width: 760px) and (max-height: 600px) and (orientation: landscape) {
+@media (min-width: 700px) and (max-width: 760px) and (max-height: 600px) and (orientation: landscape) {
   .login-layout {
     grid-template-columns: minmax(260px, 38%) 1fr;
   }
@@ -568,7 +575,7 @@
     padding: 22px 28px;
   }
 
-  .sidebar-logo {
+  .login-logo {
     width: 145px;
   }
 

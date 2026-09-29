@@ -1,14 +1,64 @@
-import Login  from "../src/pages/Login/Login.jsx";
+import { Navigate, Route, Routes } from "react-router-dom";
+
+import Login from "./pages/Login/Login.jsx";
+import Usuarios from "./pages/Usuarios/Usuarios.jsx";
+import EncargadoTILayout from "./components/layout/EncargadoTILayout/EncargadoTILayout.jsx";
+import AdminLayout from "./components/layout/AdminLayout/AdminLayout.jsx";
+import PanelTemporal from "./components/layout/PanelTemporal/PanelTemporal.jsx";
 
 function App() {
-  
+    return (
+        <Routes>
+            <Route path="/caja" element={<PanelTemporal rol="CAJA" items={[{ label: "Caja", disabled: true }]} />} />
+            <Route path="/cocina" element={<PanelTemporal rol="COCINA" items={[{ label: "Cocina", disabled: true }]} />} />
+            <Route
+                path="/"
+                element={<Login />}
+            />
 
-  return (
-    <>
-    <Login/>
-    
-    </>
-  )
+            <Route
+                path="/encargado-ti"
+                element={<EncargadoTILayout />}
+            >
+                <Route
+                    index
+                    element={
+                        <Navigate
+                            to="usuarios"
+                            replace
+                        />
+                    }
+                />
+
+                <Route
+                    path="usuarios"
+                    element={<Usuarios />}
+                />
+            </Route>
+
+
+
+            <Route
+                path="/administrador"
+                element={<AdminLayout />}
+            >
+                <Route
+                    index
+                    element={
+                        <Navigate
+                            to="usuarios"
+                            replace
+                        />
+                    }
+                />
+
+                <Route
+                    path="usuarios"
+                    element={<Usuarios />}
+                />
+            </Route>
+        </Routes>
+    );
 }
 
-export default App
+export default App;

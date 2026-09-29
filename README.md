@@ -1,16 +1,63 @@
-# React + Vite
+# PizzERP – Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interfaz web del sistema PizzERP (Pizzería Mabet), hecha con React 19 y Vite.
+Se conecta con la API del repositorio [PizzERP-backend](https://github.com/pizzerpcr-hub/PizzERP-backend).
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Programa | Versión | Descarga |
+| --- | --- | --- |
+| Git | cualquiera | https://git-scm.com/download/win |
+| Node.js | 22.12 o superior (LTS) | https://nodejs.org (use "Windows Installer (.msi)") |
 
-## React Compiler
+Además, el backend tiene que estar instalado y encendido (vea el README del backend).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Instalación
 
-## Expanding the ESLint configuration
+```powershell
+git clone -b develop https://github.com/pizzerpcr-hub/PizzERP-frontend.git
+cd PizzERP-frontend
+npm install
+copy .env.example .env
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+`BACKEND_URL` en `.env` indica dónde corre la API (por defecto `http://localhost:8000`).
+
+## Ejecutar
+
+Con el backend ya encendido (`php artisan serve`):
+
+```powershell
+npm run dev
+```
+
+Abra http://localhost:5173. Vite reenvía las llamadas a `/api` y `/sanctum` al backend,
+así que los dos deben estar encendidos al mismo tiempo, cada uno en su propia ventana de PowerShell.
+
+## Pruebas y revisión de código
+
+```powershell
+npm run lint                     # revisión con ESLint
+node --test "tests/*.test.mjs"   # pruebas automáticas
+npm run build                    # confirma que el proyecto compila
+```
+
+## Traer los cambios del equipo
+
+```powershell
+git pull origin develop --no-rebase
+npm install
+```
+
+## Estructura
+
+```
+src/
+  components/   componentes reutilizables (Sidebar, tablas, formularios, layouts)
+  constants/    roles y rutas de inicio por rol
+  context/      sesión del usuario (AuthContext)
+  pages/        pantallas (Login, Usuarios)
+  services/     llamadas a la API
+  styles/       estilos generales
+tests/          pruebas con node:test
+```
