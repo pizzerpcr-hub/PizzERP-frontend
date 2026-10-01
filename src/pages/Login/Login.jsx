@@ -7,6 +7,7 @@ import { obtenerRutaInicio } from "../../constants/roles.js";
 import { iniciarSesion as iniciarSesionService } from "../../services/loginService.js";
 import Notification from "../../components/Notification/Notification.jsx";
 import LoginForm from "../../components/forms/LoginForm/LoginForm.jsx";
+import LoadingSpinner from "../../components/common/LoadingSpinner/LoadingSpinner.jsx";
 
 const MAX_INTENTOS_LOGIN = 3;
 
@@ -122,7 +123,7 @@ function Login() {
   };
 
   if (cargandoSesion) {
-    return null;
+    return <LoadingSpinner label="Cargando página" fullPage />;
   }
 
   const rutaInicio = obtenerRutaInicio(usuario);

@@ -37,16 +37,23 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: 24px;
     width: 100%;
 }
 
 .header-description p {
-    flex: 1 1 300px;
-    margin: 7px 0 0;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 65ch;
+    margin: 9px 0 0;
     color: #746761;
     font-size: 16px;
     font-weight: 400;
+    line-height: 1.5;
+}
+
+.users-header .header-description p {
+    font-size: 18px;
 }
 
 /* =========================
@@ -268,6 +275,15 @@
     box-shadow: 0 0 0 3px rgba(183, 75, 27, 0.08);
 }
 
+.users-panel .search-box .search-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
 .search-box input {
     width: 100%;
     min-width: 0;
@@ -419,44 +435,8 @@
 ========================= */
 
 .users-panel td.cargando-usuarios {
-    height: 84px;
-    padding: 0 20px;
-
-    text-align: center;
-}
-
-.cargando-usuarios::before {
-    content: "";
-
-    display: block;
-
-    width: 24px;
-    height: 24px;
-
-    margin: 0 auto;
-
-    border: 3px solid #ddd;
-    border-top-color: #05a2e6;
-
-    border-radius: 50%;
-
-    animation: cargarUsuarios 0.8s linear infinite;
-}
-
-.cargando-usuarios-texto {
-    position: absolute;
-    width: 1px;
-    height: 1px;
     padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-}
-
-@keyframes cargarUsuarios {
-    to {
-        transform: rotate(360deg);
-    }
+    text-align: center;
 }
 
 /* =========================
@@ -661,6 +641,7 @@
 @media (max-width: 720px) {
     .header-description p {
         flex-basis: auto;
+        max-width: none;
     }
     .management-header {
         flex-direction: column;
@@ -688,6 +669,12 @@
     .management-panel-header {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .users-panel .management-panel-header .page-search--header {
+        flex: none;
+        width: 100%;
+        min-width: 0;
     }
 
     .search-box {
@@ -718,6 +705,10 @@
 
     .header-description p {
         font-size: 14px;
+    }
+
+    .users-header .header-description p {
+        font-size: 16px;
     }
 
     .management-header .management-primary {

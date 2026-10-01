@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import Sidebar from "../../Sidebar/Sidebar.jsx";
+import LoadingSpinner from "../../common/LoadingSpinner/LoadingSpinner.jsx";
 import { useAuth } from "../../../context/useAuth.js";
 import { normalizarRol, puedeGestionarUsuarios } from "../../../constants/roles.js";
 import "./EncargadoTILayout.css";
@@ -26,7 +27,7 @@ function EncargadoTILayout() {
     ];
 
     if (cargandoSesion) {
-        return null;
+        return <LoadingSpinner label="Cargando página" fullPage />;
     }
 
     if (!puedeGestionarUsuarios(usuario) || normalizarRol(usuario?.rol) !== "TI") {

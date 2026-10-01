@@ -2,6 +2,7 @@ import {
     normalizarRol,
     obtenerEtiquetaRol,
 } from "../../constants/roles.js";
+import LoadingSpinner from "../common/LoadingSpinner/LoadingSpinner.jsx";
 
 function UsuariosTable({
     usuarios,
@@ -29,9 +30,7 @@ function UsuariosTable({
                     <tbody role="rowgroup">
                         <tr role="row">
                             <td role="cell" colSpan="5" className="cargando-usuarios">
-                                <span className="cargando-usuarios-texto" role="status">
-                                    Cargando usuarios
-                                </span>
+                                <LoadingSpinner label="Cargando usuarios" />
                             </td>
                         </tr>
                     </tbody>

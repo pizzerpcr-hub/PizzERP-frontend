@@ -56,6 +56,13 @@
 }
 
 .productos-primary-button:hover { background: #872d10; }
+.productos-primary-button:disabled,
+.productos-table-actions button:disabled { opacity: .55; cursor: not-allowed; }
+
+.productos-message,
+.productos-error { margin: 0 0 15px; font-size: 14px; }
+.productos-message { color: #287443; }
+.productos-error { color: #a62c23; }
 
 .productos-header .productos-primary-button { box-shadow: 0 4px 10px rgba(166, 60, 22, .18); }
 .productos-header .productos-primary-button:hover { box-shadow: 0 6px 14px rgba(166, 60, 22, .24); transform: translateY(-1px); }
@@ -139,9 +146,7 @@
 .productos-description { display: block; max-width: 240px; margin-top: 3px; color: #796c66; font-size: 12px; line-height: 1.4; }
 .productos-sizes { display: flex; flex-wrap: wrap; gap: 5px; max-width: 225px; }
 .productos-sizes span { padding: 3px 7px; border-radius: 5px; background: #f4efeb; color: #60483e; font-size: 11px; }
-.productos-status { display: inline-block; padding: 5px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-.productos-status.active { background: #e9f5eb; color: #287443; }
-.productos-status.inactive { background: #f3efec; color: #76665d; }
+.productos-status { color: inherit; font: inherit; }
 .productos-table-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .productos-table-actions button { padding: 5px 7px; border: 1px solid #e2d5ce; border-radius: 5px; background: #fff; color: #87401f; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .productos-table-actions button:hover { background: #fff8f4; border-color: #bd8d76; }
@@ -197,11 +202,12 @@
     .productos-table tr { margin-bottom: 14px; padding: 14px; border: 1px solid #e4dfda; border-radius: 8px; }
     .productos-table td { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 8px 0; border-bottom: 1px solid #f0ece9; }
     .productos-table td:last-child { border-bottom: 0; }
-    .productos-table td:not(.productos-empty)::before { content: attr(data-label); color: #796c66; font-size: 12px; font-weight: 600; }
+    .productos-table td:not(.productos-empty):not(.productos-loading)::before { content: attr(data-label); color: #796c66; font-size: 12px; font-weight: 600; }
     .productos-table .productos-empty { display: block; }
-    .productos-product-cell { max-width: 60%; text-align: right; }
+    .productos-table .productos-loading { display: block; }
+    .productos-product-cell { max-width: none; text-align: left; }
     .productos-description { max-width: none; }
-    .productos-sizes, .productos-table-actions { justify-content: flex-end; }
+    .productos-table-actions { justify-content: flex-start; }
 }
 
 @media (max-width: 600px) {

@@ -25,6 +25,8 @@ import { verificarSesion } from "../../services/loginService.js";
 import { observarUsuarios } from "../../services/observarUsuarios.js";
 
 import "./Usuarios.css";
+import PageSearch from "../../components/common/PageSearch/PageSearch.jsx";
+import LoadingSpinner from "../../components/common/LoadingSpinner/LoadingSpinner.jsx";
 
 const MENSAJE_RECARGA_FALLIDA =
     "El cambio fue guardado, pero no fue posible actualizar el listado. Intenta recargar la página.";
@@ -742,7 +744,7 @@ function Usuarios() {
     };
 
     if (cargandoSesion) {
-        return null;
+        return <LoadingSpinner label="Cargando página" fullPage />;
     }
 
     if (!tieneAccesoUsuarios) {
@@ -799,7 +801,7 @@ function Usuarios() {
 
     return (
         <>
-            <header className="management-header">
+            <header className="management-header users-header">
                 <div>
                     <p className="eyebrow">
                         Administración
@@ -838,21 +840,9 @@ function Usuarios() {
                         </p>
                     </div>
 
-                    <label className="search-box">
-                        ⌕
-
-                        <input
-                            id="userSearch"
-                            type="search"
-                            placeholder="Buscar usuario"
-                            value={busqueda}
-                            onChange={(event) =>
-                                setBusqueda(
-                                    event.target.value,
-                                )
-                            }
-                        />
-                    </label>
+                    <PageSearch className="page-search--header" label="Buscar usuario" id="userSearch"
+                        placeholder="Buscar usuario" value={busqueda}
+                        onChange={(event) => setBusqueda(event.target.value)} />
                 </div>
 
                 <UsuariosTable

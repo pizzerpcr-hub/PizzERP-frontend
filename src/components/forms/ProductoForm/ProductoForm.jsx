@@ -1,24 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 
-const opcionesTamano = ["Personal", "Mediana", "Grande", "Familiar", "600 ml", "Unidad"];
-const opcionesIngrediente = ["Harina", "Queso mozzarella", "Salsa de tomate", "Pepperoni"];
-const opcionesUnidad = ["g", "kg", "ml", "l", "u"];
-let siguienteFilaId = 0;
-const nuevaFilaTamano = () => ({ id: `tamano-${++siguienteFilaId}`, nombre: "", precio: "" });
-const nuevaFilaIngrediente = () => ({ id: `ingrediente-${++siguienteFilaId}`, nombre: "", cantidad: "", unidad: "" });
-
-function ProductoForm({ producto, codigosExistentes, onGuardar, onCerrar }) {
+function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar }) {
     const dialogRef = useRef(null);
-    const [datos, setDatos] = useState(() => ({
-        codigo: producto?.codigo ?? "",
+    const [datos, setDatos] = useState({
+        id_categoria: producto?.id_categoria ?? "",
+        codigo_producto: producto?.codigo_producto ?? "",
         nombre: producto?.nombre ?? "",
         descripcion: producto?.descripcion ?? "",
         precio: producto?.precio ?? "",
         estado: producto?.estado ?? "ACTIVO",
-        tamanos: producto?.tamanos.map((tamano) => ({ ...tamano })) ?? [nuevaFilaTamano()],
-        ingredientes: producto?.ingredientes.map((ingrediente) => ({ ...ingrediente })) ?? [nuevaFilaIngrediente()],
-    }));
-    const [errorCodigo, setErrorCodigo] = useState("");
+    });
+    const [errores, setErrores] = useState({});
+    const [errorGeneral, setErrorGeneral] = useState("");
 
     useEffect(() => {
         const dialog = dialogRef.current;
@@ -28,102 +21,99 @@ function ProductoForm({ producto, codigosExistentes, onGuardar, onCerrar }) {
         };
     }, []);
 
-    const actualizarFila = (grupo, id, campo, valor) => {
-        setDatos((actual) => ({
-            ...actual,
-            [grupo]: actual[grupo].map((fila) => fila.id === id ? { ...fila, [campo]: valor } : fila),
-        }));
+    const cambiar = (campo, valor) => {
+        setDatos((actual) => ({ ...actual, [campo]: valor }));
+        setErrores((actual) => ({ ...actual, [campo]: undefined }));
     };
 
-    const quitarFila = (grupo, id) => {
-        setDatos((actual) => ({ ...actual, [grupo]: actual[grupo].filter((fila) => fila.id !== id) }));
-    };
-
-    const guardar = (event) => {
+    const guardar = async (event) => {
         event.preventDefault();
-        const codigo = datos.codigo.trim().toUpperCase();
-        if (codigosExistentes.some((existente) => existente !== producto?.codigo && existente === codigo)) {
-            setErrorCodigo("Ya existe un producto con este código.");
-            return;
+        setErrorGeneral("");
+
+        try {
+            await onGuardar({
+                id_categoria: Number(datos.id_categoria),
+                codigo_producto: datos.codigo_producto.trim().toUpperCase(),
+                nombre: datos.nombre.trim(),
+                descripcion: datos.descripcion.trim(),
+                precio: datos.precio,
+                estado: datos.estado,
+            });
+        } catch (error) {
+            if (error.status === 422 && error.errors) {
+                setErrores(Object.fromEntries(Object.entries(error.errors).map(([campo, mensajes]) => [
+                    campo, Array.isArray(mensajes) ? mensajes[0] : mensajes,
+                ])));
+            } else {
+                setErrorGeneral(error.message || "No fue posible guardar el producto.");
+            }
         }
-        onGuardar({
-            ...datos,
-            codigo,
-            nombre: datos.nombre.trim(),
-            descripcion: datos.descripcion.trim(),
-            precio: Number(datos.precio),
-            tamanos: datos.tamanos.filter((fila) => fila.nombre || fila.precio),
-            ingredientes: datos.ingredientes.filter((fila) => fila.nombre || fila.cantidad || fila.unidad),
-        }, producto?.codigo);
     };
 
     return (
-        <dialog ref={dialogRef} className="productos-dialog" onCancel={(event) => { event.preventDefault(); onCerrar(); }} aria-labelledby="productoModalTitle">
-            <button className="productos-dialog-close" type="button" onClick={onCerrar} aria-label="Cerrar">×</button>
+        <dialog ref={dialogRef} className="productos-dialog" onCancel={(event) => {
+            event.preventDefault();
+            if (!enviando) onCerrar();
+        }} aria-labelledby="productoModalTitle">
+            <button className="productos-dialog-close" type="button" onClick={onCerrar} disabled={enviando} aria-label="Cerrar">×</button>
             <header className="productos-dialog-header">
                 <span className="productos-eyebrow">Administración</span>
                 <h2 id="productoModalTitle">{producto ? "Editar producto" : "Registrar producto"}</h2>
-                <p>Completa la información del producto y sus ingredientes asociados.</p>
+                <p>Completa la información del producto y selecciona su categoría.</p>
             </header>
             <form onSubmit={guardar}>
                 <section className="productos-form-section" aria-labelledby="productoDatosTitle">
                     <h3 id="productoDatosTitle">Información del producto</h3>
                     <div className="productos-form-grid">
                         <label>Código o número interno
-                            <input value={datos.codigo} onChange={(event) => { setDatos({ ...datos, codigo: event.target.value.toUpperCase() }); setErrorCodigo(""); }} placeholder="Ej. PIZ-001" required aria-invalid={Boolean(errorCodigo)} aria-describedby={errorCodigo ? "productoCodigoError" : undefined} />
-                            {errorCodigo && <span id="productoCodigoError" className="productos-field-error" role="alert">{errorCodigo}</span>}
+                            <input value={datos.codigo_producto} maxLength="30" required placeholder="Ej: PIZ-001"
+                                onChange={(event) => cambiar("codigo_producto", event.target.value.toUpperCase())}
+                                aria-invalid={Boolean(errores.codigo_producto)} />
+                            {errores.codigo_producto && <span className="productos-field-error">{errores.codigo_producto}</span>}
                         </label>
                         <label>Nombre del producto
-                            <input value={datos.nombre} onChange={(event) => setDatos({ ...datos, nombre: event.target.value })} placeholder="Ej. Pizza Suprema" required />
+                            <input value={datos.nombre} maxLength="100" required placeholder="Ej: Pizza Suprema"
+                                onChange={(event) => cambiar("nombre", event.target.value)} aria-invalid={Boolean(errores.nombre)} />
+                            {errores.nombre && <span className="productos-field-error">{errores.nombre}</span>}
                         </label>
                     </div>
                     <label>Descripción
-                        <textarea value={datos.descripcion} onChange={(event) => setDatos({ ...datos, descripcion: event.target.value })} rows="3" placeholder="Describe el producto..." />
+                        <textarea value={datos.descripcion} maxLength="150" required rows="3" placeholder="Describe el producto..."
+                            onChange={(event) => cambiar("descripcion", event.target.value)} aria-invalid={Boolean(errores.descripcion)} />
+                        {errores.descripcion && <span className="productos-field-error">{errores.descripcion}</span>}
                     </label>
                     <div className="productos-form-grid">
+                        <label>Categoría
+                            <select value={datos.id_categoria} required onChange={(event) => cambiar("id_categoria", event.target.value)}
+                                aria-invalid={Boolean(errores.id_categoria)}>
+                                <option value="">Seleccionar categoría</option>
+                                {categorias.map((categoria) => <option key={categoria.id_categoria} value={categoria.id_categoria}>
+                                    {categoria.nombre}
+                                </option>)}
+                            </select>
+                            {errores.id_categoria && <span className="productos-field-error">{errores.id_categoria}</span>}
+                        </label>
                         <label>Precio
-                            <span className="productos-price-input"><span>₡</span><input type="number" min="0.01" step="0.01" value={datos.precio} onChange={(event) => setDatos({ ...datos, precio: event.target.value })} placeholder="0.00" required /></span>
+                            <span className="productos-price-input"><span>₡</span><input type="number" min="0.01" max="99999999.99"
+                                step="0.01" value={datos.precio} onChange={(event) => cambiar("precio", event.target.value)}
+                                placeholder="0.00" required aria-invalid={Boolean(errores.precio)} /></span>
+                            {errores.precio && <span className="productos-field-error">{errores.precio}</span>}
                         </label>
-                        <label>Estado
-                            <select value={datos.estado} onChange={(event) => setDatos({ ...datos, estado: event.target.value })}><option value="ACTIVO">Activo</option><option value="INACTIVO">Inactivo</option></select>
-                        </label>
                     </div>
+                    <label>Estado
+                        <select value={datos.estado} onChange={(event) => cambiar("estado", event.target.value)}>
+                            <option value="ACTIVO">Activo</option>
+                            <option value="INACTIVO">Inactivo</option>
+                        </select>
+                    </label>
                 </section>
-
-                <section className="productos-form-section" aria-labelledby="productoTamanosTitle">
-                    <div className="productos-section-heading">
-                        <div><h3 id="productoTamanosTitle">Tamaños y precios</h3><p>Configura los tamaños disponibles y el precio correspondiente.</p></div>
-                        <button type="button" className="productos-add-button" onClick={() => setDatos((actual) => ({ ...actual, tamanos: [...actual.tamanos, nuevaFilaTamano()] }))}>+ Agregar tamaño</button>
-                    </div>
-                    <div className="productos-rows">
-                        {datos.tamanos.map((fila) => (
-                            <div className="productos-size-row" key={fila.id}>
-                                <select aria-label="Tamaño" value={fila.nombre} onChange={(event) => actualizarFila("tamanos", fila.id, "nombre", event.target.value)}><option value="">Seleccionar tamaño</option>{opcionesTamano.map((opcion) => <option key={opcion} value={opcion}>{opcion}</option>)}</select>
-                                <span className="productos-price-input"><span>₡</span><input type="number" min="0.01" step="0.01" aria-label="Precio del tamaño" placeholder="Precio" value={fila.precio} onChange={(event) => actualizarFila("tamanos", fila.id, "precio", event.target.value)} /></span>
-                                <button type="button" className="productos-remove-button" onClick={() => quitarFila("tamanos", fila.id)} aria-label="Eliminar tamaño">×</button>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="productos-form-section" aria-labelledby="productoIngredientesTitle">
-                    <div className="productos-section-heading">
-                        <div><h3 id="productoIngredientesTitle">Ingredientes asociados</h3><p>Asocia los ingredientes utilizados en la preparación del producto.</p></div>
-                        <button type="button" className="productos-add-button" onClick={() => setDatos((actual) => ({ ...actual, ingredientes: [...actual.ingredientes, nuevaFilaIngrediente()] }))}>+ Agregar ingrediente</button>
-                    </div>
-                    <div className="productos-rows">
-                        {datos.ingredientes.map((fila) => (
-                            <div className="productos-ingredient-row" key={fila.id}>
-                                <select aria-label="Ingrediente" value={fila.nombre} onChange={(event) => actualizarFila("ingredientes", fila.id, "nombre", event.target.value)}><option value="">Seleccionar ingrediente</option>{opcionesIngrediente.map((opcion) => <option key={opcion} value={opcion}>{opcion}</option>)}</select>
-                                <input type="number" min="0" step="0.01" aria-label="Cantidad" placeholder="Cantidad" value={fila.cantidad} onChange={(event) => actualizarFila("ingredientes", fila.id, "cantidad", event.target.value)} />
-                                <select aria-label="Unidad" value={fila.unidad} onChange={(event) => actualizarFila("ingredientes", fila.id, "unidad", event.target.value)}><option value="">Unidad</option>{opcionesUnidad.map((opcion) => <option key={opcion} value={opcion}>{opcion}</option>)}</select>
-                                <button type="button" className="productos-remove-button" onClick={() => quitarFila("ingredientes", fila.id)} aria-label="Eliminar ingrediente">×</button>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                <div className="productos-form-actions"><button type="button" className="productos-secondary-button" onClick={onCerrar}>Cancelar</button><button type="submit" className="productos-primary-button">{producto ? "Guardar cambios" : "Registrar producto"}</button></div>
+                {errorGeneral && <p className="productos-error" role="alert">{errorGeneral}</p>}
+                <div className="productos-form-actions">
+                    <button type="button" className="productos-secondary-button" onClick={onCerrar} disabled={enviando}>Cancelar</button>
+                    <button type="submit" className="productos-primary-button" disabled={enviando}>
+                        {enviando ? "Guardando..." : producto ? "Guardar cambios" : "Registrar producto"}
+                    </button>
+                </div>
             </form>
         </dialog>
     );
