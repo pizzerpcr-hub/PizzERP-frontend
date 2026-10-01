@@ -1,469 +1,455 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import "./RolForm.css";
 
 const pestanasSistema = [
     {
         id: "usuarios",
         nombre: "Usuarios",
-        descripcion: "Administración de cuentas de usuario.",
+        permisos: [
+            { id: "crear", nombre: "Crear" },
+            { id: "ver", nombre: "Ver" },
+            { id: "editar", nombre: "Modificar" },
+            { id: "eliminar", nombre: "Borrar" },
+        ],
     },
     {
         id: "roles",
         nombre: "Roles y permisos",
-        descripcion: "Configuración de roles y niveles de acceso.",
+        permisos: [
+            { id: "crear", nombre: "Crear" },
+            { id: "ver", nombre: "Ver" },
+            { id: "editar", nombre: "Modificar" },
+            { id: "eliminar", nombre: "Borrar" },
+        ],
     },
     {
         id: "categorias",
         nombre: "Categorías",
-        descripcion: "Administración de categorías del menú.",
+        permisos: [
+            { id: "crear", nombre: "Crear" },
+            { id: "ver", nombre: "Ver" },
+            { id: "editar", nombre: "Modificar" },
+            { id: "eliminar", nombre: "Borrar" },
+        ],
     },
     {
         id: "productos",
         nombre: "Productos",
-        descripcion: "Administración de productos disponibles.",
+        permisos: [
+            { id: "crear", nombre: "Crear" },
+            { id: "ver", nombre: "Ver" },
+            { id: "editar", nombre: "Modificar" },
+            { id: "eliminar", nombre: "Borrar" },
+        ],
     },
     {
         id: "ingredientes",
         nombre: "Ingredientes",
-        descripcion: "Administración de ingredientes e inventario.",
+        permisos: [
+            { id: "crear", nombre: "Crear" },
+            { id: "ver", nombre: "Ver" },
+            { id: "editar", nombre: "Modificar" },
+            { id: "eliminar", nombre: "Borrar" },
+        ],
     },
     {
         id: "combos",
         nombre: "Combos y promociones",
-        descripcion: "Administración de combos y promociones.",
+        permisos: [
+            { id: "crear", nombre: "Crear" },
+            { id: "ver", nombre: "Ver" },
+            { id: "editar", nombre: "Modificar" },
+            { id: "eliminar", nombre: "Borrar" },
+        ],
     },
     {
         id: "pedidos",
         nombre: "Pedidos",
-        descripcion: "Registro y administración de pedidos.",
+        permisos: [
+            { id: "crear", nombre: "Crear pedido" },
+            { id: "ver", nombre: "Ver pantalla" },
+            { id: "editar", nombre: "Cambiar estado" },
+            { id: "eliminar", nombre: "Eliminar pedido" },
+        ],
     },
     {
         id: "cocina",
         nombre: "Cocina",
-        descripcion: "Consulta y actualización de pedidos en cocina.",
+        permisos: [
+            { id: "crear", nombre: "Crear pedido" },
+            { id: "ver", nombre: "Ver pantalla" },
+            { id: "editar", nombre: "Cambiar estado" },
+            { id: "eliminar", nombre: "Eliminar pedido" },
+        ],
     },
 ];
 
-const permisosIniciales = {};
+const crearPermisosIniciales = () => {
+    const resultado = {};
 
-pestanasSistema.forEach((pestana) => {
-    permisosIniciales[pestana.id] = {
-        permitido: false,
-        ver: false,
-        crear: false,
-        editar: false,
-        eliminar: false,
-    };
-});
+    pestanasSistema.forEach((pestana) => {
+        resultado[pestana.id] = {};
+
+        pestana.permisos.forEach((permiso) => {
+            resultado[pestana.id][permiso.id] = false;
+        });
+    });
+
+    return resultado;
+};
 
 function RolForm({ onCerrar }) {
     const [nombreRol, setNombreRol] = useState("");
+    const [permisos, setPermisos] = useState(crearPermisosIniciales);
+    const [expandidos, setExpandidos] = useState([]);
 
-    const [permisos, setPermisos] = useState(permisosIniciales);
+    const totalPermisos = useMemo(() => {
+        return pestanasSistema.reduce(
+            (total, modulo) => total + modulo.permisos.length,
+            0
+        );
+    }, []);
 
-    const cambiarAccesoPestana = (id) => {
-        setPermisos((actual) => {
-            const nuevoEstado = !actual[id].permitido;
+    const seleccionados = useMemo(() => {
+        return pestanasSistema.reduce((total, modulo) => {
+            const cantidad = modulo.permisos.filter(
+                (permiso) => permisos[modulo.id]?.[permiso.id]
+            ).length;
 
-            return {
-                ...actual,
+            return total + cantidad;
+        }, 0);
+    }, [permisos]);
 
-                [id]: {
-                    permitido: nuevoEstado,
-                    ver: nuevoEstado,
-                    crear: false,
-                    editar: false,
-                    eliminar: false,
-                },
-            };
-        });
-    };
-
-    const cambiarPermiso = (id, permiso) => {
+    const cambiarPermiso = (moduloId, permisoId) => {
         setPermisos((actual) => ({
             ...actual,
 
-            [id]: {
-                ...actual[id],
-                [permiso]: !actual[id][permiso],
+            [moduloId]: {
+                ...actual[moduloId],
+
+                [permisoId]: !actual[moduloId][permisoId],
             },
         }));
     };
 
-    const seleccionarTodos = (id) => {
+    const cambiarTodosModulo = (modulo) => {
+        const todosMarcados = modulo.permisos.every(
+            (permiso) => permisos[modulo.id]?.[permiso.id]
+        );
+
         setPermisos((actual) => {
-            const todosSeleccionados =
-                actual[id].ver &&
-                actual[id].crear &&
-                actual[id].editar &&
-                actual[id].eliminar;
+            const nuevosPermisosModulo = {};
+
+            modulo.permisos.forEach((permiso) => {
+                nuevosPermisosModulo[permiso.id] = !todosMarcados;
+            });
 
             return {
                 ...actual,
 
-                [id]: {
-                    permitido: true,
-                    ver: !todosSeleccionados,
-                    crear: !todosSeleccionados,
-                    editar: !todosSeleccionados,
-                    eliminar: !todosSeleccionados,
-                },
+                [modulo.id]: nuevosPermisosModulo,
             };
         });
+    };
+
+    const alternarModulo = (id) => {
+        setExpandidos((actual) =>
+            actual.includes(id)
+                ? actual.filter((moduloId) => moduloId !== id)
+                : [...actual, id]
+        );
+    };
+
+    const expandirTodo = () => {
+        const todosExpandidos =
+            expandidos.length === pestanasSistema.length;
+
+        if (todosExpandidos) {
+            setExpandidos([]);
+            return;
+        }
+
+        setExpandidos(
+            pestanasSistema.map((modulo) => modulo.id)
+        );
+    };
+
+    const marcarTodo = () => {
+        const nuevosPermisos = {};
+
+        pestanasSistema.forEach((modulo) => {
+            nuevosPermisos[modulo.id] = {};
+
+            modulo.permisos.forEach((permiso) => {
+                nuevosPermisos[modulo.id][permiso.id] = true;
+            });
+        });
+
+        setPermisos(nuevosPermisos);
+    };
+
+    const limpiarTodo = () => {
+        setPermisos(crearPermisosIniciales());
     };
 
     const guardarRol = (event) => {
         event.preventDefault();
 
-        // El guardado se conectará al servicio de roles.
+        const datos = {
+            nombre: nombreRol.trim(),
+            permisos,
+        };
+
+        console.log("Rol:", datos);
+
+        // Aquí conectas posteriormente tu endpoint Laravel.
     };
 
     return (
-                <div
-                    className="modal-overlay open"
-                    onMouseDown={(event) => {
-                        if (event.target === event.currentTarget) {
-                            onCerrar();
-                        }
-                    }}
+        <div
+            className="modal-overlay open"
+            onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                    onCerrar?.();
+                }
+            }}
+        >
+            <div
+                className="role-modal"
+                onMouseDown={(event) => event.stopPropagation()}
+            >
+                <button
+                    type="button"
+                    className="role-modal-close"
+                    onClick={onCerrar}
+                    aria-label="Cerrar"
                 >
+                    ×
+                </button>
 
-                    <div className="role-modal">
+                <form onSubmit={guardarRol}>
+                    <div className="role-form-header">
+                        <h2>Crear rol</h2>
 
-                        <button
-                            className="modal-close"
-                            type="button"
-                            onClick={onCerrar}
-                            aria-label="Cerrar"
-                        >
-                            ×
-                        </button>
+                        <p>
+                            Define el nombre y los permisos disponibles
+                            para este rol.
+                        </p>
+                    </div>
 
+                    <div className="role-form-group">
+                        <label htmlFor="nombreRol">
+                            Nombre del rol
+                        </label>
 
-                        <div className="modal-header">
+                        <input
+                            id="nombreRol"
+                            type="text"
+                            value={nombreRol}
+                            onChange={(event) =>
+                                setNombreRol(event.target.value)
+                            }
+                            placeholder="Ej. Administrador, Cocinero..."
+                            autoComplete="off"
+                            required
+                        />
+                    </div>
 
-                            <span className="management-eyebrow">
-                                Administración
-                            </span>
+                    <div className="permissions-section">
+                        <div className="permissions-title-row">
+                            <div>
+                                <h3>Permisos</h3>
 
-                            <h2>
-                                Crear rol
-                            </h2>
-
-                            <p>
-                                Define el nombre del rol y selecciona las
-                                pestañas y acciones que podrá utilizar.
-                            </p>
-
-                        </div>
-
-
-                        <form onSubmit={guardarRol}>
-
-                            <div className="form-section">
-
-                                <div className="form-section-title">
-                                    Información del rol
-                                </div>
-
-                                <div className="form-group">
-
-                                    <label htmlFor="nombreRol">
-                                        Nombre del rol
-                                    </label>
-
-                                    <input
-                                        id="nombreRol"
-                                        type="text"
-                                        value={nombreRol}
-                                        onChange={(event) =>
-                                            setNombreRol(event.target.value)
-                                        }
-                                        placeholder="Ej. Encargado de inventario"
-                                        required
-                                    />
-
-                                </div>
-
+                                <span className="permissions-total">
+                                    {seleccionados}/{totalPermisos}
+                                </span>
                             </div>
 
+                            <div className="permissions-tools">
+                                <button
+                                    type="button"
+                                    onClick={expandirTodo}
+                                >
+                                    {expandidos.length ===
+                                    pestanasSistema.length
+                                        ? "Contraer todo"
+                                        : "Expandir todo"}
+                                </button>
 
-                            <div className="form-section">
+                                <button
+                                    type="button"
+                                    onClick={marcarTodo}
+                                >
+                                    Marcar todo
+                                </button>
 
-                                <div className="permissions-header">
+                                <button
+                                    type="button"
+                                    onClick={limpiarTodo}
+                                >
+                                    Limpiar
+                                </button>
+                            </div>
+                        </div>
 
-                                    <div>
+                        <div className="permission-list">
+                            {pestanasSistema.map((modulo) => {
+                                const estaExpandido =
+                                    expandidos.includes(modulo.id);
 
-                                        <div className="form-section-title">
-                                            Pestañas existentes y permisos
+                                const cantidadMarcada =
+                                    modulo.permisos.filter(
+                                        (permiso) =>
+                                            permisos[modulo.id]?.[
+                                                permiso.id
+                                            ]
+                                    ).length;
+
+                                const todosMarcados =
+                                    cantidadMarcada ===
+                                    modulo.permisos.length;
+
+                                const algunoMarcado =
+                                    cantidadMarcada > 0;
+
+                                return (
+                                    <div
+                                        className={`permission-module ${
+                                            estaExpandido
+                                                ? "expanded"
+                                                : ""
+                                        }`}
+                                        key={modulo.id}
+                                    >
+                                        <div className="permission-module-header">
+                                            <label
+                                                className="permission-module-check"
+                                                onClick={(event) =>
+                                                    event.stopPropagation()
+                                                }
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={todosMarcados}
+                                                    ref={(elemento) => {
+                                                        if (elemento) {
+                                                            elemento.indeterminate =
+                                                                algunoMarcado &&
+                                                                !todosMarcados;
+                                                        }
+                                                    }}
+                                                    onChange={() =>
+                                                        cambiarTodosModulo(
+                                                            modulo
+                                                        )
+                                                    }
+                                                />
+
+                                                <span className="checkmark" />
+                                            </label>
+
+                                            <button
+                                                type="button"
+                                                className="permission-module-toggle"
+                                                onClick={() =>
+                                                    alternarModulo(
+                                                        modulo.id
+                                                    )
+                                                }
+                                            >
+                                                <span
+                                                    className={`permission-arrow ${
+                                                        estaExpandido
+                                                            ? "open"
+                                                            : ""
+                                                    }`}
+                                                >
+                                                    ▶
+                                                </span>
+
+                                                <strong>
+                                                    {modulo.nombre}
+                                                </strong>
+
+                                                <span className="permission-count">
+                                                    {cantidadMarcada}/
+                                                    {
+                                                        modulo
+                                                            .permisos
+                                                            .length
+                                                    }
+                                                </span>
+                                            </button>
                                         </div>
 
-                                        <p>
-                                            Selecciona las pestañas a las que
-                                            tendrá acceso este rol y las acciones
-                                            permitidas dentro de cada módulo.
-                                        </p>
-
-                                    </div>
-
-                                </div>
-
-
-                                <div className="permissions-table-wrap">
-
-                                    <table className="permissions-table">
-
-                                        <thead>
-
-                                            <tr>
-                                                <th className="module-column">
-                                                    Pestaña
-                                                </th>
-
-                                                <th>
-                                                    Acceso
-                                                </th>
-
-                                                <th>
-                                                    Ver
-                                                </th>
-
-                                                <th>
-                                                    Crear
-                                                </th>
-
-                                                <th>
-                                                    Editar
-                                                </th>
-
-                                                <th>
-                                                    Eliminar
-                                                </th>
-
-                                                <th>
-                                                    Todo
-                                                </th>
-                                            </tr>
-
-                                        </thead>
-
-
-                                        <tbody>
-
-                                            {pestanasSistema.map((pestana) => {
-
-                                                const permiso =
-                                                    permisos[pestana.id];
-
-                                                return (
-
-                                                    <tr
-                                                        key={pestana.id}
-                                                        className={
-                                                            permiso.permitido
-                                                                ? "permission-active"
-                                                                : ""
-                                                        }
-                                                    >
-
-                                                        <td
-                                                            className="
-                                                                module-info
-                                                            "
+                                        {estaExpandido && (
+                                            <div className="permission-options">
+                                                {modulo.permisos.map(
+                                                    (permiso) => (
+                                                        <label
+                                                            className="permission-option"
+                                                            key={
+                                                                permiso.id
+                                                            }
                                                         >
-
-                                                            <strong>
-                                                                {
-                                                                    pestana.nombre
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={
+                                                                    permisos[
+                                                                        modulo
+                                                                            .id
+                                                                    ]?.[
+                                                                        permiso
+                                                                            .id
+                                                                    ] ??
+                                                                    false
                                                                 }
-                                                            </strong>
+                                                                onChange={() =>
+                                                                    cambiarPermiso(
+                                                                        modulo.id,
+                                                                        permiso.id
+                                                                    )
+                                                                }
+                                                            />
+
+                                                            <span className="checkmark" />
 
                                                             <span>
                                                                 {
-                                                                    pestana.descripcion
+                                                                    permiso.nombre
                                                                 }
                                                             </span>
-
-                                                        </td>
-
-
-                                                        <td>
-
-                                                            <label
-                                                                className="
-                                                                    checkbox-wrapper
-                                                                "
-                                                            >
-
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={
-                                                                        permiso.permitido
-                                                                    }
-                                                                    onChange={() =>
-                                                                        cambiarAccesoPestana(
-                                                                            pestana.id
-                                                                        )
-                                                                    }
-                                                                />
-
-                                                                <span
-                                                                    className="
-                                                                        custom-checkbox
-                                                                    "
-                                                                />
-
-                                                            </label>
-
-                                                        </td>
-
-
-                                                        {[
-                                                            "ver",
-                                                            "crear",
-                                                            "editar",
-                                                            "eliminar",
-                                                        ].map(
-                                                            (
-                                                                tipoPermiso
-                                                            ) => (
-
-                                                                <td
-                                                                    key={
-                                                                        tipoPermiso
-                                                                    }
-                                                                >
-
-                                                                    <label
-                                                                        className="
-                                                                            checkbox-wrapper
-                                                                        "
-                                                                    >
-
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={
-                                                                                permiso[
-                                                                                    tipoPermiso
-                                                                                ]
-                                                                            }
-                                                                            disabled={
-                                                                                !permiso.permitido
-                                                                            }
-                                                                            onChange={() =>
-                                                                                cambiarPermiso(
-                                                                                    pestana.id,
-                                                                                    tipoPermiso
-                                                                                )
-                                                                            }
-                                                                        />
-
-                                                                        <span
-                                                                            className="
-                                                                                custom-checkbox
-                                                                            "
-                                                                        />
-
-                                                                    </label>
-
-                                                                </td>
-
-                                                            )
-                                                        )}
-
-
-                                                        <td>
-
-                                                            <label
-                                                                className="
-                                                                    checkbox-wrapper
-                                                                "
-                                                            >
-
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={
-                                                                        permiso.ver &&
-                                                                        permiso.crear &&
-                                                                        permiso.editar &&
-                                                                        permiso.eliminar
-                                                                    }
-                                                                    disabled={
-                                                                        !permiso.permitido
-                                                                    }
-                                                                    onChange={() =>
-                                                                        seleccionarTodos(
-                                                                            pestana.id
-                                                                        )
-                                                                    }
-                                                                />
-
-                                                                <span
-                                                                    className="
-                                                                        custom-checkbox
-                                                                    "
-                                                                />
-
-                                                            </label>
-
-                                                        </td>
-
-                                                    </tr>
-
-                                                );
-
-                                            })}
-
-                                        </tbody>
-
-                                    </table>
-
-                                </div>
-
-                            </div>
-
-
-                            <div className="permissions-note">
-
-                                <strong>
-                                    ¿Cómo funcionan los permisos?
-                                </strong>
-
-                                <p>
-                                    El acceso habilita la pestaña para el rol.
-                                    Luego puedes definir si el usuario puede
-                                    consultar, crear, editar o eliminar
-                                    información dentro de ella.
-                                </p>
-
-                            </div>
-
-
-                            <p className="module-notice">El guardado estará disponible cuando se conecte el módulo al servidor.</p>
-                            <div className="form-actions">
-
-                                <button
-                                    className="management-secondary"
-                                    type="button"
-                                    onClick={onCerrar}
-                                >
-                                    Cancelar
-                                </button>
-
-                                <button
-                                    className="management-primary"
-                                    type="submit"
-                                    disabled
-                                >
-                                    Crear rol
-                                </button>
-
-                            </div>
-
-                        </form>
-
+                                                        </label>
+                                                    )
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
 
-                </div>
+                    <div className="role-form-actions">
+                        <button
+                            type="button"
+                            className="role-cancel-button"
+                            onClick={onCerrar}
+                        >
+                            Cancelar
+                        </button>
+
+                        <button
+                            type="submit"
+                            className="role-save-button"
+                            disabled={!nombreRol.trim()}
+                        >
+                            Crear rol
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 }
 
