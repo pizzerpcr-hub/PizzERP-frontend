@@ -1,7 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 import Sidebar from "../../Sidebar/Sidebar.jsx";
 import { useAuth } from "../../../context/useAuth.js";
-import { puedeGestionarUsuarios } from "../../../constants/roles.js";
+import { normalizarRol, puedeGestionarUsuarios } from "../../../constants/roles.js";
 import "./EncargadoTILayout.css";
 
 function EncargadoTILayout() {
@@ -12,6 +12,10 @@ function EncargadoTILayout() {
                   {
                       label: "Usuarios",
                       ruta: "/encargado-ti/usuarios",
+                  },
+                  {
+                      label: "Roles y permisos",
+                      ruta: "/encargado-ti/roles",
                   },
               ]
             : []),
@@ -25,7 +29,7 @@ function EncargadoTILayout() {
         return null;
     }
 
-    if (!puedeGestionarUsuarios(usuario)) {
+    if (!puedeGestionarUsuarios(usuario) || normalizarRol(usuario?.rol) !== "TI") {
         return <Navigate to="/" replace />;
     }
 

@@ -1,27 +1,25 @@
 import { Navigate, Outlet } from "react-router-dom";
 import Sidebar from "../../Sidebar/Sidebar.jsx";
 import { useAuth } from "../../../context/useAuth.js";
-import { puedeGestionarUsuarios } from "../../../constants/roles.js";
+import { normalizarRol, puedeGestionarUsuarios } from "../../../constants/roles.js";
 import "./AdminLayout.css";
 
-function EncargadoTILayout() {
+function AdminLayout() {
     const { usuario, cargandoSesion } = useAuth();
     const navItems = [
-        ...(puedeGestionarUsuarios(usuario)
-            ? [
-                  {
-                      label: "Usuarios",
-                      ruta: "/administrador/usuarios",
-                  },
-              ]
-            : []),
+        { label: "Categorías", ruta: "/administrador/categorias" },
+        { label: "Productos", ruta: "/administrador/productos" },
+        { label: "Ingredientes", ruta: "/administrador/ingredientes" },
+        { label: "Promociones", ruta: "/administrador/promociones" },
+        { label: "Usuarios", ruta: "/administrador/usuarios" },
+        { label: "Roles y permisos", ruta: "/administrador/roles" },
     ];
 
     if (cargandoSesion) {
         return null;
     }
 
-    if (!puedeGestionarUsuarios(usuario)) {
+    if (!puedeGestionarUsuarios(usuario) || normalizarRol(usuario?.rol) !== "ADMINISTRADOR") {
         return <Navigate to="/" replace />;
     }
 
@@ -36,4 +34,4 @@ function EncargadoTILayout() {
     );
 }
 
-export default EncargadoTILayout;
+export default AdminLayout;

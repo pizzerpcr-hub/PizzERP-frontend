@@ -1,0 +1,1100 @@
+/* =========================
+   Variables
+========================= */
+
+:root {
+    --font: "Poppins", sans-serif;
+
+    --brown-dark: #2b1914;
+    --brown: #291b17;
+    --orange: #a33e16;
+
+    --background: #f7f6f4;
+    --border: #e4dfda;
+
+    --text: #291b17;
+    --muted: #746761;
+}
+
+
+/* =========================
+   General
+========================= */
+
+* {
+    box-sizing: border-box;
+    
+}
+
+body {
+    margin: 0;
+
+    font-family: var(--font);
+
+    color: var(--text);
+    background: var(--background);
+}
+
+button,
+input,
+textarea,
+select {
+    font-family: var(--font);
+}
+
+
+/* =========================
+   Sidebar
+========================= */
+
+.management-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+
+    display: flex;
+    flex-direction: column;
+
+    width: 258px;
+    height: 100dvh;
+
+    gap: 20px;
+
+    padding: 26px 16px;
+
+    color: #fff;
+    background: var(--brown-dark);
+
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+
+/* =========================
+   Logo
+========================= */
+
+.sidebar-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    max-width: 184px;
+
+    margin: 0 auto;
+    padding: 5px;
+
+    box-sizing: border-box;
+
+    background: #050505;
+
+    border-radius: 7px;
+
+    flex-shrink: 0;
+}
+
+.sidebar-logo img {
+    display: block;
+
+    width: 100%;
+    height: auto;
+
+    border-radius: 5px;
+}
+
+
+/* =========================
+   Branding
+========================= */
+
+.management-brand {
+    display: grid;
+
+    gap: 3px;
+
+    padding: 0 10px 4px;
+
+    flex-shrink: 0;
+}
+
+.management-brand strong {
+    font-size: 14px;
+    font-weight: 600;
+
+    letter-spacing: -0.01em;
+}
+
+.management-brand span {
+    color: rgba(255, 255, 255, 0.62);
+
+    font-size: 14px;
+    font-weight: 400;
+}
+
+
+/* =========================
+   Navigation
+========================= */
+
+.management-nav {
+    display: grid;
+
+    gap: 4px;
+
+    flex-shrink: 0;
+}
+
+.management-nav-label {
+    padding: 12px 10px 5px;
+
+    color: rgba(255, 255, 255, 0.42);
+
+    font-size: 14px;
+    font-weight: 600;
+
+    letter-spacing: 0.08em;
+}
+
+.management-nav a {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
+    min-height: 40px;
+
+    padding: 9px 12px;
+
+    border-left: 3px solid transparent;
+    border-radius: 5px;
+
+    color: rgba(255, 255, 255, 0.72);
+
+    text-decoration: none;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    transition:
+        color 0.18s,
+        background 0.18s,
+        border-color 0.18s;
+}
+
+.management-nav a:hover {
+    color: #fff;
+
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.management-nav a.active {
+    color: #fff;
+
+    border-left-color: #f1bd76;
+
+    background: rgba(255, 255, 255, 0.17);
+}
+
+
+/* =========================
+   Account
+========================= */
+
+.management-account {
+    display: grid;
+
+    gap: 14px;
+
+    width: 100%;
+
+    margin-top: auto;
+
+    flex-shrink: 0;
+}
+
+.management-profile {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    margin-top: 0;
+    padding-top: 18px;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.management-profile strong {
+    display: block;
+
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.management-profile small {
+    color: rgba(255, 255, 255, 0.62);
+
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.profile-avatar {
+    display: grid;
+    place-items: center;
+
+    width: 34px;
+    height: 34px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    background: #f2b85c;
+    color: #4b1f13;
+
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.logout-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 172px;
+    max-width: 100%;
+    min-height: 42px;
+
+    justify-self: center;
+
+    gap: 8px;
+
+    padding: 0 14px;
+
+    box-sizing: border-box;
+
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 7px;
+
+    background: rgba(255, 255, 255, 0.07);
+    color: #fff;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        border-color 0.2s,
+        transform 0.2s;
+}
+
+.logout-button:hover {
+    border-color: #866c3b;
+
+    background: rgba(244, 194, 98, 0.16);
+
+    transform: translateY(-1px);
+}
+
+
+/* =========================
+   Contenido principal
+========================= */
+
+.management-content {
+    min-height: 100dvh;
+
+    margin-left: 258px;
+
+    padding: 32px 40px 40px;
+
+    background: var(--background);
+}
+
+
+/* =========================
+   Encabezado
+========================= */
+
+.management-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+
+    width: 100%;
+
+    margin: 0 0 28px;
+
+    gap: 30px;
+}
+
+.management-eyebrow {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: var(--orange);
+
+    font-size: 13px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.08em;
+}
+
+.management-header h1 {
+    margin: 0 0 7px;
+
+    color: var(--brown);
+
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.management-header p {
+    max-width: 700px;
+
+    margin: 0;
+
+    color: var(--muted);
+
+    font-size: 14px;
+    font-weight: 400;
+
+    line-height: 1.6;
+}
+
+
+/* =========================
+   Botón principal
+========================= */
+
+.management-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 42px;
+
+    padding: 0 16px;
+
+    border: 0;
+    border-radius: 7px;
+
+    background: var(--orange);
+    color: #fff;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        transform 0.2s;
+}
+
+.management-primary:hover {
+    background: #8e3412;
+
+    transform: translateY(-1px);
+}
+
+
+/* =========================
+   Panel de categorías
+========================= */
+
+.management-panel {
+    width: 100%;
+    max-width: none;
+
+    margin: 0;
+
+    padding: 28px 30px;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    background: #fff;
+
+    box-shadow:
+        0 4px 18px rgba(43, 25, 20, 0.05);
+}
+
+
+/* =========================
+   Encabezado del panel
+========================= */
+
+.panel-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    width: 100%;
+
+    margin-bottom: 24px;
+
+    gap: 20px;
+}
+
+.panel-heading h2 {
+    margin: 0 0 5px;
+
+    color: var(--brown);
+
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.panel-heading p {
+    margin: 0;
+
+    color: #796c66;
+
+    font-size: 14px;
+    font-weight: 400;
+
+    line-height: 1.5;
+}
+
+
+
+
+/* =========================
+   Buscador
+========================= */
+
+.search-box {
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    max-width: 520px;
+
+    margin-bottom: 24px;
+}
+
+.search-box label {
+    margin-bottom: 6px;
+
+    color: #4a3932;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.search-box input {
+    width: 100%;
+    height: 44px;
+
+    padding: 0 13px;
+
+    border: 1px solid #dcd5d0;
+    border-radius: 7px;
+
+    outline: none;
+
+    background: #fff;
+    color: var(--brown);
+
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.search-box input::placeholder {
+    color: #a09792;
+}
+
+.search-box input:focus {
+    border-color: var(--orange);
+
+    box-shadow:
+        0 0 0 3px rgba(163, 62, 22, 0.08);
+}
+
+
+/* =========================
+   Tabla
+========================= */
+
+.table-wrap {
+    width: 100%;
+
+    overflow-x: auto;
+}
+
+.management-table {
+    width: 100%;
+    min-width: 850px;
+
+    border-collapse: collapse;
+
+    font-size: 14px;
+}
+
+.management-table th {
+    padding: 14px 16px;
+
+    border-bottom: 1px solid #ddd5cf;
+
+    color: #746761;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    text-align: left;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.04em;
+}
+
+.management-table td {
+    padding: 18px 16px;
+
+    border-bottom: 1px solid #eee9e5;
+
+    color: #5f5049;
+
+    font-size: 14px;
+    font-weight: 400;
+
+    vertical-align: middle;
+}
+
+.management-table td.productos {
+    text-align: left;
+    width: 20px;
+}
+.management-table tbody tr:hover {
+    background: #fcfaf9;
+}
+
+.management-table td strong {
+    color: var(--brown);
+
+    font-size: 14px;
+    font-weight: 600;
+}
+
+
+/* =========================
+   Ancho de columnas
+========================= */
+
+.management-table th:nth-child(1),
+.management-table td:nth-child(1) {
+    width: 18%;
+}
+
+.management-table th:nth-child(2),
+.management-table td:nth-child(2) {
+    width: 34%;
+}
+
+.management-table th:nth-child(3),
+.management-table td:nth-child(3) {
+    width: 12%;
+}
+
+.management-table th:nth-child(4),
+.management-table td:nth-child(4) {
+    width: 12%;
+}
+
+.management-table th:nth-child(5),
+.management-table td:nth-child(5) {
+    width: 24%;
+}
+
+
+/* =========================
+   Estados
+========================= */
+
+.status {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 5px 9px;
+
+    border-radius: 20px;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status.active {
+    background: #e8f3e8;
+    color: #32723b;
+}
+
+.status.inactive {
+    background: #f2e8e5;
+    color: #8a4435;
+}
+
+
+/* =========================
+   Acciones
+========================= */
+
+.table-actions {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 7px;
+}
+
+.action-button {
+    min-height: 34px;
+
+    padding: 0 11px;
+
+    border-radius: 6px;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        border-color 0.2s;
+}
+
+
+/* Editar */
+
+.action-button.edit {
+    border: 1px solid #d9c5b9;
+
+    background: #fff;
+    color: #91401e;
+}
+
+.action-button.edit:hover {
+    background: #faf2ee;
+}
+
+
+/* Desactivar */
+
+.action-button.deactivate {
+    border: 1px solid #ead6c9;
+
+    background: #fff8f4;
+    color: #98512f;
+}
+
+.action-button.deactivate:hover {
+    background: #f8ebe5;
+}
+
+
+/* Activar */
+
+.action-button.activate {
+    border: 1px solid #cfe1d0;
+
+    background: #f2f8f2;
+    color: #32723b;
+}
+
+.action-button.activate:hover {
+    background: #e6f2e7;
+}
+
+
+/* Eliminar */
+
+.action-button.delete {
+    border: 1px solid #e3c9c4;
+
+    background: #fff;
+    color: #a53d32;
+}
+
+.action-button.delete:hover {
+    background: #fff3f1;
+}
+
+
+/* =========================
+   Modal
+========================= */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+
+    z-index: 500;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(43, 25, 20, 0.48);
+}
+
+.modal-overlay.open {
+    display: flex;
+}
+
+.category-modal {
+    position: relative;
+
+    width: 100%;
+    max-width: 500px;
+
+    padding: 28px;
+
+    border-radius: 10px;
+
+    background: #fff;
+
+    box-shadow:
+        0 15px 50px rgba(43, 25, 20, 0.20);
+}
+
+
+/* Cerrar */
+
+.modal-close {
+    position: absolute;
+
+    top: 13px;
+    right: 15px;
+
+    display: grid;
+    place-items: center;
+
+    width: 32px;
+    height: 32px;
+
+    padding: 0;
+
+    border: 0;
+    border-radius: 50%;
+
+    background: transparent;
+    color: #796c66;
+
+    font-size: 26px;
+    font-weight: 400;
+
+    line-height: 1;
+
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    background: #f3efec;
+}
+
+
+/* Encabezado */
+
+.modal-header {
+    margin-bottom: 22px;
+}
+
+.modal-header h2 {
+    margin: 0 0 6px;
+
+    color: var(--brown);
+
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.modal-header p {
+    margin: 0;
+
+    color: #796c66;
+
+    font-size: 14px;
+    font-weight: 400;
+
+    line-height: 1.5;
+}
+
+
+/* =========================
+   Formulario
+========================= */
+
+.form-group {
+    margin-bottom: 17px;
+}
+
+.form-group label {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: #4a3932;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+
+    padding: 10px 11px;
+
+    border: 1px solid #dcd5d0;
+    border-radius: 7px;
+
+    outline: none;
+
+    background: #fff;
+    color: var(--brown);
+
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.form-group textarea {
+    min-height: 100px;
+
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    border-color: var(--orange);
+
+    box-shadow:
+        0 0 0 3px rgba(163, 62, 22, 0.08);
+}
+
+
+/* =========================
+   Acciones del formulario
+========================= */
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 9px;
+
+    margin-top: 22px;
+}
+
+.management-secondary {
+    min-height: 42px;
+
+    padding: 0 16px;
+
+    border: 1px solid #d8d0ca;
+    border-radius: 7px;
+
+    background: #fff;
+    color: #4a3932;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: background 0.2s;
+}
+
+.management-secondary:hover {
+    background: #f3f0ed;
+}
+
+
+/* =========================
+   Responsive 1100px
+========================= */
+
+@media (max-width: 1100px) {
+
+    .management-sidebar {
+        width: 230px;
+    }
+
+    .management-content {
+        margin-left: 230px;
+
+        padding: 28px 25px 35px;
+    }
+
+}
+
+
+/* =========================
+   Responsive 850px
+========================= */
+
+@media (max-width: 850px) {
+
+    .management-sidebar {
+        position: static;
+
+        width: 100%;
+        height: auto;
+    }
+
+    .management-content {
+        margin-left: 0;
+
+        padding: 24px 18px;
+    }
+
+    .management-header {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+    .management-primary {
+        width: auto;
+    }
+
+    .management-panel {
+        padding: 22px 20px;
+    }
+
+    .table-wrap {
+        overflow: visible;
+    }
+
+    .management-table,
+    .management-table tbody,
+    .management-table tr,
+    .management-table td {
+        display: block;
+
+        width: 100%;
+    }
+
+    .management-table {
+        min-width: 0;
+    }
+
+    .management-table thead {
+        display: none;
+    }
+
+    .management-table tr {
+        margin-bottom: 14px;
+
+        padding: 14px;
+
+        border: 1px solid var(--border);
+        border-radius: 8px;
+    }
+
+    .management-table td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        gap: 15px;
+
+        padding: 8px 0;
+
+        border-bottom: 1px solid #f0ece9;
+    }
+
+    .management-table td:last-child {
+        border-bottom: 0;
+    }
+
+    .management-table td::before {
+        content: attr(data-label);
+
+        color: #796c66;
+
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .table-actions {
+        justify-content: flex-end;
+    }
+
+}
+
+
+/* =========================
+   Responsive 600px
+========================= */
+
+@media (max-width: 600px) {
+
+    .management-content {
+        padding: 20px 14px;
+    }
+
+    .management-header h1 {
+        font-size: 24px;
+    }
+
+    .management-header p {
+        font-size: 14px;
+    }
+
+    .management-primary {
+        width: 100%;
+    }
+
+    .management-panel {
+        padding: 18px 16px;
+    }
+
+    .panel-heading {
+        margin-bottom: 20px;
+    }
+
+    .search-box {
+        max-width: none;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .form-actions button {
+        width: 100%;
+    }
+
+    .category-modal {
+        padding: 23px 18px;
+    }
+
+}
+
+
+/* =========================
+   Reduce motion
+========================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .management-primary,
+    .action-button,
+    .logout-button {
+        transition: none;
+    }
+
+}
