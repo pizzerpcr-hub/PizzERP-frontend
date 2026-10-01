@@ -158,6 +158,59 @@
     color: #a62c23;
 }
 
+.password-requirements-panel {
+    display: grid;
+    gap: 7px;
+    padding: 10px 12px;
+    border: 1px solid #dce8df;
+    border-radius: 8px;
+    background: #f5f7f5;
+}
+
+.password-requirements-title {
+    margin: 0;
+    color: #543e34;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.password-requirements {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: #6f625d;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.password-requirements li {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.password-requirements li.met,
+.password-match.met {
+    color: #287443;
+}
+
+.password-requirement-icon {
+    flex: 0 0 auto;
+    color: #287443;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.password-match {
+    margin: 0;
+    color: #a62c23;
+    font-size: 13px;
+}
+
 .dialog-field input:disabled,
 .dialog-field select:disabled,
 .password-toggle:disabled {

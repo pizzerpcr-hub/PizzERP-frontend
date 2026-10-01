@@ -5,6 +5,9 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth.js";
 import { obtenerRutaInicio } from "../../constants/roles.js";
 import { iniciarSesion as iniciarSesionService } from "../../services/loginService.js";
+import Notification from "../../components/Notification/Notification.jsx";
+
+const MAX_INTENTOS_LOGIN = 3;
 
 const formatearTiempo = (segundosTotales) => {
     const minutos = Math.floor(segundosTotales / 60);
@@ -19,7 +22,7 @@ function Login() {
   const [messageType, setMessageType] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [segundosRestantes, setSegundosRestantes] = useState(0);
-  const mensajeBaseRef = useRef("");
+  const bloqueoHastaRef = useRef(0);
   const {
     usuario, cargandoSesion, iniciarSesion,
   } = useAuth();
@@ -35,30 +38,25 @@ function Login() {
   const bloqueado = segundosRestantes > 0;
 
   useEffect(() => {
-      if (segundosRestantes <= 0) {
+      if (!bloqueado) {
           return undefined;
       }
 
       const intervalo = window.setInterval(() => {
-          setSegundosRestantes((actuales) => {
-              const siguiente = actuales - 1;
+          const restantes = Math.max(
+              0,
+              Math.ceil((bloqueoHastaRef.current - Date.now()) / 1000),
+          );
+          setSegundosRestantes(restantes);
 
-              if (siguiente <= 0) {
-                  setFormMessage("");
-                  setMessageType("");
-                  return 0;
-              }
-
-              setFormMessage(
-                  `${mensajeBaseRef.current} Intenta nuevamente en ${formatearTiempo(siguiente)}.`,
-              );
-
-              return siguiente;
-          });
+          if (restantes === 0) {
+              setFormMessage("");
+              setMessageType("");
+          }
       }, 1000);
 
       return () => window.clearInterval(intervalo);
-  }, [segundosRestantes > 0]);
+  }, [bloqueado]);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -77,7 +75,7 @@ function Login() {
   const handleSubmit = async (event) => {
       event.preventDefault();
 
-      if (bloqueado) {
+      if (bloqueado || isSubmitting) {
           return;
       }
 
@@ -98,11 +96,6 @@ function Login() {
               remember: formData.remember,
           });
 
-          setFormMessage(
-              `Bienvenido, ${responseData.usuario.nombre_completo}.`
-          );
-          setMessageType("success");
-
           iniciarSesion(responseData.usuario);
 
           setFormData((previousData) => ({
@@ -113,16 +106,14 @@ function Login() {
           setMessageType("error");
 
           if (typeof error.retryAfter === "number" && error.retryAfter > 0) {
-              mensajeBaseRef.current = error.message;
-
-              setFormMessage(
-                  `${error.message} Intenta nuevamente en ${formatearTiempo(error.retryAfter)}.`,
-              );
-
-              setSegundosRestantes(error.retryAfter);
+              bloqueoHastaRef.current = Date.now() + error.retryAfter * 1000;
+              setFormMessage(error.message);
+              setSegundosRestantes(Math.ceil(error.retryAfter));
           } else {
               setFormMessage(
-                  error.message || "No fue posible iniciar sesión."
+                  error instanceof TypeError
+                    ? "No fue posible conectar con el servidor. Revisa tu conexión e intenta nuevamente."
+                    : error.message || "No fue posible iniciar sesión."
               );
           }
       } finally {
@@ -141,6 +132,15 @@ function Login() {
 
   return (
     <main className="login-layout">
+      {formMessage && (
+        <Notification
+          title={bloqueado ? "Acceso temporalmente bloqueado" : "No se pudo iniciar sesión"}
+          message={bloqueado
+            ? `${formMessage}\nEspera a que termine la cuenta regresiva para volver a intentarlo.`
+            : formMessage}
+          onClose={() => setFormMessage("")}
+        />
+      )}
       <aside
         className="login-sidebar"
         aria-label="Información de PizzERP"
@@ -183,6 +183,14 @@ function Login() {
             <h2 id="loginTitle">Inicia sesión</h2>
 
             <p>Ingresa tus credenciales para continuar.</p>
+            <div className="login-attempts-info" id="loginAttemptsInfo">
+              <p>Máximo {MAX_INTENTOS_LOGIN} intentos.</p>
+              {bloqueado && (
+                <p className="login-lockout-countdown">
+                  Podrás intentarlo nuevamente en {formatearTiempo(segundosRestantes)}.
+                </p>
+              )}
+            </div>
           </div>
 
           <form
@@ -190,17 +198,8 @@ function Login() {
             onSubmit={handleSubmit}
             noValidate
             aria-busy={isSubmitting}
+            aria-describedby="loginAttemptsInfo"
           >
-            {formMessage && (
-              <p
-                className={`form-message ${messageType}`}
-                role="alert"
-                aria-live="polite"
-              >
-                {formMessage}
-              </p>
-            )}
-
             <div className="form-field">
               <label htmlFor="username">
                 Nombre de usuario
@@ -289,6 +288,10 @@ function Login() {
                 : "Ingresar al sistema"}
             </button>
           </form>
+
+          <div className="login-divider" aria-hidden="true">
+            <span>o</span>
+          </div>
 
           <p className="help-text">
             ¿Necesitas ayuda?{" "}

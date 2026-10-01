@@ -9,8 +9,15 @@ const formularioVacio = {
     nombre_completo: "",
     nombre_usuario: "",
     contrasena: "",
+    confirmar_contrasena: "",
     rol: "",
 };
+
+const requisitosContrasena = [
+    { texto: "Mínimo 8 caracteres", cumple: (valor) => valor.length >= 8 },
+    { texto: "Al menos una letra", cumple: (valor) => /[A-Za-z]/.test(valor) },
+    { texto: "Al menos un número", cumple: (valor) => /\d/.test(valor) },
+];
 
 const obtenerDatosIniciales = (usuarioInicial) => ({
     ...formularioVacio,
@@ -40,6 +47,8 @@ function UsuarioFormBase({
     const [formData, setFormData] = useState(() =>
         obtenerDatosIniciales(usuarioInicial),
     );
+    const mostrarRequisitosContrasena =
+        !requisitosContrasena.every(({ cumple }) => cumple(formData.contrasena));
 
     const todosVacios = (datos) =>
         contrasenaObligatoria &&
@@ -52,6 +61,10 @@ function UsuarioFormBase({
         if (!contrasena && contrasenaObligatoria) errores.contrasena = "La contraseña es obligatoria.";
         else if (contrasena && contrasena.length < 8) errores.contrasena = "La contraseña debe tener al menos 8 caracteres.";
         else if (contrasena && !/(?=.*[A-Za-z])(?=.*\d)/.test(contrasena)) errores.contrasena = "La contraseña debe incluir una letra y un número.";
+        if (contrasenaObligatoria || contrasena || datos.confirmar_contrasena) {
+            if (!datos.confirmar_contrasena) errores.confirmar_contrasena = "Confirma la contraseña.";
+            else if (datos.confirmar_contrasena !== contrasena) errores.confirmar_contrasena = "Las contraseñas no coinciden.";
+        }
         if (!datos.rol) errores.rol = "Selecciona un rol.";
         return errores;
     };
@@ -97,6 +110,7 @@ function UsuarioFormBase({
         const datosActualizados = {
             ...formData,
             [name]: name === "nombre_usuario" ? value.toUpperCase() : value,
+            ...(name === "contrasena" && !value ? { confirmar_contrasena: "" } : {}),
         };
         setFormData(datosActualizados);
         setErrorNota(false);
@@ -104,7 +118,11 @@ function UsuarioFormBase({
         if (errorNota && todosVacios(datosActualizados)) {
             setAvisosCampo({});
         } else {
-            setAvisosCampo((actuales) => ({ ...actuales, [name]: null }));
+            setAvisosCampo((actuales) => ({
+                ...actuales,
+                [name]: null,
+                ...(name === "contrasena" ? { confirmar_contrasena: null } : {}),
+            }));
         }
     };
 
@@ -268,11 +286,10 @@ function UsuarioFormBase({
                             placeholder={placeholderContrasena}
                             autoComplete="new-password"
                             aria-invalid={Boolean(avisosCampo.contrasena)}
-                            aria-describedby={
-                                avisosCampo.contrasena
-                                    ? "formPasswordError"
-                                    : undefined
-                            }
+                            aria-describedby={[
+                                mostrarRequisitosContrasena && "formPasswordRequirements",
+                                avisosCampo.contrasena && "formPasswordError",
+                            ].filter(Boolean).join(" ") || undefined}
                         />
 
                         <button
@@ -298,6 +315,51 @@ function UsuarioFormBase({
                             {avisosCampo.contrasena.texto}
                         </p>
                     )}
+                    {mostrarRequisitosContrasena && (
+                        <div className="password-requirements-panel">
+                            <p className="password-requirements-title">La contraseña debe incluir:</p>
+                            <ul id="formPasswordRequirements" className="password-requirements" aria-label="Requisitos de la contraseña">
+                                {requisitosContrasena.map(({ texto, cumple }) => {
+                                    const cumplido = cumple(formData.contrasena);
+                                    return (
+                                        <li key={texto} className={cumplido ? "met" : ""}>
+                                            <span>{texto}</span>
+                                            {cumplido && (
+                                                <span className="password-requirement-icon" aria-hidden="true">✓</span>
+                                            )}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+
+                <div className="dialog-field">
+                        <label htmlFor="formPasswordConfirmation">Confirmar contraseña</label>
+                        <input
+                            id="formPasswordConfirmation"
+                            name="confirmar_contrasena"
+                            type={mostrarPassword ? "text" : "password"}
+                            value={formData.confirmar_contrasena}
+                            onChange={handleChange}
+                            disabled={isSubmitting}
+                            required={contrasenaObligatoria || Boolean(formData.contrasena)}
+                            placeholder="Repite la contraseña"
+                            autoComplete="new-password"
+                            aria-invalid={Boolean(avisosCampo.confirmar_contrasena)}
+                            aria-describedby={avisosCampo.confirmar_contrasena ? "formPasswordConfirmationError" : undefined}
+                        />
+                        {avisosCampo.confirmar_contrasena && (
+                            <p id="formPasswordConfirmationError" className="dialog-message dialog-field-message visible" role="alert">
+                                {avisosCampo.confirmar_contrasena.texto}
+                            </p>
+                        )}
+                        {formData.confirmar_contrasena && formData.confirmar_contrasena === formData.contrasena && !avisosCampo.confirmar_contrasena && (
+                            <p className="password-match met" role="status">
+                                ✓ Las contraseñas coinciden.
+                            </p>
+                        )}
                 </div>
 
                 <div className="dialog-field">

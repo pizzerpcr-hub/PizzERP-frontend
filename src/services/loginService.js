@@ -114,7 +114,12 @@ export const iniciarSesion = async (datosLogin) => {
 
     if (!loginResponse.ok) {
         const error = new Error(
-            obtenerMensajeError(responseData, MENSAJE_LOGIN_FALLIDO),
+            obtenerMensajeError(
+                responseData,
+                loginResponse.status === 401
+                    ? "Credenciales incorrectas. Revisa tu usuario y contraseña."
+                    : MENSAJE_LOGIN_FALLIDO,
+            ),
         );
 
         // Segundos restantes de bloqueo por IP, si aplica (429).

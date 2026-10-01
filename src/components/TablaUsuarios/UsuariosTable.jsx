@@ -73,7 +73,7 @@ function UsuariosTable({
 
                                         <td role="cell" className="usuario-card-username">
                                             <span className="usuario-field-label" aria-hidden="true">Usuario</span>
-                                            <span>{usuarioListado.nombre_usuario?.toUpperCase()}</span>
+                                            <span>{usuarioListado.nombre_usuario}</span>
                                         </td>
 
                                         <td role="cell">
