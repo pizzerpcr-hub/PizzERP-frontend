@@ -6,23 +6,23 @@
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 24px;
-    margin-bottom: 24px;
+    gap: 22px;
+    margin-bottom: 15px;
 }
 
 .productos-eyebrow {
     display: block;
-    margin-bottom: 5px;
     color: #a33e16;
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 18px;
+    font-weight: 600;
     letter-spacing: 0.08em;
-    text-transform: uppercase;
 }
 
 .productos-header h1 {
-    margin: 0 0 7px;
+    margin: 0;
     font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
 }
 
 .productos-header p,
@@ -31,15 +31,17 @@
 .productos-section-heading p {
     margin: 0;
     color: #746761;
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.5;
 }
 
+.productos-header p { margin-top: 7px; }
+
 .productos-primary-button,
 .productos-secondary-button {
-    min-height: 42px;
-    padding: 9px 16px;
-    border-radius: 7px;
+    min-height: 40px;
+    padding: 9px 14px;
+    border-radius: 8px;
     font: inherit;
     font-size: 14px;
     font-weight: 600;
@@ -48,43 +50,55 @@
 
 .productos-primary-button {
     border: 0;
-    background: #a33e16;
+    background: #a63c16;
     color: #fff;
     white-space: nowrap;
 }
 
-.productos-primary-button:hover { background: #8e3412; }
+.productos-primary-button:hover { background: #872d10; }
+
+.productos-header .productos-primary-button { box-shadow: 0 4px 10px rgba(166, 60, 22, .18); }
+.productos-header .productos-primary-button:hover { box-shadow: 0 6px 14px rgba(166, 60, 22, .24); transform: translateY(-1px); }
 
 .productos-secondary-button {
-    border: 1px solid #d8d0ca;
-    background: #fff;
-    color: #4a3932;
+    border: 0;
+    background: #f1e9e3;
+    color: #57392f;
 }
 
-.productos-secondary-button:hover { background: #f3f0ed; }
+.productos-secondary-button:hover { background: #e9ddd5; }
 
 .productos-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 320px);
+    column-gap: 14px;
     min-width: 0;
-    padding: 28px 30px;
+    padding: 20px;
     border: 1px solid #e4dfda;
-    border-radius: 10px;
+    border-radius: 8px;
     background: #fff;
-    box-shadow: 0 4px 18px rgba(43, 25, 20, 0.05);
 }
 
-.productos-panel-heading { margin-bottom: 22px; }
-.productos-panel-heading h2 { margin: 0 0 5px; font-size: 18px; }
+.productos-panel-heading { min-width: 0; margin-bottom: 15px; }
+.productos-panel-heading h2 { margin: 0 0 10px; color: #38221a; font-size: 18px; font-weight: 600; }
+.productos-panel-heading p { color: #796c66; }
 .productos-panel-heading small { display: block; margin-top: 8px; color: #796c66; font-size: 12px; }
 
 .productos-search {
-    display: grid;
-    gap: 6px;
-    width: min(100%, 520px);
-    margin-bottom: 24px;
-    color: #4a3932;
-    font-size: 13px;
-    font-weight: 600;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    margin-bottom: 15px;
+    padding: 8px 10px;
+    border: 1px solid #ddd7d2;
+    border-radius: 6px;
+    transition: border-color .2s, box-shadow .2s;
 }
+
+.productos-search:focus-within { border-color: #b74b1b; box-shadow: 0 0 0 3px rgba(183, 75, 27, .08); }
+.productos-search span { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .productos-search input,
 .productos-dialog input,
@@ -92,31 +106,33 @@
 .productos-dialog textarea {
     width: 100%;
     min-width: 0;
-    padding: 10px 12px;
-    border: 1px solid #dcd5d0;
-    border-radius: 7px;
+    padding: 9px 10px;
+    border: 1px solid #ddd3cd;
+    border-radius: 8px;
     outline: none;
     background: #fff;
-    color: #291b17;
+    color: #3b2922;
     font: inherit;
     font-size: 14px;
 }
 
-.productos-search input:focus,
 .productos-dialog input:focus,
 .productos-dialog select:focus,
 .productos-dialog textarea:focus {
-    border-color: #a33e16;
-    box-shadow: 0 0 0 3px rgba(163, 62, 22, 0.08);
+    border-color: #b74b1b;
+    box-shadow: 0 0 0 3px rgba(183, 75, 27, 0.12);
 }
+
+.productos-search input,
+.productos-search input:focus { min-height: 0; padding: 0; border: 0; border-radius: 0; outline: 0; background: transparent; box-shadow: none; }
 
 .productos-dialog input[aria-invalid="true"] { border-color: #a62c23; }
 
-.productos-table-wrap { width: 100%; overflow-x: auto; }
+.productos-table-wrap { grid-column: 1 / -1; width: 100%; overflow-x: auto; }
 .productos-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 14px; }
-.productos-table th { padding: 13px 14px; border-bottom: 1px solid #ddd5cf; color: #746761; font-size: 12px; text-align: left; text-transform: uppercase; letter-spacing: 0.04em; }
-.productos-table td { padding: 16px 14px; border-bottom: 1px solid #eee9e5; color: #5f5049; vertical-align: middle; }
-.productos-table tbody tr:hover { background: #fcfaf9; }
+.productos-table th { padding: 11px 10px; border-bottom: 1px solid #d9dee7; background: #faf9f7; color: #756860; font-size: 14px; font-weight: 600; text-align: left; }
+.productos-table td { padding: 11px 10px; border-bottom: 1px solid #d9dee7; color: #49342c; vertical-align: middle; }
+.productos-table tbody tr:hover { background: #fffcf8; }
 .productos-table td strong { display: block; color: #291b17; font-weight: 600; }
 .productos-product-cell { min-width: 0; }
 .productos-table .productos-empty { padding: 28px 14px; text-align: center; }
@@ -127,7 +143,7 @@
 .productos-status.active { background: #e9f5eb; color: #287443; }
 .productos-status.inactive { background: #f3efec; color: #76665d; }
 .productos-table-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.productos-table-actions button { padding: 6px 9px; border: 1px solid #e2d5ce; border-radius: 5px; background: #fff; color: #87401f; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.productos-table-actions button { padding: 5px 7px; border: 1px solid #e2d5ce; border-radius: 5px; background: #fff; color: #87401f; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .productos-table-actions button:hover { background: #fff8f4; border-color: #bd8d76; }
 
 .productos-dialog {
@@ -135,9 +151,9 @@
     width: min(92vw, 760px);
     max-width: 760px;
     max-height: calc(100dvh - 32px);
-    padding: 28px 30px;
+    padding: 26px;
     border: 0;
-    border-radius: 12px;
+    border-radius: 14px;
     background: #fff;
     color: #291b17;
     box-shadow: 0 22px 55px rgba(35, 20, 14, 0.27);
@@ -147,7 +163,7 @@
 .productos-dialog::backdrop { background: rgba(34, 18, 13, 0.47); }
 .productos-dialog-close { position: absolute; top: 18px; right: 18px; width: 30px; height: 30px; border: 0; border-radius: 50%; background: #f3ece7; color: #63443a; font-size: 21px; line-height: 1; cursor: pointer; }
 .productos-dialog-header { margin: 0 35px 24px 0; }
-.productos-dialog-header h2 { margin: 0 0 6px; font-size: 20px; }
+.productos-dialog-header h2 { margin: 0 0 6px; color: #38221a; font-size: 18px; font-weight: 600; }
 .productos-form-section { padding: 18px 0; border-top: 1px solid #eee9e5; }
 .productos-form-section h3 { margin: 0 0 14px; font-size: 16px; }
 .productos-form-section label { display: grid; gap: 6px; margin-bottom: 14px; color: #4a3932; font-size: 13px; font-weight: 600; }
@@ -173,6 +189,7 @@
 .productos-form-actions { display: flex; justify-content: flex-end; gap: 9px; padding-top: 20px; border-top: 1px solid #eee9e5; }
 
 @media (max-width: 850px) {
+    .productos-panel { grid-template-columns: 1fr; }
     .productos-table-wrap { overflow: visible; }
     .productos-table, .productos-table tbody, .productos-table tr, .productos-table td { display: block; width: 100%; }
     .productos-table { min-width: 0; }
@@ -190,7 +207,7 @@
 @media (max-width: 600px) {
     .productos-header { align-items: stretch; flex-direction: column; }
     .productos-header .productos-primary-button { width: 100%; }
-    .productos-panel { padding: 18px 16px; }
+    .productos-panel { padding: 16px 14px; }
     .productos-dialog { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); padding: 24px 18px; }
     .productos-form-grid { grid-template-columns: 1fr; gap: 0; }
     .productos-section-heading { flex-direction: column; }

@@ -117,17 +117,7 @@
 
   padding: 40px 24px;
 
-  background:
-    radial-gradient(
-      circle at 88% 8%,
-      rgba(229, 176, 76, 0.17),
-      transparent 23rem
-    ),
-    linear-gradient(
-      135deg,
-      #fffdf9 0%,
-      #f8f1ea 100%
-    );
+  background: #f7f6f4;
 }
 
 .login-card {
@@ -135,12 +125,10 @@
 
   padding: clamp(28px, 4vw, 40px);
 
-  border: 1px solid rgba(150, 107, 80, 0.14);
-  border-radius: 16px;
+  border: 1px solid #e4dfda;
+  border-radius: 8px;
 
   background: #fff;
-
-  box-shadow: 0 16px 36px rgba(65, 37, 25, 0.09);
 }
 
 /* =========================
@@ -156,11 +144,10 @@
 
   color: #a33e16;
 
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 600;
 
   letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .welcome h2 {
@@ -197,10 +184,10 @@
 
 .form-field label,
 .remember {
-  color: #392e29;
+  color: #543e34;
 
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .form-field input {
@@ -209,13 +196,13 @@
 
   padding: 12px 14px;
 
-  border: 1px solid #d9d1cb;
-  border-radius: 9px;
+  border: 1px solid #ddd3cd;
+  border-radius: 8px;
 
   outline: none;
 
   background: #fff;
-  color: #231815;
+  color: #3b2922;
 
   font-size: 16px;
   font-weight: 400;
@@ -326,7 +313,7 @@
   gap: 12px;
 
   border: 0;
-  border-radius: 9px;
+  border-radius: 8px;
 
   background: #a63c16;
   color: #fff;

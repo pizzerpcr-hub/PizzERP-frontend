@@ -6,7 +6,7 @@ import {
     useState,
 } from "react";
 
-import CambiarEstadoUsuarioDialog from "../../components/TablaUsuarios/CambiarEstadoUsuarioDialog.jsx";
+import CambiarEstadoUsuarioDialog from "../../components/forms/CambiarEstadoUsuarioDialog/CambiarEstadoUsuarioDialog.jsx";
 import UsuariosTable from "../../components/TablaUsuarios/UsuariosTable.jsx";
 import RegistrarUsuarioForm from "../../components/forms/RegistrarUsuarioForm/RegistrarUsuarioForm.jsx";
 import ModificarUsuarioForm from "../../components/forms/ModificarUsuarioForm/ModificarUsuarioForm.jsx";

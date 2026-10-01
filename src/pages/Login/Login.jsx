@@ -6,6 +6,7 @@ import { useAuth } from "../../context/useAuth.js";
 import { obtenerRutaInicio } from "../../constants/roles.js";
 import { iniciarSesion as iniciarSesionService } from "../../services/loginService.js";
 import Notification from "../../components/Notification/Notification.jsx";
+import LoginForm from "../../components/forms/LoginForm/LoginForm.jsx";
 
 const MAX_INTENTOS_LOGIN = 3;
 
@@ -17,7 +18,6 @@ const formatearTiempo = (segundosTotales) => {
 };
 
 function Login() {
-  const [showPassword, setShowPassword] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -193,101 +193,15 @@ function Login() {
             </div>
           </div>
 
-          <form
-            id="loginForm"
+          <LoginForm
+            formData={formData}
+            onChange={handleChange}
             onSubmit={handleSubmit}
-            noValidate
-            aria-busy={isSubmitting}
-            aria-describedby="loginAttemptsInfo"
-          >
-            <div className="form-field">
-              <label htmlFor="username">
-                Nombre de usuario
-              </label>
-
-              <input
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="username"
-                placeholder="Ingresa tu usuario"
-                value={formData.username}
-                onChange={handleChange}
-                aria-invalid={messageType === "error"}
-                disabled={isSubmitting || bloqueado}
-                required
-              />
-            </div>
-
-            <div className="form-field">
-              <div className="label-row">
-                <label htmlFor="password">
-                  Contraseña
-                </label>
-              </div>
-
-              <div className="password-wrap">
-                <input
-                  id="password"
-                  name="password"
-                  type={
-                    showPassword ? "text" : "password"
-                  }
-                  autoComplete="current-password"
-                  placeholder="Ingresa tu contraseña"
-                  minLength={8}
-                  value={formData.password}
-                  onChange={handleChange}
-                  aria-invalid={messageType === "error"}
-                  disabled={isSubmitting || bloqueado}
-                  required
-                />
-
-                <button
-                  className="password-toggle"
-                  type="button"
-                  aria-label={
-                    showPassword
-                      ? "Ocultar contraseña"
-                      : "Mostrar contraseña"
-                  }
-                  aria-pressed={showPassword}
-                  onClick={() =>
-                    setShowPassword(
-                      (previousValue) => !previousValue,
-                    )
-                  }
-                  disabled={isSubmitting || bloqueado}
-                >
-                  {showPassword ? "Ocultar" : "Mostrar"}
-                </button>
-              </div>
-            </div>
-
-            <label className="remember">
-              <input
-                type="checkbox"
-                name="remember"
-                checked={formData.remember}
-                onChange={handleChange}
-                disabled={isSubmitting || bloqueado}
-              />
-
-              <span>Recordarme en este equipo</span>
-            </label>
-
-            <button
-              className="login-button"
-              type="submit"
-              disabled={isSubmitting || bloqueado}
-            >
-              {bloqueado
-                ? `Espera ${formatearTiempo(segundosRestantes)}`
-                : isSubmitting
-                ? "Verificando..."
-                : "Ingresar al sistema"}
-            </button>
-          </form>
+            messageType={messageType}
+            isSubmitting={isSubmitting}
+            bloqueado={bloqueado}
+            tiempoRestante={formatearTiempo(segundosRestantes)}
+          />
 
           <div className="login-divider" aria-hidden="true">
             <span>o</span>
