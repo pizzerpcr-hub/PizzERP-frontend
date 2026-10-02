@@ -1028,34 +1028,6 @@ select {
     overflow-y: auto;
 }
 
-.ingredients-page .management-header {
-    align-items: flex-start;
-}
-
-.ingredients-page .management-header > div {
-    width: 100%;
-}
-
-.ingredients-page .management-header .eyebrow {
-    margin: 0;
-    color: #a33e16;
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: .08em;
-}
-
-.ingredients-page .header-description {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-}
-
-.ingredients-page .header-description p {
-    flex: 1 1 300px;
-}
-
 .ingredients-page .management-toast-region {
     position: fixed;
     top: max(16px, env(safe-area-inset-top));
@@ -1065,65 +1037,11 @@ select {
     pointer-events: none;
 }
 
-.ingredients-page .management-toast {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 12px;
-    border: 1px solid #d8d2cc;
-    border-left: 3px solid #657f6b;
-    border-radius: 6px;
-    background: #faf9f7;
-    color: #382e29;
-    font-size: 14px;
-    line-height: 1.4;
-    pointer-events: auto;
-}
-
-.ingredients-page .management-toast.error {
-    border-left-color: #a66b62;
-}
-
-.ingredients-page .management-toast span {
-    min-width: 0;
-    overflow-wrap: anywhere;
-}
-
-.ingredients-page .management-toast-close {
-    flex-shrink: 0;
-    padding: 0 2px;
-    border: 0;
-    background: transparent;
-    color: #625953;
-    font: inherit;
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-}
-
-.module-page .ingredients-panel {
-    display: block;
-}
-
 .ingredients-page .management-panel-header {
-    display: flex;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 15px;
-}
-
-.ingredients-page .management-panel-header h2 {
-    margin: 0 0 10px;
-    color: #38221a;
-    font-size: 18px;
-    font-weight: 600;
 }
 
 .ingredients-page .management-panel-header p {
-    margin: 5px 0 0;
-    color: #796c66;
     font-size: 16px;
 }
 
@@ -1290,10 +1208,6 @@ select {
 }
 
 @media (max-width: 600px) {
-    .ingredients-page .management-panel-header {
-        flex-direction: column;
-    }
-
     .module-page .ingredients-panel .search-box {
         flex: auto;
         width: 100%;

@@ -247,58 +247,6 @@
 }
 
 /* =========================
-   Search
-========================= */
-
-.search-box {
-    display: flex;
-    align-items: center;
-
-    gap: 6px;
-
-    min-width: 180px;
-
-    padding: 8px 10px;
-
-    border: 1px solid #ddd7d2;
-    border-radius: 6px;
-
-    color: #8d7c73;
-
-    transition:
-        border-color 0.2s,
-        box-shadow 0.2s;
-}
-
-.search-box:focus-within {
-    border-color: #b74b1b;
-    box-shadow: 0 0 0 3px rgba(183, 75, 27, 0.08);
-}
-
-.users-panel .search-box .search-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-}
-
-.search-box input {
-    width: 100%;
-    min-width: 0;
-
-    border: 0;
-    outline: 0;
-
-    background: transparent;
-    color: #3b2922;
-
-    font-family: var(--font);
-    font-size: 14px;
-}
-
-/* =========================
    Table
 ========================= */
 
@@ -675,12 +623,6 @@
         flex: none;
         width: 100%;
         min-width: 0;
-    }
-
-    .search-box {
-        width: 100%;
-        min-width: 0;
-        box-sizing: border-box;
     }
 }
 
