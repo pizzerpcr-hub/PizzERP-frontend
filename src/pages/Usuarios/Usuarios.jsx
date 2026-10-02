@@ -26,6 +26,7 @@ import { puede } from "../../constants/roles.js";
 import { useBusquedaLista, useListaSesion } from "../../hooks/useListaSesion.js";
 import { marcarListaPendiente, leerLista, listaDesactualizada, versionListasSesion } from "../../services/listasSesion.js";
 
+import "../ModulePage.css";
 import "./Usuarios.css";
 import PageSearch from "../../components/common/PageSearch/PageSearch.jsx";
 import LoadingSpinner from "../../components/common/LoadingSpinner/LoadingSpinner.jsx";
@@ -737,7 +738,7 @@ function Usuarios() {
         : RegistrarUsuarioForm;
 
     return (
-        <>
+        <div className="module-page users-page">
             <header className="management-header users-header">
                 <div>
                     <p className="eyebrow">
@@ -819,7 +820,7 @@ function Usuarios() {
                 onConfirm={handleCambioEstado}
                 onClose={cerrarCambioEstado}
             />
-        </>
+        </div>
     );
 }
 

@@ -272,17 +272,6 @@ select {
    CONTENIDO PRINCIPAL
    ========================================================= */
 
-.management-content {
-    min-height: 100dvh;
-
-    margin-left: 258px;
-
-    padding: 32px 40px 40px;
-
-    background: var(--background);
-}
-
-
 /* =========================================================
    ENCABEZADO
    ========================================================= */
@@ -400,39 +389,6 @@ select {
 /* =========================================================
    ENCABEZADO DEL PANEL
    ========================================================= */
-
-.panel-heading {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-
-    width: 100%;
-
-    margin-bottom: 24px;
-
-    gap: 20px;
-}
-
-.panel-heading h2 {
-    margin: 0 0 5px;
-
-    color: var(--brown);
-
-    font-size: 18px;
-    font-weight: 600;
-}
-
-.panel-heading p {
-    margin: 0;
-
-    color: #796c66;
-
-    font-size: 14px;
-    font-weight: 400;
-
-    line-height: 1.5;
-}
-
 
 /* =========================================================
    TABLA
@@ -852,11 +808,6 @@ select {
         width: 230px;
     }
 
-    .management-content {
-        margin-left: 230px;
-
-        padding: 28px 25px 35px;
-    }
 }
 
 
@@ -873,11 +824,6 @@ select {
         height: auto;
     }
 
-    .management-content {
-        margin-left: 0;
-
-        padding: 24px 18px;
-    }
 
     .management-header {
         align-items: flex-start;
@@ -962,9 +908,6 @@ select {
 
 @media (max-width: 600px) {
 
-    .management-content {
-        padding: 20px 14px;
-    }
 
     .management-header h1 {
         font-size: 24px;
@@ -982,9 +925,6 @@ select {
         padding: 18px 16px;
     }
 
-    .panel-heading {
-        margin-bottom: 20px;
-    }
 
     .form-actions {
         flex-direction: column-reverse;
@@ -1043,13 +983,6 @@ select {
 
 .ingredients-page .management-panel-header p {
     font-size: 16px;
-}
-
-.module-page .ingredients-panel .search-box {
-    flex: 0 1 320px;
-    min-width: 180px;
-    margin-bottom: 0;
-    color: #8d7c73;
 }
 
 .ingredients-page .ingredients-table {
@@ -1204,13 +1137,6 @@ select {
     .ingredients-page .ingredients-table .module-empty {
         display: block;
         padding: 28px 14px;
-    }
-}
-
-@media (max-width: 600px) {
-    .module-page .ingredients-panel .search-box {
-        flex: auto;
-        width: 100%;
     }
 }
 
