@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function CategoriaForm({ categoria, enviando, onGuardar, onCerrar }) {
+function CategoriaForm({ categoria, enviando, onGuardar, onCerrar, puedeDesactivar = true }) {
     const [datos, setDatos] = useState({
         nombre: categoria?.nombre ?? "",
         descripcion: categoria?.descripcion ?? "",
@@ -65,7 +65,7 @@ function CategoriaForm({ categoria, enviando, onGuardar, onCerrar }) {
                         <label htmlFor="estadoCategoria">Estado</label>
                         <select id="estadoCategoria" value={datos.estado} onChange={(event) => cambiar("estado", event.target.value)}>
                             <option value="ACTIVO">Activa</option>
-                            <option value="INACTIVO">Inactiva</option>
+                            <option value="INACTIVO" disabled={Boolean(categoria && categoria.estado === "ACTIVO" && !puedeDesactivar)}>Inactiva</option>
                         </select>
                     </div>
                     {errorGeneral && <p className="catalog-error" role="alert">{errorGeneral}</p>}

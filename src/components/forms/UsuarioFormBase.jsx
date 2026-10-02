@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
     normalizarRol,
     obtenerEtiquetaRol,
-    ROLES_PERMITIDOS,
 } from "../../constants/roles.js";
 
 const formularioVacio = {
@@ -28,6 +27,10 @@ const obtenerDatosIniciales = (usuarioInicial) => ({
 
 function UsuarioFormBase({
     usuarioInicial = null,
+    rolesDisponibles = [],
+    estadoCatalogoRoles = "listo",
+    errorCatalogoRoles = "",
+    onReintentarRoles,
     titulo,
     etiquetaContrasena,
     placeholderContrasena,
@@ -49,6 +52,7 @@ function UsuarioFormBase({
     );
     const mostrarRequisitosContrasena =
         !requisitosContrasena.every(({ cumple }) => cumple(formData.contrasena));
+    const rolesListos = estadoCatalogoRoles === "listo" && rolesDisponibles.length > 0;
 
     const todosVacios = (datos) =>
         contrasenaObligatoria &&
@@ -143,7 +147,7 @@ function UsuarioFormBase({
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (isSubmitting || envioEnCursoRef.current) {
+        if (isSubmitting || envioEnCursoRef.current || !rolesListos) {
             return;
         }
 
@@ -370,18 +374,29 @@ function UsuarioFormBase({
                         name="rol"
                         value={formData.rol}
                         onChange={handleChange}
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || !rolesListos}
+                        aria-busy={estadoCatalogoRoles === "cargando"}
                         required
                         aria-invalid={Boolean(avisosCampo.rol)}
                         aria-describedby={avisosCampo.rol ? "formRoleError" : undefined}
                     >
-                        <option value="">Seleccione un rol</option>
-                        {ROLES_PERMITIDOS.map((rol) => (
-                            <option key={rol} value={rol}>
-                                {obtenerEtiquetaRol(rol)}
+                        <option value="">{estadoCatalogoRoles === "cargando" ? "Cargando roles…" : "Seleccione un rol"}</option>
+                        {formData.rol && !rolesDisponibles.some((rol) => rol.nombre === formData.rol) &&
+                            <option value={formData.rol} disabled>{estadoCatalogoRoles === "cargando" ? "Cargando roles…" : `${obtenerEtiquetaRol(formData.rol)}${estadoCatalogoRoles === "listo" ? " (inactivo; selecciona otro)" : ""}`}</option>}
+                        {rolesDisponibles.map((rol) => (
+                            <option key={rol.nombre} value={rol.nombre}>
+                                {obtenerEtiquetaRol(rol.nombre)}
                             </option>
                         ))}
                     </select>
+                    {(estadoCatalogoRoles === "error" || errorCatalogoRoles) && (
+                        <p className="dialog-message dialog-field-message visible" role="alert">
+                            No fue posible cargar los roles. <button type="button" onClick={onReintentarRoles}>Reintentar</button>
+                        </p>
+                    )}
+                    {estadoCatalogoRoles === "listo" && !errorCatalogoRoles && !rolesDisponibles.length && (
+                        <p className="dialog-message dialog-field-message visible" role="alert">No hay roles disponibles para asignar.</p>
+                    )}
                     {avisosCampo.rol && (
                         <p id="formRoleError" className="dialog-message dialog-field-message visible" role="alert">
                             {avisosCampo.rol.texto}
@@ -409,7 +424,7 @@ function UsuarioFormBase({
                     <button
                         className="management-primary"
                         type="submit"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || !rolesListos}
                     >
                         {isSubmitting
                             ? "Guardando..."

@@ -34,12 +34,12 @@ for (const usuario of [null, { rol: "CAJA", estado: "ACTIVO" },
     });
 }
 
-for (const rol of ["ADMINISTRADOR", "TI"]) {
+for (const rol of ["ADMINISTRADOR", "TI", "AUDITOR"]) {
     test(`foco y temporizador verifican permiso antes del listado: ${rol}`, async () => {
         const env = entorno(), llamadas = [];
         const stop = observarUsuarios({
             ...env,
-            consultar: async () => { llamadas.push("sesion"); return { rol, estado: "ACTIVO" }; },
+            consultar: async () => { llamadas.push("sesion"); return { rol, estado: "ACTIVO", permisos: { usuarios: { ver: true } } }; },
             revocar: () => assert.fail("permiso vigente"),
             recargar: async () => { llamadas.push("listado"); },
         });
@@ -64,7 +64,7 @@ test("espera el listado anterior y descarta una verificación cancelada", async 
     let resolver, consultas = 0, recargas = 0;
     const stop = observarUsuarios({
         ...env,
-        consultar: async () => { consultas++; return { rol: "TI", estado: "ACTIVO" }; },
+        consultar: async () => { consultas++; return { rol: "TI", estado: "ACTIVO", permisos: { usuarios: { ver: true } } }; },
         revocar: () => assert.fail(),
         recargar: () => { recargas++; return new Promise((r) => { resolver = r; }); },
     });
@@ -93,13 +93,37 @@ test("fallo de sesión no provoca GET ni revocación; puede reintentar", async (
     let fallo = true, recargas = 0;
     const stop = observarUsuarios({
         ...env,
-        consultar: async () => { if (fallo) throw Error("red"); return { rol: "TI", estado: "ACTIVO" }; },
+        consultar: async () => { if (fallo) throw Error("red"); return { rol: "TI", estado: "ACTIVO", permisos: { usuarios: { ver: true } } }; },
         recargar: () => { recargas++; }, revocar: () => assert.fail("error no es revocación"),
     });
     await env.tick();
     assert.equal(recargas, 0);
     fallo = false;
     await env.tick();
+    assert.equal(recargas, 1);
+    stop();
+});
+
+test("mantiene permisos mientras consulta y aplica la revocación solo al confirmarla", async () => {
+    const env = entorno();
+    const previo = { rol: "TI", estado: "ACTIVO", permisos: { usuarios: { ver: true, editar: true } } };
+    let actual = previo, resolver, recargas = 0;
+    const stop = observarUsuarios({
+        ...env, consultar: () => new Promise((resolve) => { resolver = resolve; }),
+        revocar: (confirmado) => { actual = confirmado; },
+        recargar: (confirmado) => { actual = confirmado; recargas++; },
+    });
+    const primera = env.tick();
+    assert.equal(actual, previo);
+    resolver({ ...previo, permisos: { usuarios: { ver: true, editar: false } } });
+    await primera;
+    assert.equal(actual.permisos.usuarios.editar, false);
+    assert.equal(recargas, 1);
+    const segunda = env.tick();
+    assert.equal(actual.permisos.usuarios.ver, true);
+    resolver({ ...previo, permisos: { usuarios: { ver: false, editar: false } } });
+    await segunda;
+    assert.equal(actual.permisos.usuarios.ver, false);
     assert.equal(recargas, 1);
     stop();
 });

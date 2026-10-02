@@ -21,8 +21,10 @@ import {
     registrarUsuario,
 } from "../../services/usuariosService.js";
 
-import { verificarSesion } from "../../services/loginService.js";
-import { observarUsuarios } from "../../services/observarUsuarios.js";
+import { obtenerRolesAsignables } from "../../services/gestionesService.js";
+import { puede } from "../../constants/roles.js";
+import { useBusquedaLista, useListaSesion } from "../../hooks/useListaSesion.js";
+import { marcarListaPendiente, leerLista, listaDesactualizada, versionListasSesion } from "../../services/listasSesion.js";
 
 import "./Usuarios.css";
 import PageSearch from "../../components/common/PageSearch/PageSearch.jsx";
@@ -70,18 +72,11 @@ function Usuarios() {
     const [usuarioEditando, setUsuarioEditando] = useState(null);
     const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
 
-    const [usuarios, setUsuarios] = useState([]);
-    const [cargandoUsuarios, setCargandoUsuarios] = useState(true);
-
     const [enviando, setEnviando] = useState(false);
 
     const [mensajeGeneral, setMensajeGeneral] = useState(null);
 
-    const [busqueda, setBusqueda] = useState("");
-
-    const [usuariosPendientes, setUsuariosPendientes] = useState(
-        new Set(),
-    );
+    const [busqueda, setBusqueda] = useBusquedaLista("/api/users");
 
     const montadoRef = useRef(false);
     const controladorListadoRef = useRef(null);
@@ -93,6 +88,17 @@ function Usuarios() {
     const { usuario, cargandoSesion, actualizarUsuario } = useAuth();
 
     const tieneAccesoUsuarios = puedeGestionarUsuarios(usuario);
+    const puedeEditarUsuarios = puede(usuario, "usuarios", "editar");
+    const puedeCrearUsuarios = puede(usuario, "usuarios", "crear");
+    const necesitaCatalogoRoles = puedeEditarUsuarios || puedeCrearUsuarios;
+    const { datos: usuarios, setDatos: setUsuarios, cargando: cargandoUsuarios,
+        pendientes: usuariosPendientes, error: errorListado, recargar: reintentarListado } = useListaSesion(
+        "/api/users", obtenerUsuarios, { habilitado: !cargandoSesion && tieneAccesoUsuarios });
+    const { datos: rolesDisponibles, disponible: catalogoRolesDisponible,
+        error: errorRoles, recargar: reintentarRoles } = useListaSesion(
+        "/api/users/roles", obtenerRolesAsignables,
+        { habilitado: !cargandoSesion && tieneAccesoUsuarios && necesitaCatalogoRoles });
+    const estadoCatalogoRoles = catalogoRolesDisponible ? "listo" : errorRoles ? "error" : "cargando";
 
     useEffect(() => {
         montadoRef.current = true;
@@ -140,13 +146,9 @@ function Usuarios() {
 
             controladorListadoRef.current = controller;
 
-            if (mostrarCarga && montadoRef.current) {
-                setCargandoUsuarios(true);
-            }
-
             try {
                 const listaUsuarios = await obtenerUsuarios(
-                    controller.signal,
+                    controller.signal, { forzar: !mostrarCarga },
                 );
 
                 if (
@@ -186,49 +188,18 @@ function Usuarios() {
 
                 throw error;
             } finally {
-                if (
-                    montadoRef.current &&
-                    idSolicitud === solicitudListadoRef.current
-                ) {
-                    setCargandoUsuarios(false);
-                }
-
                 if (controladorListadoRef.current === controller) {
                     controladorListadoRef.current = null;
                 }
             }
         },
-        [],
+        [setUsuarios],
     );
 
     useEffect(() => {
-        if (cargandoSesion || !tieneAccesoUsuarios) {
-            return undefined;
-        }
-
-        const cargar = async () => {
-            try {
-                await cargarUsuarios({
-                    mostrarCarga: true,
-                });
-            } catch (error) {
-                if (montadoRef.current) {
-                    setMensajeGeneral({
-                        tipo: "error",
-                        texto:
-                            error.message ||
-                            "No fue posible cargar los usuarios.",
-                    });
-                }
-            }
-        };
-
-        cargar();
-
-        return () => {
-            controladorListadoRef.current?.abort();
-        };
-    }, [cargandoSesion, cargarUsuarios, tieneAccesoUsuarios]);
+        listadoVigenteRef.current = !cargandoUsuarios && !errorListado && !usuariosPendientes.size
+            && Boolean(leerLista("/api/users").actualizado);
+    }, [usuarios, cargandoUsuarios, errorListado, usuariosPendientes.size]);
 
     const usuariosFiltrados = useMemo(() => {
         const termino = busqueda.trim().toLocaleLowerCase();
@@ -307,31 +278,7 @@ function Usuarios() {
 
             return ordenarUsuarios(usuariosActualizados);
         });
-    }, []);
-
-    useEffect(() => {
-        if (cargandoSesion || !tieneAccesoUsuarios) return undefined;
-        return observarUsuarios({
-            consultar: verificarSesion,
-            revocar: (actualizado) => {
-                solicitudListadoRef.current += 1;
-                controladorListadoRef.current?.abort();
-                setUsuarios([]);
-                actualizarUsuario(actualizado);
-            },
-            recargar: async (actualizado) => {
-                if (!montadoRef.current || document.visibilityState === "hidden") return;
-                if (["id_usuario", "nombre_completo", "nombre_usuario", "rol", "estado"]
-                    .some((campo) => usuario?.[campo] !== actualizado[campo])) {
-                    actualizarUsuario(actualizado);
-                    return;
-                }
-                // La consulta de fondo no debe reemplazar un cambio pendiente.
-                if (cambiosPendientesRef.current.size || controladorListadoRef.current) return;
-                await cargarUsuarios();
-            },
-        });
-    }, [cargandoSesion, tieneAccesoUsuarios, usuario, actualizarUsuario, cargarUsuarios]);
+    }, [setUsuarios]);
 
     const invalidarListado = () => {
         solicitudListadoRef.current += 1;
@@ -352,7 +299,7 @@ function Usuarios() {
     const iniciarCambioOptimista = (anterior, provisional) => {
         const id = String(anterior.id_usuario);
 
-        if (cambiosPendientesRef.current.has(id)) {
+        if (usuariosPendientes.has(id) || cambiosPendientesRef.current.has(id)) {
             return false;
         }
 
@@ -362,9 +309,7 @@ function Usuarios() {
             provisional,
         });
 
-        setUsuariosPendientes(
-            new Set(cambiosPendientesRef.current.keys()),
-        );
+        marcarListaPendiente("/api/users", id, true);
 
         setUsuarios((usuariosActuales) =>
             ordenarUsuarios(
@@ -376,17 +321,13 @@ function Usuarios() {
             ),
         );
 
-        setCargandoUsuarios(false);
-
         return true;
     };
 
     const terminarCambioOptimista = (id) => {
         cambiosPendientesRef.current.delete(String(id));
 
-        setUsuariosPendientes(
-            new Set(cambiosPendientesRef.current.keys()),
-        );
+        marcarListaPendiente("/api/users", id, false);
     };
 
     /**
@@ -412,6 +353,7 @@ function Usuarios() {
         }
 
         setMensajeGeneral(null);
+        const epoch = versionListasSesion();
 
         const confirmar = async () => {
             let respuesta;
@@ -419,24 +361,16 @@ function Usuarios() {
             try {
                 respuesta = await solicitud();
             } catch (error) {
+                if (epoch !== versionListasSesion()) return null;
+                // También revierte la memoria si se navegó a otro módulo durante el PATCH.
+                setUsuarios((actuales) => ordenarUsuarios(actuales.map((item) =>
+                    String(item.id_usuario) === String(anterior.id_usuario) ? anterior : item)));
+                terminarCambioOptimista(anterior.id_usuario);
                 if (!montadoRef.current) {
                     return null;
                 }
 
                 invalidarListado();
-
-                terminarCambioOptimista(anterior.id_usuario);
-
-                setUsuarios((usuariosActuales) =>
-                    ordenarUsuarios(
-                        usuariosActuales.map((usuarioListado) =>
-                            String(usuarioListado.id_usuario) ===
-                            String(anterior.id_usuario)
-                                ? anterior
-                                : usuarioListado,
-                        ),
-                    ),
-                );
 
                 const erroresCampo = mostrarErroresDeCampo
                     ? obtenerErroresCampo(error)
@@ -464,11 +398,11 @@ function Usuarios() {
                 return null;
             }
 
+            if (epoch !== versionListasSesion()) return null;
+            terminarCambioOptimista(anterior.id_usuario);
             if (!montadoRef.current) {
                 return null;
             }
-
-            terminarCambioOptimista(anterior.id_usuario);
 
             aplicarUsuarioConfirmado(respuesta?.usuario);
 
@@ -495,6 +429,7 @@ function Usuarios() {
     };
 
     const abrirRegistro = () => {
+        if (!puedeCrearUsuarios || rolesDisponibles.length === 0) return;
         setUsuarioEditando(null);
         setMensajeGeneral(null);
         setMostrarForm(true);
@@ -502,7 +437,8 @@ function Usuarios() {
 
     const abrirEdicion = (usuarioListado) => {
         if (
-            cambiosPendientesRef.current.has(
+            !puedeEditarUsuarios ||
+            usuariosPendientes.has(
                 String(usuarioListado.id_usuario),
             )
         ) {
@@ -512,6 +448,7 @@ function Usuarios() {
         setUsuarioEditando(usuarioListado);
         setMensajeGeneral(null);
         setMostrarForm(true);
+        if (estadoCatalogoRoles === "error") void reintentarRoles().catch(() => {});
     };
 
     const cerrarFormulario = () => {
@@ -531,6 +468,8 @@ function Usuarios() {
     const handleFormSubmit = async (datosUsuario) => {
         const usuarioEnEdicion = usuarioEditando;
         const esEdicion = Boolean(usuarioEnEdicion);
+        if (!(esEdicion ? puedeEditarUsuarios : puedeCrearUsuarios) ||
+            estadoCatalogoRoles !== "listo" || !rolesDisponibles.length) return null;
 
         const nombreUsuario = datosUsuario.nombre_usuario
             .trim()
@@ -538,7 +477,7 @@ function Usuarios() {
 
         // La validación local solo es fiable mientras el listado esté vigente.
         if (
-            listadoVigenteRef.current &&
+            listadoVigenteRef.current && !listaDesactualizada(leerLista("/api/users")) &&
             usuarios.some(
                 (usuarioListado) =>
                     String(usuarioListado.id_usuario) !==
@@ -659,7 +598,6 @@ function Usuarios() {
 
         listadoVigenteRef.current = false;
 
-        setCargandoUsuarios(false);
         setMostrarForm(false);
         setUsuarioEditando(null);
         setEnviando(false);
@@ -674,7 +612,7 @@ function Usuarios() {
 
     const abrirCambioEstado = (usuarioListado) => {
         if (
-            cambiosPendientesRef.current.has(
+            usuariosPendientes.has(
                 String(usuarioListado.id_usuario),
             )
         ) {
@@ -756,8 +694,7 @@ function Usuarios() {
                 <h1>Acceso no autorizado</h1>
 
                 <p>
-                    La gestión de usuarios está disponible
-                    únicamente para administradores y personal de TI activos.
+                    No tienes permiso para consultar usuarios.
                 </p>
             </section>
         );
@@ -815,18 +752,20 @@ function Usuarios() {
                             del sistema.
                         </p>
 
-                        <button
+                        {puede(usuario, "usuarios", "crear") && <button
                             className="management-primary"
                             type="button"
                             onClick={abrirRegistro}
+                            disabled={rolesDisponibles.length === 0}
                         >
                             + Registrar usuario
-                        </button>
+                        </button>}
                     </div>
                 </div>
             </header>
 
             {!mostrarForm && notificacionGeneral}
+            {errorListado && <p className="catalog-error" role="alert">{errorListado} <button type="button" onClick={() => void reintentarListado().catch(() => {})}>Reintentar</button></p>}
 
             <section className="management-panel users-panel">
                 <div className="management-panel-header">
@@ -853,12 +792,18 @@ function Usuarios() {
                     usuariosPendientes={usuariosPendientes}
                     onEditar={abrirEdicion}
                     onCambiarEstado={abrirCambioEstado}
+                    puedeEditar={puedeEditarUsuarios}
+                    puedeCambiarEstado={(estado) => puede(usuario, "usuarios", estado === "ACTIVO" ? "eliminar" : "editar")}
                 />
             </section>
 
-            {mostrarForm && (
+            {mostrarForm && (usuarioEditando ? puedeEditarUsuarios : puedeCrearUsuarios) && (
                 <FormularioUsuario
                     usuarioInicial={usuarioEditando}
+                    rolesDisponibles={rolesDisponibles}
+                    estadoCatalogoRoles={estadoCatalogoRoles}
+                    errorCatalogoRoles={errorRoles}
+                    onReintentarRoles={() => void reintentarRoles().catch(() => {})}
                     onSubmit={handleFormSubmit}
                     onClose={cerrarFormulario}
                     isSubmitting={enviando}

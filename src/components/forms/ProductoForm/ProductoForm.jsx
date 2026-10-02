@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
-function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar }) {
+function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar, puedeDesactivar = true,
+    categoriasDisponibles = true, errorCategorias = "", onReintentarCategorias }) {
     const dialogRef = useRef(null);
     const [datos, setDatos] = useState({
         id_categoria: producto?.id_categoria ?? "",
@@ -28,6 +29,7 @@ function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar }) {
 
     const guardar = async (event) => {
         event.preventDefault();
+        if (!categoriasDisponibles || !categorias.length || enviando) return;
         setErrorGeneral("");
 
         try {
@@ -85,12 +87,15 @@ function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar }) {
                     <div className="productos-form-grid">
                         <label>Categoría
                             <select value={datos.id_categoria} required onChange={(event) => cambiar("id_categoria", event.target.value)}
+                                disabled={!categoriasDisponibles || enviando} aria-busy={!categoriasDisponibles && !errorCategorias}
                                 aria-invalid={Boolean(errores.id_categoria)}>
-                                <option value="">Seleccionar categoría</option>
+                                <option value="">{!categoriasDisponibles && !errorCategorias ? "Cargando categorías…" : "Seleccionar categoría"}</option>
                                 {categorias.map((categoria) => <option key={categoria.id_categoria} value={categoria.id_categoria}>
                                     {categoria.nombre}
                                 </option>)}
                             </select>
+                            {errorCategorias && <span className="productos-field-error" role="alert">{errorCategorias} <button type="button" onClick={onReintentarCategorias}>Reintentar</button></span>}
+                            {categoriasDisponibles && !errorCategorias && !categorias.length && <span className="productos-field-error">Registra una categoría antes de crear productos.</span>}
                             {errores.id_categoria && <span className="productos-field-error">{errores.id_categoria}</span>}
                         </label>
                         <label>Precio
@@ -103,14 +108,14 @@ function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar }) {
                     <label>Estado
                         <select value={datos.estado} onChange={(event) => cambiar("estado", event.target.value)}>
                             <option value="ACTIVO">Activo</option>
-                            <option value="INACTIVO">Inactivo</option>
+                            <option value="INACTIVO" disabled={Boolean(producto && producto.estado === "ACTIVO" && !puedeDesactivar)}>Inactivo</option>
                         </select>
                     </label>
                 </section>
                 {errorGeneral && <p className="productos-error" role="alert">{errorGeneral}</p>}
                 <div className="productos-form-actions">
                     <button type="button" className="productos-secondary-button" onClick={onCerrar} disabled={enviando}>Cancelar</button>
-                    <button type="submit" className="productos-primary-button" disabled={enviando}>
+                    <button type="submit" className="productos-primary-button" disabled={enviando || !categoriasDisponibles || !categorias.length}>
                         {enviando ? "Guardando..." : producto ? "Guardar cambios" : "Registrar producto"}
                     </button>
                 </div>

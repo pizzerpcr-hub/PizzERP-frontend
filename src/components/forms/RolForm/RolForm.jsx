@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./RolForm.css";
 
 const pestanasSistema = [
@@ -98,10 +98,15 @@ const crearPermisosIniciales = () => {
     return resultado;
 };
 
-function RolForm({ onCerrar }) {
-    const [nombreRol, setNombreRol] = useState("");
-    const [permisos, setPermisos] = useState(crearPermisosIniciales);
+function RolForm({ onCerrar, rol = null, onGuardar }) {
+    const [nombreRol, setNombreRol] = useState(rol?.nombre ?? "");
+    const [permisos, setPermisos] = useState(() => rol?.permisos ?? crearPermisosIniciales());
     const [expandidos, setExpandidos] = useState([]);
+    const [enviando, setEnviando] = useState(false);
+    const [error, setError] = useState("");
+    const pendiente = useRef(false);
+    const montado = useRef(true);
+    useEffect(() => { montado.current = true; return () => { montado.current = false; }; }, []);
 
     const totalPermisos = useMemo(() => {
         return pestanasSistema.reduce(
@@ -192,17 +197,26 @@ function RolForm({ onCerrar }) {
         setPermisos(crearPermisosIniciales());
     };
 
-    const guardarRol = (event) => {
+    const guardarRol = async (event) => {
         event.preventDefault();
+        if (pendiente.current) return;
+        pendiente.current = true;
 
         const datos = {
             nombre: nombreRol.trim(),
             permisos,
         };
 
-        console.log("Rol:", datos);
-
-        // Aquí conectas posteriormente tu endpoint Laravel.
+        setEnviando(true);
+        setError("");
+        try {
+            await onGuardar(datos);
+        } catch (fallo) {
+            if (montado.current) setError(fallo.message || "No fue posible guardar el rol.");
+        } finally {
+            pendiente.current = false;
+            if (montado.current) setEnviando(false);
+        }
     };
 
     return (
@@ -210,7 +224,7 @@ function RolForm({ onCerrar }) {
             className="modal-overlay open"
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget) {
-                    onCerrar?.();
+                    if (!enviando) onCerrar?.();
                 }
             }}
         >
@@ -222,6 +236,7 @@ function RolForm({ onCerrar }) {
                     type="button"
                     className="role-modal-close"
                     onClick={onCerrar}
+                    disabled={enviando}
                     aria-label="Cerrar"
                 >
                     ×
@@ -229,7 +244,7 @@ function RolForm({ onCerrar }) {
 
                 <form onSubmit={guardarRol}>
                     <div className="role-form-header">
-                        <h2>Crear rol</h2>
+                        <h2>{rol ? "Modificar rol" : "Crear rol"}</h2>
 
                         <p>
                             Define el nombre y los permisos disponibles
@@ -246,6 +261,7 @@ function RolForm({ onCerrar }) {
                             id="nombreRol"
                             type="text"
                             value={nombreRol}
+                            maxLength={30}
                             onChange={(event) =>
                                 setNombreRol(event.target.value)
                             }
@@ -331,6 +347,7 @@ function RolForm({ onCerrar }) {
                                                 <input
                                                     type="checkbox"
                                                     checked={todosMarcados}
+                                                    disabled={enviando}
                                                     ref={(elemento) => {
                                                         if (elemento) {
                                                             elemento.indeterminate =
@@ -404,6 +421,7 @@ function RolForm({ onCerrar }) {
                                                                     ] ??
                                                                     false
                                                                 }
+                                                                disabled={enviando}
                                                                 onChange={() =>
                                                                     cambiarPermiso(
                                                                         modulo.id,
@@ -435,6 +453,7 @@ function RolForm({ onCerrar }) {
                             type="button"
                             className="role-cancel-button"
                             onClick={onCerrar}
+                            disabled={enviando}
                         >
                             Cancelar
                         </button>
@@ -442,11 +461,12 @@ function RolForm({ onCerrar }) {
                         <button
                             type="submit"
                             className="role-save-button"
-                            disabled={!nombreRol.trim()}
+                            disabled={!nombreRol.trim() || enviando}
                         >
-                            Crear rol
+                            {enviando ? "Guardando..." : rol ? "Guardar cambios" : "Crear rol"}
                         </button>
                     </div>
+                    {error && <p className="role-form-error" role="alert">{error}</p>}
                 </form>
             </div>
         </div>

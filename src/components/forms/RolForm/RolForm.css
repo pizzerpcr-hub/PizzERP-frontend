@@ -619,3 +619,28 @@
         width: 100%;
     }
 }
+
+.module-page .role-form-error {
+    margin: 12px 0 0;
+    color: #8a4435;
+    font-size: 13px;
+}
+
+.module-page .role-form-note {
+    margin: 12px 0 0;
+    color: #6f625c;
+    font-size: 12px;
+}
+
+.roles-page .role-page-message {
+    margin: 0 0 16px;
+    color: #765447;
+    font-size: 13px;
+}
+
+.roles-page .role-system-label {
+    display: inline-block;
+    margin-left: 8px;
+    color: #796c66;
+    font-size: 11px;
+}

@@ -1,3 +1,5 @@
+import { confirmarLista, consultarLista, versionListasSesion } from "./listasSesion.js";
+
 const leerRespuesta = async (response, mensajePredeterminado) => {
     if (response.status === 401 || response.status === 403) {
         window.dispatchEvent(new Event("pizzerp:session-check"));
@@ -21,17 +23,18 @@ const obtenerCookie = (nombre) => {
     return cookie ? decodeURIComponent(cookie.trim().slice(nombre.length + 1)) : "";
 };
 
-const obtenerLista = async (ruta, clave, mensaje, signal) => {
+export const obtenerLista = (ruta, clave, mensaje, signal, opciones = {}) => consultarLista(ruta, async (signalCompartida) => {
     const response = await fetch(ruta, {
         credentials: "include",
         headers: { Accept: "application/json" },
-        signal,
+        signal: signalCompartida,
     });
     const data = await leerRespuesta(response, mensaje);
     return Array.isArray(data[clave]) ? data[clave] : [];
-};
+}, { ...opciones, signal });
 
-const enviarMutacion = async (ruta, metodo, datos, mensaje) => {
+export const enviarMutacion = async (ruta, metodo, datos, mensaje) => {
+    const epoch = versionListasSesion();
     const csrf = await fetch("/sanctum/csrf-cookie", {
         credentials: "include",
         headers: { Accept: "application/json" },
@@ -52,11 +55,16 @@ const enviarMutacion = async (ruta, metodo, datos, mensaje) => {
         body: JSON.stringify(datos),
     });
 
-    return leerRespuesta(response, mensaje);
+    const respuesta = await leerRespuesta(response, mensaje);
+    confirmarLista(ruta, metodo, respuesta, epoch);
+    return respuesta;
 };
 
-export const obtenerCategorias = (signal) =>
-    obtenerLista("/api/categories", "categorias", "No fue posible cargar las categorías.", signal);
+export const obtenerCategorias = (signal, opciones) =>
+    obtenerLista("/api/categories", "categorias", "No fue posible cargar las categorías.", signal, opciones);
+
+export const obtenerCategoriasParaProducto = (signal, opciones) =>
+    obtenerLista("/api/products/categorias", "categorias", "No fue posible cargar las categorías disponibles.", signal, opciones);
 
 export const registrarCategoria = (datos) =>
     enviarMutacion("/api/categories", "POST", datos, "No fue posible registrar la categoría.");
@@ -64,8 +72,8 @@ export const registrarCategoria = (datos) =>
 export const actualizarCategoria = (id, datos) =>
     enviarMutacion(`/api/categories/${id}`, "PATCH", datos, "No fue posible actualizar la categoría.");
 
-export const obtenerProductos = (signal) =>
-    obtenerLista("/api/products", "productos", "No fue posible cargar los productos.", signal);
+export const obtenerProductos = (signal, opciones) =>
+    obtenerLista("/api/products", "productos", "No fue posible cargar los productos.", signal, opciones);
 
 export const registrarProducto = (datos) =>
     enviarMutacion("/api/products", "POST", datos, "No fue posible registrar el producto.");

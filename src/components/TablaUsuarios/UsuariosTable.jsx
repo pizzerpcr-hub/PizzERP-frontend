@@ -12,6 +12,8 @@ function UsuariosTable({
     usuariosPendientes,
     onEditar,
     onCambiarEstado,
+    puedeEditar = true,
+    puedeCambiarEstado = () => true,
 }) {
     return (
         <div className="table-wrap">
@@ -96,7 +98,7 @@ function UsuariosTable({
                                         </td>
 
                                         <td role="cell" className="user-actions">
-                                            <button
+                                            {puedeEditar && <button
                                                 type="button"
                                                 onClick={() =>
                                                     onEditar(usuarioListado)
@@ -104,9 +106,9 @@ function UsuariosTable({
                                                 disabled={cambioPendiente}
                                             >
                                                 Modificar
-                                            </button>
+                                            </button>}
 
-                                            <button
+                                            {puedeCambiarEstado(estadoNormalizado) && <button
                                                 type="button"
                                                 onClick={() =>
                                                     onCambiarEstado(
@@ -123,7 +125,7 @@ function UsuariosTable({
                                                 {estadoNormalizado === "ACTIVO"
                                                     ? "Desactivar"
                                                     : "Activar"}
-                                            </button>
+                                            </button>}
                                         </td>
                                     </tr>
                                 );

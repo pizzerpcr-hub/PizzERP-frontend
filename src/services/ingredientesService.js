@@ -1,3 +1,6 @@
+import { obtenerLista } from "./catalogoService.js";
+import { confirmarLista, versionListasSesion } from "./listasSesion.js";
+
 const leerRespuesta = async (response, mensajePredeterminado) => {
     if (response.status === 401 || response.status === 403) {
         window.dispatchEvent(new Event("pizzerp:session-check"));
@@ -22,6 +25,7 @@ const obtenerCookie = (nombre) => {
 };
 
 const enviarMutacion = async (ruta, metodo, datos, mensaje) => {
+    const epoch = versionListasSesion();
     const csrf = await fetch("/sanctum/csrf-cookie", {
         credentials: "include",
         headers: { Accept: "application/json" },
@@ -42,18 +46,13 @@ const enviarMutacion = async (ruta, metodo, datos, mensaje) => {
         ...(datos ? { body: JSON.stringify(datos) } : {}),
     });
 
-    return leerRespuesta(response, mensaje);
+    const respuesta = await leerRespuesta(response, mensaje);
+    confirmarLista(ruta, metodo, respuesta, epoch);
+    return respuesta;
 };
 
-export const obtenerIngredientes = async (signal) => {
-    const response = await fetch("/api/ingredients", {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-        signal,
-    });
-    const data = await leerRespuesta(response, "No fue posible cargar los ingredientes.");
-    return Array.isArray(data.ingredientes) ? data.ingredientes : [];
-};
+export const obtenerIngredientes = (signal, opciones) =>
+    obtenerLista("/api/ingredients", "ingredientes", "No fue posible cargar los ingredientes.", signal, opciones);
 
 export const registrarIngrediente = (datos) =>
     enviarMutacion("/api/ingredients", "POST", datos, "No fue posible registrar el ingrediente.");

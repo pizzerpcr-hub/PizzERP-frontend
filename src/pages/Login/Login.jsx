@@ -97,7 +97,7 @@ function Login() {
               remember: formData.remember,
           });
 
-          iniciarSesion(responseData.usuario);
+          await iniciarSesion(responseData.usuario);
 
           setFormData((previousData) => ({
               ...previousData,

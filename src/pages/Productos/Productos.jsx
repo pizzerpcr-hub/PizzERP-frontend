@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth.js";
-import { normalizarRol } from "../../constants/roles.js";
+import { puede } from "../../constants/roles.js";
 import "../ModulePage.css";
 import "./Productos.css";
 import ProductoForm from "../../components/forms/ProductoForm/ProductoForm.jsx";
 import LoadingSpinner from "../../components/common/LoadingSpinner/LoadingSpinner.jsx";
 import PageSearch from "../../components/common/PageSearch/PageSearch.jsx";
-import { actualizarProducto, obtenerCategorias, obtenerProductos, registrarProducto } from "../../services/catalogoService.js";
+import { actualizarProducto, obtenerCategoriasParaProducto, obtenerProductos, registrarProducto } from "../../services/catalogoService.js";
+import { useBusquedaLista, useListaSesion } from "../../hooks/useListaSesion.js";
 
 const formatoPrecio = new Intl.NumberFormat("es-CR", {
     style: "currency", currency: "CRC", minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -15,12 +15,14 @@ const formatoPrecio = new Intl.NumberFormat("es-CR", {
 
 function Productos() {
     const { usuario } = useAuth();
-    const [productos, setProductos] = useState([]);
-    const [categorias, setCategorias] = useState([]);
-    const [cargando, setCargando] = useState(true);
+    const puedeCambiarProductos = puede(usuario, "productos", "crear") || puede(usuario, "productos", "editar");
+    const { datos: productos, cargando, error: errorLista, recargar, vigente } = useListaSesion(
+        "/api/products", obtenerProductos, { habilitado: puede(usuario, "productos") });
+    const { datos: categorias, disponible: categoriasDisponibles, cargando: cargandoCategorias, error: errorCategorias, recargar: recargarCategorias } = useListaSesion(
+        "/api/products/categorias", obtenerCategoriasParaProducto, { habilitado: puedeCambiarProductos });
     const [error, setError] = useState("");
     const [mensaje, setMensaje] = useState("");
-    const [busqueda, setBusqueda] = useState("");
+    const [busqueda, setBusqueda] = useBusquedaLista("/api/products");
     const [productoEditando, setProductoEditando] = useState(null);
     const [modalAbierto, setModalAbierto] = useState(false);
     const [enviando, setEnviando] = useState(false);
@@ -31,66 +33,40 @@ function Productos() {
         return () => window.clearTimeout(temporizador);
     }, [mensaje]);
 
-    useEffect(() => {
-        const controller = new AbortController();
-
-        Promise.all([obtenerProductos(controller.signal), obtenerCategorias(controller.signal)])
-            .then(([listaProductos, listaCategorias]) => {
-                setProductos(listaProductos);
-                setCategorias(listaCategorias);
-            })
-            .catch((fallo) => {
-                if (!controller.signal.aborted) setError(fallo.message);
-            })
-            .finally(() => {
-                if (!controller.signal.aborted) setCargando(false);
-            });
-
-        return () => controller.abort();
-    }, []);
-
     const productosFiltrados = useMemo(() => productos.filter((producto) =>
         `${producto.codigo_producto} ${producto.nombre} ${producto.descripcion} ${producto.categoria?.nombre ?? ""}`
             .toLocaleLowerCase().includes(busqueda.trim().toLocaleLowerCase())
     ), [productos, busqueda]);
 
-    if (normalizarRol(usuario?.rol) !== "ADMINISTRADOR") {
-        return <Navigate to="/encargado-ti/usuarios" replace />;
-    }
-
     const guardarProducto = async (datos) => {
         setEnviando(true);
         try {
-            const respuesta = productoEditando
+            productoEditando
                 ? await actualizarProducto(productoEditando.id_producto, datos)
                 : await registrarProducto(datos);
-            const guardado = respuesta.producto;
-            setProductos((actuales) => [...actuales.filter((item) => item.id_producto !== guardado.id_producto), guardado]
-                .sort((a, b) => a.nombre.localeCompare(b.nombre)));
+            if (!vigente()) return;
             setModalAbierto(false);
             setProductoEditando(null);
             setMensaje(productoEditando ? "Producto actualizado correctamente." : "Producto registrado correctamente.");
             setError("");
         } finally {
-            setEnviando(false);
+            if (vigente()) setEnviando(false);
         }
     };
 
     const cambiarEstado = async (producto) => {
         setEnviando(true);
         try {
-            const respuesta = await actualizarProducto(producto.id_producto, {
+            await actualizarProducto(producto.id_producto, {
                 estado: producto.estado === "ACTIVO" ? "INACTIVO" : "ACTIVO",
             });
-            setProductos((actuales) => actuales.map((item) =>
-                item.id_producto === producto.id_producto ? respuesta.producto : item
-            ));
+            if (!vigente()) return;
             setMensaje("Estado del producto actualizado correctamente.");
             setError("");
         } catch (fallo) {
-            setError(fallo.message);
+            if (vigente()) setError(fallo.message);
         } finally {
-            setEnviando(false);
+            if (vigente()) setEnviando(false);
         }
     };
 
@@ -108,7 +84,7 @@ function Productos() {
                     <div className="header-description">
                         <p>Gestiona los productos del menú, sus categorías y precios.</p>
                         <button type="button" className="management-primary" onClick={() => abrirFormulario()}
-                            disabled={cargando || categorias.length === 0}>+ Registrar producto</button>
+                            disabled={cargando || categorias.length === 0 || !puede(usuario, "productos", "crear")}>+ Registrar producto</button>
                     </div>
                 </div>
             </header>
@@ -120,7 +96,10 @@ function Productos() {
                 </div>}
             </div>
             {error && <p className="productos-error" role="alert">{error}</p>}
-            {!cargando && categorias.length === 0 && !error &&
+            {errorLista && <p className="productos-error" role="alert">{errorLista} <button type="button" onClick={() => void recargar().catch(() => {})}>Reintentar</button></p>}
+            {errorCategorias && <p className="productos-error" role="alert">{errorCategorias} <button type="button" onClick={() => void recargarCategorias().catch(() => {})}>Reintentar categorías</button></p>}
+            {cargandoCategorias && puedeCambiarProductos && <p role="status">Cargando categorías…</p>}
+            {categoriasDisponibles && !errorCategorias && categorias.length === 0 && puede(usuario, "productos", "crear") &&
                 <p className="productos-error">Registra una categoría antes de crear productos.</p>}
             <section className="management-panel" aria-labelledby="productosTitle">
                 <div className="management-panel-header">
@@ -147,9 +126,9 @@ function Productos() {
                                     <td data-label="Estado"><span className={`productos-status ${producto.estado === "ACTIVO" ? "active" : "inactive"}`}>
                                         {producto.estado === "ACTIVO" ? "Activo" : "Inactivo"}</span></td>
                                     <td data-label="Acciones"><div className="productos-table-actions">
-                                        <button type="button" disabled={enviando} onClick={() => abrirFormulario(producto)}>Editar</button>
-                                        <button type="button" disabled={enviando} onClick={() => cambiarEstado(producto)}>
-                                            {producto.estado === "ACTIVO" ? "Desactivar" : "Activar"}</button>
+                                        {puede(usuario, "productos", "editar") && <button type="button" disabled={enviando} onClick={() => abrirFormulario(producto)}>Editar</button>}
+                                        {puede(usuario, "productos", producto.estado === "ACTIVO" ? "eliminar" : "editar") && <button type="button" disabled={enviando} onClick={() => cambiarEstado(producto)}>
+                                            {producto.estado === "ACTIVO" ? "Desactivar" : "Activar"}</button>}
                                     </div></td>
                                 </tr>)}
                         </tbody>
@@ -158,6 +137,9 @@ function Productos() {
             </section>
             {modalAbierto && <ProductoForm key={productoEditando?.id_producto ?? "nuevo"}
                 producto={productoEditando} categorias={categorias} enviando={enviando}
+                categoriasDisponibles={categoriasDisponibles} errorCategorias={errorCategorias}
+                onReintentarCategorias={() => void recargarCategorias().catch(() => {})}
+                puedeDesactivar={puede(usuario, "productos", "eliminar")}
                 onGuardar={guardarProducto} onCerrar={() => !enviando && setModalAbierto(false)} />}
         </div>
     );

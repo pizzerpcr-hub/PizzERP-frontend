@@ -2,15 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import "../ModulePage.css";
 import CategoriaForm from "../../components/forms/CategoriaForm/CategoriaForm.jsx";
 import LoadingSpinner from "../../components/common/LoadingSpinner/LoadingSpinner.jsx";
+import { useAuth } from "../../context/useAuth.js";
+import { puede } from "../../constants/roles.js";
 import PageSearch from "../../components/common/PageSearch/PageSearch.jsx";
 import { actualizarCategoria, obtenerCategorias, registrarCategoria } from "../../services/catalogoService.js";
+import { useBusquedaLista, useListaSesion } from "../../hooks/useListaSesion.js";
 
 function Categorias() {
-    const [categorias, setCategorias] = useState([]);
-    const [cargando, setCargando] = useState(true);
-    const [errorCarga, setErrorCarga] = useState("");
+    const { usuario } = useAuth();
+    const { datos: categorias, cargando, error: errorCarga, recargar, vigente } = useListaSesion(
+        "/api/categories", obtenerCategorias, { habilitado: puede(usuario, "categorias") });
     const [mensaje, setMensaje] = useState("");
-    const [busqueda, setBusqueda] = useState("");
+    const [busqueda, setBusqueda] = useBusquedaLista("/api/categories");
     const [categoriaEditando, setCategoriaEditando] = useState(null);
     const [modalAbierto, setModalAbierto] = useState(false);
     const [enviando, setEnviando] = useState(false);
@@ -21,21 +24,6 @@ function Categorias() {
         return () => window.clearTimeout(temporizador);
     }, [mensaje]);
 
-    useEffect(() => {
-        const controller = new AbortController();
-
-        obtenerCategorias(controller.signal)
-            .then((lista) => setCategorias(lista))
-            .catch((error) => {
-                if (!controller.signal.aborted) setErrorCarga(error.message);
-            })
-            .finally(() => {
-                if (!controller.signal.aborted) setCargando(false);
-            });
-
-        return () => controller.abort();
-    }, []);
-
     const categoriasFiltradas = useMemo(() => categorias.filter((categoria) =>
         `${categoria.nombre} ${categoria.descripcion}`.toLocaleLowerCase()
             .includes(busqueda.trim().toLocaleLowerCase())
@@ -44,17 +32,15 @@ function Categorias() {
     const guardar = async (datos) => {
         setEnviando(true);
         try {
-            const respuesta = categoriaEditando
+            categoriaEditando
                 ? await actualizarCategoria(categoriaEditando.id_categoria, datos)
                 : await registrarCategoria(datos);
-            const guardada = respuesta.categoria;
-            setCategorias((actuales) => [...actuales.filter((item) => item.id_categoria !== guardada.id_categoria), guardada]
-                .sort((a, b) => a.nombre.localeCompare(b.nombre)));
+            if (!vigente()) return;
             setModalAbierto(false);
             setCategoriaEditando(null);
             setMensaje(categoriaEditando ? "Categoría actualizada correctamente." : "Categoría registrada correctamente.");
         } finally {
-            setEnviando(false);
+            if (vigente()) setEnviando(false);
         }
     };
 
@@ -71,9 +57,9 @@ function Categorias() {
                     <h1>Categorías</h1>
                     <div className="header-description">
                         <p>Gestiona las categorías utilizadas para organizar los productos del menú.</p>
-                        <button className="management-primary" type="button" onClick={() => abrirFormulario()}>
+                        {puede(usuario, "categorias", "crear") && <button className="management-primary" type="button" onClick={() => abrirFormulario()}>
                             + Registrar categoría
-                        </button>
+                        </button>}
                     </div>
                 </div>
             </header>
@@ -85,7 +71,7 @@ function Categorias() {
                         onClick={() => setMensaje("")}>×</button>
                 </div>}
             </div>
-            {errorCarga && <p className="catalog-error" role="alert">{errorCarga}</p>}
+            {errorCarga && <p className="catalog-error" role="alert">{errorCarga} <button type="button" onClick={() => void recargar().catch(() => {})}>Reintentar</button></p>}
 
             <section className="management-panel">
                 <div className="management-panel-header">
@@ -102,7 +88,7 @@ function Categorias() {
                         <thead><tr><th>Nombre</th><th>Descripción</th><th>Productos</th><th>Estado</th><th>Acciones</th></tr></thead>
                         <tbody>
                             {cargando ? <tr><td colSpan="5"><LoadingSpinner label="Cargando categorías" /></td></tr>
-                                : errorCarga ? <tr><td colSpan="5" className="module-empty">No fue posible mostrar las categorías.</td></tr>
+                                : errorCarga && !categorias.length ? <tr><td colSpan="5" className="module-empty">No fue posible mostrar las categorías.</td></tr>
                                     : categoriasFiltradas.length === 0 ? <tr><td colSpan="5" className="module-empty">
                                     {busqueda ? "No se encontraron categorías." : "No hay categorías registradas."}
                                 </td></tr> : categoriasFiltradas.map((categoria) => <tr className="management-card" key={categoria.id_categoria}>
@@ -111,7 +97,7 @@ function Categorias() {
                                     <td data-label="Productos">{categoria.productos_count}</td>
                                     <td data-label="Estado"><span className={`catalog-status ${categoria.estado === "ACTIVO" ? "active" : "inactive"}`}>
                                         {categoria.estado === "ACTIVO" ? "Activo" : "Inactivo"}</span></td>
-                                    <td data-label="Acciones"><button className="catalog-action" type="button" onClick={() => abrirFormulario(categoria)}>Editar</button></td>
+                                    <td data-label="Acciones">{puede(usuario, "categorias", "editar") && <button className="catalog-action" type="button" onClick={() => abrirFormulario(categoria)}>Editar</button>}</td>
                                 </tr>)}
                         </tbody>
                     </table>
@@ -120,6 +106,7 @@ function Categorias() {
 
             {modalAbierto && <CategoriaForm key={categoriaEditando?.id_categoria ?? "nueva"}
                 categoria={categoriaEditando} enviando={enviando} onGuardar={guardar}
+                puedeDesactivar={puede(usuario, "categorias", "eliminar")}
                 onCerrar={() => !enviando && setModalAbierto(false)} />}
         </div>
     );

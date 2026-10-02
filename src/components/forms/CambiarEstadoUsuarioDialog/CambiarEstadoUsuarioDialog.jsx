@@ -5,6 +5,9 @@ function CambiarEstadoUsuarioDialog({
     isSubmitting,
     onConfirm,
     onClose,
+    entidad = "usuario",
+    mensajeError = "",
+    textoEnviando = "Guardando...",
 }) {
     const dialogRef = useRef(null);
     const envioEnCursoRef = useRef(false);
@@ -80,8 +83,8 @@ function CambiarEstadoUsuarioDialog({
                     <div>
                         <p className="eyebrow">
                             {reactivando
-                                ? "Reactivar usuario"
-                                : "Desactivar usuario"}
+                                ? `Reactivar ${entidad}`
+                                : `Desactivar ${entidad}`}
                         </p>
 
                         <h2>
@@ -104,9 +107,11 @@ function CambiarEstadoUsuarioDialog({
 
                 <p className="status-dialog-copy">
                     {reactivando
-                        ? `Se restablecerá el acceso de ${usuarioSeleccionado?.nombre_completo}.`
-                        : `Se retirará temporalmente el acceso de ${usuarioSeleccionado?.nombre_completo}.`}
+                        ? `Se restablecerá el acceso ${entidad === "rol" ? "de las cuentas con el rol" : "de"} ${usuarioSeleccionado?.nombre_completo ?? usuarioSeleccionado?.nombre}.`
+                        : `Se retirará temporalmente el acceso ${entidad === "rol" ? "de las cuentas con el rol" : "de"} ${usuarioSeleccionado?.nombre_completo ?? usuarioSeleccionado?.nombre}.`}
                 </p>
+
+                {mensajeError && <p className="status-dialog-error" role="alert">{mensajeError}</p>}
 
                 <div className="dialog-actions">
                     <button
@@ -128,7 +133,7 @@ function CambiarEstadoUsuarioDialog({
                         disabled={isSubmitting}
                     >
                         {isSubmitting
-                            ? "Guardando..."
+                            ? textoEnviando
                             : reactivando
                               ? "Activar"
                               : "Desactivar"}

@@ -1,0 +1,38 @@
+.roles-page .roles-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.roles-page .roles-actions button {
+    max-width: 100%;
+    padding: 5px 7px;
+    border: 1px solid #e2d5ce;
+    border-radius: 5px;
+    background: #fff;
+    color: #87401f;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: normal;
+    transition: border-color .2s, background .2s;
+}
+
+.roles-page .roles-actions .roles-state-action { color: #a62c23; }
+.roles-page .roles-actions button:hover { border-color: #bd8d76; background: #fff8f4; }
+.roles-page .roles-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.roles-page .roles-actions button:disabled:hover { border-color: #e2d5ce; background: #fff; }
+.roles-page .status-dialog-error { color: #9a352d; line-height: 1.5; overflow-wrap: anywhere; }
+
+@media (min-width: 901px) {
+    .roles-page .roles-actions { flex-wrap: nowrap; }
+    .roles-page .management-table :is(th, td):last-child { min-width: 190px; }
+    .roles-page .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 900px) {
+    .roles-page .management-table .management-card td { width: 100%; }
+    .roles-page .roles-actions button { min-height: 40px; }
+}

@@ -1,3 +1,5 @@
+import { confirmarLista, consultarLista, usuarioListadoPublico, versionListasSesion } from "./listasSesion.js";
+
 const obtenerCookie = (nombre) => {
     const cookies = document.cookie.split(";");
 
@@ -57,6 +59,7 @@ const enviarMutacion = async (
     datos,
     mensajePredeterminado
 ) => {
+    const epoch = versionListasSesion();
     const xsrfToken = await solicitarCsrf();
     const response = await fetch(ruta, {
         method: metodo,
@@ -83,6 +86,7 @@ const enviarMutacion = async (
         throw error;
     }
 
+    confirmarLista(ruta, metodo, data, epoch);
     return data;
 };
 
@@ -113,25 +117,27 @@ export const cambiarEstadoUsuario = async (id, estado) => {
     );
 };
 
-export const obtenerUsuarios = async (signal) => {
+export const obtenerUsuarios = (signal, opciones = {}) => consultarLista("/api/users", async (signalCompartida) => {
     const response = await fetch("/api/users", {
         method: "GET",
         credentials: "include",
         headers: {
             Accept: "application/json",
         },
-        signal,
+        signal: signalCompartida,
     });
     const data = await leerRespuesta(response);
 
     if (!response.ok) {
-        throw new Error(
+        const error = new Error(
             obtenerMensajeError(
                 data,
                 "Error al obtener los usuarios."
             )
         );
+        error.status = response.status;
+        throw error;
     }
 
-    return Array.isArray(data.usuarios) ? data.usuarios : [];
-};
+    return Array.isArray(data.usuarios) ? data.usuarios.map(usuarioListadoPublico) : [];
+}, { ...opciones, signal });

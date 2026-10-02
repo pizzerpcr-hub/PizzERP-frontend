@@ -18,10 +18,10 @@ for (const rol of ['CAJA', 'COCINA', 'TI', 'ADMINISTRADOR']) {
     test(`sesión abierta se sincroniza a ${rol} sin Reverb`, async () => {
         const env = entorno();
         let actual;
-        const stop = observarSesion({...env, consultar: async () => ({rol,estado:'ACTIVO'}), actualizar: value => actual = value});
+        const stop = observarSesion({...env, consultar: async () => ({rol,estado:'ACTIVO',permisos:{usuarios:{ver:['TI','ADMINISTRADOR'].includes(rol)},pedidos:{ver:rol==='CAJA'},cocina:{ver:rol==='COCINA'}}}), actualizar: value => actual = value});
         await env.tick();
         assert.equal(actual.rol, rol);
-        assert.equal(obtenerRutaInicio(actual), {CAJA:'/caja',COCINA:'/cocina',TI:'/encargado-ti/usuarios',ADMINISTRADOR:'/administrador/usuarios'}[rol]);
+        assert.equal(obtenerRutaInicio(actual), {CAJA:'/caja',COCINA:'/cocina',TI:'/panel/usuarios',ADMINISTRADOR:'/panel/usuarios'}[rol]);
         stop();
     });
 }

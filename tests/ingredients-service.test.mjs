@@ -1,5 +1,8 @@
-import { test } from "node:test";
+import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { sincronizarListasSesion } from "../src/services/listasSesion.js";
+beforeEach(() => sincronizarListasSesion({ id_usuario: 1, estado: "ACTIVO", permisos: { ingredientes: { ver: true } } }));
+afterEach(() => sincronizarListasSesion(null));
 import {
     actualizarIngrediente,
     eliminarIngrediente,

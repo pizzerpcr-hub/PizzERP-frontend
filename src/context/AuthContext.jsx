@@ -13,6 +13,9 @@ import {
 import { AuthContext } from "./useAuth.js";
 import { observarSesion } from "../services/observarSesion.js";
 import echo from "../services/echo.js";
+import { obtenerPermisos } from "../services/gestionesService.js";
+import { sincronizarListasSesion } from "../services/listasSesion.js";
+import { precargarListas } from "../services/precargarListas.js";
 import "../styles/cerrarSesion.css";
 import { useNavigate } from "react-router-dom";
 
@@ -29,6 +32,15 @@ export function AuthProvider({ children }) {
     const montado = useRef(true);
     const cierreTimer = useRef(null);
     const cierreEnCurso = useRef(false);
+    const versionSesion = useRef(0);
+    const usuarioRef = useRef(null);
+    const verificacionRef = useRef(null);
+    const aceptarUsuario = useCallback((actual) => {
+        usuarioRef.current = actual;
+        sincronizarListasSesion(actual);
+        setUsuario(actual);
+        if (actual?.permisos) void precargarListas(actual, window.location.pathname);
+    }, []);
 
     useEffect(() => {
         montado.current = true;
@@ -36,6 +48,7 @@ export function AuthProvider({ children }) {
         return () => {
             montado.current = false;
             window.clearTimeout(cierreTimer.current);
+            verificacionRef.current?.controller.abort();
         };
     }, []);
 
@@ -48,15 +61,19 @@ export function AuthProvider({ children }) {
                     controller.signal,
                 );
 
+                const permisos = usuarioActual
+                    ? await obtenerPermisos(controller.signal).catch(() => null)
+                    : null;
+
                 if (!controller.signal.aborted) {
-                    setUsuario(usuarioActual);
+                    aceptarUsuario(usuarioActual ? { ...usuarioActual, permisos } : null);
                 }
             } catch (error) {
                 if (
                     error.name !== "AbortError" &&
                     !controller.signal.aborted
                 ) {
-                    setUsuario(null);
+                    aceptarUsuario(null);
                 }
             } finally {
                 if (!controller.signal.aborted) {
@@ -70,7 +87,7 @@ export function AuthProvider({ children }) {
         return () => {
             controller.abort();
         };
-    }, []);
+    }, [aceptarUsuario]);
 
     /**
      * Muestra el aviso de revocación y retira la sesión tras una pausa breve.
@@ -82,6 +99,8 @@ export function AuthProvider({ children }) {
         }
 
         cierreEnCurso.current = true;
+        versionSesion.current++;
+        sincronizarListasSesion(null);
 
         setErrorCierre("");
         setMensajeCierre(
@@ -95,13 +114,34 @@ export function AuthProvider({ children }) {
                 return;
             }
 
-            setUsuario(null);
+            aceptarUsuario(null);
             setCerrandoSesion(false);
             cierreEnCurso.current = false;
 
             navigate("/", { replace: true });
         }, 1500);
-    }, []);
+    }, [navigate, aceptarUsuario]);
+
+    // Comparte verificaciones simultáneas, nunca memoriza una autorización entre solicitudes.
+    const verificarAcceso = useCallback(() => {
+        if (verificacionRef.current) return verificacionRef.current.promise;
+        if (!usuarioRef.current || cierreEnCurso.current) return Promise.resolve(null);
+        const controller = new AbortController();
+        const version = versionSesion.current;
+        const promise = (async () => {
+            const actual = await verificarSesion(controller.signal);
+            const actualizado = actual ? { ...actual, permisos: await obtenerPermisos(controller.signal) } : null;
+            if (!montado.current || controller.signal.aborted || version !== versionSesion.current) return null;
+            if (!actualizado) { cerrarPorPermisos(); return null; }
+            const previo = usuarioRef.current;
+            if (JSON.stringify(previo) !== JSON.stringify(actualizado)) aceptarUsuario(actualizado);
+            return actualizado;
+        })().finally(() => {
+            if (verificacionRef.current?.promise === promise) verificacionRef.current = null;
+        });
+        verificacionRef.current = { controller, promise };
+        return promise;
+    }, [aceptarUsuario, cerrarPorPermisos]);
 
     // La consulta periódica respalda la notificación inmediata por WebSocket.
     useEffect(() => {
@@ -113,38 +153,14 @@ export function AuthProvider({ children }) {
         }
 
         return observarSesion({
-            consultar: verificarSesion,
-
-            actualizar: (actualizado) => {
-                if (!actualizado) {
-                    cerrarPorPermisos();
-                    return;
-                }
-
-                setUsuario((actual) => {
-                    const campos = [
-                        "id_usuario",
-                        "nombre_completo",
-                        "nombre_usuario",
-                        "rol",
-                        "estado",
-                    ];
-
-                    const sinCambios = campos.every(
-                        (campo) =>
-                            actual?.[campo] === actualizado[campo],
-                    );
-
-                    return sinCambios
-                        ? actual
-                        : actualizado;
-                });
-            },
+            consultar: verificarAcceso,
+            actualizar: () => {},
         });
     }, [
         usuario?.id_usuario,
         cerrandoSesion,
         cerrarPorPermisos,
+        verificarAcceso,
     ]);
 
     // WebSocket permite revocar el acceso sin esperar la siguiente consulta.
@@ -187,9 +203,11 @@ export function AuthProvider({ children }) {
         };
     }, [usuario?.id_usuario, cerrandoSesion, cerrarPorPermisos]);
 
-    const iniciarSesion = useCallback((datosUsuario) => {
-        setUsuario(datosUsuario);
-    }, []);
+    const iniciarSesion = useCallback(async (datosUsuario) => {
+        const version = ++versionSesion.current;
+        const permisos = await obtenerPermisos().catch(() => null);
+        if (montado.current && version === versionSesion.current) aceptarUsuario({ ...datosUsuario, permisos });
+    }, [aceptarUsuario]);
 
     /**
      * Cierra la sesión en el servidor y ejecuta la acción posterior al terminar.
@@ -202,6 +220,7 @@ export function AuthProvider({ children }) {
         }
 
         cierreEnCurso.current = true;
+        versionSesion.current++;
 
         setErrorCierre("");
         setMensajeCierre("Un momento, estamos cerrando tu sesión.");
@@ -212,6 +231,7 @@ export function AuthProvider({ children }) {
 
         cerrarSesionService()
             .then(() => {
+                sincronizarListasSesion(null);
                 if (!montado.current) {
                     return;
                 }
@@ -230,7 +250,7 @@ export function AuthProvider({ children }) {
 
                     cierreEnCurso.current = false;
 
-                    setUsuario(null);
+                    aceptarUsuario(null);
                     setCerrandoSesion(false);
 
                     onFinalizado?.();
@@ -249,11 +269,27 @@ export function AuthProvider({ children }) {
                     "No fue posible confirmar el cierre de sesión. Revisá tu conexión e intentá nuevamente.",
                 );
             });
-    }, []);
+    }, [aceptarUsuario]);
 
     const actualizarUsuario = useCallback((datosUsuario) => {
-        setUsuario(datosUsuario);
-    }, []);
+        const version = ++versionSesion.current;
+        if (!datosUsuario) {
+            aceptarUsuario(null);
+            return;
+        }
+        const actual = usuarioRef.current;
+        aceptarUsuario({
+            ...actual,
+            ...datosUsuario,
+            permisos: datosUsuario.permisos ?? (
+                datosUsuario.rol && datosUsuario.rol !== actual?.rol ? null : actual?.permisos
+            ),
+        });
+        if (datosUsuario.permisos) return;
+        void obtenerPermisos().then((permisos) => {
+            if (montado.current && version === versionSesion.current && usuarioRef.current) aceptarUsuario({ ...usuarioRef.current, permisos });
+        }).catch(() => {});
+    }, [aceptarUsuario]);
 
     return (
         <AuthContext.Provider
@@ -263,6 +299,7 @@ export function AuthProvider({ children }) {
                 iniciarSesion,
                 cerrarSesion,
                 actualizarUsuario,
+                verificarAcceso,
             }}
         >
             {children}

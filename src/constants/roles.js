@@ -1,10 +1,3 @@
-export const ROLES_PERMITIDOS = [
-    "ADMINISTRADOR",
-    "CAJA",
-    "COCINA",
-    "TI",
-];
-
 export const ETIQUETAS_ROL = {
     ADMINISTRADOR: "Administrador",
     CAJA: "Caja",
@@ -12,28 +5,9 @@ export const ETIQUETAS_ROL = {
     TI: "Encargado de TI",
 };
 
-const INFORMACION_PANEL = {
-    ADMINISTRADOR: {
-        panel: "Panel de administración",
-        modulos: "MÓDULOS DE ADMINISTRACIÓN",
-    },
-    TI: {
-        panel: "Panel Administrativo de TI",
-        modulos: "MÓDULOS DE TI",
-    },
-    CAJA: {
-        panel: "Panel de caja",
-        modulos: "MÓDULOS DE CAJA",
-    },
-    COCINA: {
-        panel: "Panel de cocina",
-        modulos: "MÓDULOS DE COCINA",
-    },
-};
-
 const PANEL_DESCONOCIDO = {
     panel: "Panel del sistema",
-    modulos: "MÓDULOS",
+    modulos: "MÓDULOS DISPONIBLES",
 };
 
 export const normalizarRol = (rol) =>
@@ -41,18 +15,34 @@ export const normalizarRol = (rol) =>
 
 export const puedeGestionarUsuarios = (usuario) =>
     String(usuario?.estado ?? "").trim().toUpperCase() === "ACTIVO" &&
-    ["ADMINISTRADOR", "TI"].includes(normalizarRol(usuario?.rol));
+    usuario?.permisos?.usuarios?.ver === true;
+
+export const puede = (usuario, modulo, accion = "ver") =>
+    String(usuario?.estado ?? "").trim().toUpperCase() === "ACTIVO" &&
+    usuario?.permisos?.[modulo]?.[accion] === true;
+
+export const MODULOS_GESTION = [
+    ["categorias", "Categorías"], ["productos", "Productos"],
+    ["ingredientes", "Ingredientes"], ["combos", "Promociones"],
+    ["usuarios", "Usuarios"], ["roles", "Roles y permisos"],
+];
 
 export const obtenerRutaInicio = (usuario) => {
     if (String(usuario?.estado ?? "").trim().toUpperCase() !== "ACTIVO") return null;
-    const rutas = {
-        ADMINISTRADOR: "/administrador/usuarios",
-        TI: "/encargado-ti/usuarios",
-        CAJA: "/caja",
-        COCINA: "/cocina",
-    };
-    return rutas[normalizarRol(usuario?.rol)] ?? null;
+    if (puede(usuario, "usuarios")) return "/panel/usuarios";
+    const primero = MODULOS_GESTION.find(([modulo]) => puede(usuario, modulo));
+    if (primero) return `/panel/${primero[0]}`;
+    if (puede(usuario, "pedidos")) return "/caja";
+    if (puede(usuario, "cocina")) return "/cocina";
+    return "/panel";
 };
+
+export const obtenerItemsNavegacion = (usuario) => [
+    ...MODULOS_GESTION.filter(([modulo]) => puede(usuario, modulo))
+        .map(([modulo, label]) => ({ label, ruta: `/panel/${modulo}` })),
+    ...(puede(usuario, "pedidos") ? [{ label: "Caja", disabled: true }] : []),
+    ...(puede(usuario, "cocina") ? [{ label: "Cocina", disabled: true }] : []),
+];
 
 export const obtenerEtiquetaRol = (rol) => {
     const rolNormalizado = normalizarRol(rol);
@@ -60,5 +50,4 @@ export const obtenerEtiquetaRol = (rol) => {
     return ETIQUETAS_ROL[rolNormalizado] || rolNormalizado || "Sin rol";
 };
 
-export const obtenerInformacionPanel = (rol) =>
-    INFORMACION_PANEL[normalizarRol(rol)] || PANEL_DESCONOCIDO;
+export const obtenerInformacionPanel = () => PANEL_DESCONOCIDO;
