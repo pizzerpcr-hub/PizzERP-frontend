@@ -3,7 +3,7 @@ import { obtenerUsuarios } from "./usuariosService.js";
 import { obtenerCategorias, obtenerCategoriasParaProducto, obtenerProductos } from "./catalogoService.js";
 import { obtenerIngredientes } from "./ingredientesService.js";
 import { obtenerRoles, obtenerRolesAsignables, obtenerCombos, obtenerProductosParaCombo } from "./gestionesService.js";
-import { iniciarPrecargaListas, identidadListasSesion, puedeConsultarLista } from "./listasSesion.js";
+import { iniciarPrecargaListas, identidadListasSesion, puedeConsultarLista, esListaVisible, esperarListasVisibles } from "./listasSesion.js";
 
 const grupos = {
     usuarios: [["/api/users", obtenerUsuarios], ["/api/users/roles", obtenerRolesAsignables]],
@@ -27,8 +27,10 @@ export async function precargarListas(usuario, ruta, catalogos = grupos) {
     };
     await Promise.all((catalogos[inicial] ?? []).map(cargar));
     const cola = Object.entries(catalogos).filter(([nombre]) => nombre !== inicial).flatMap(([, tareas]) => tareas);
-    const trabajador = async () => {
-        while (cola.length && sesion === identidadListasSesion()) await cargar(cola.shift());
-    };
-    await Promise.all([trabajador(), trabajador()]);
+    while (cola.length && sesion === identidadListasSesion()) {
+        await esperarListasVisibles();
+        if (sesion !== identidadListasSesion()) return;
+        const prioritaria = cola.findIndex(([recurso]) => esListaVisible(recurso));
+        await cargar(cola.splice(prioritaria < 0 ? 0 : prioritaria, 1)[0]);
+    }
 }

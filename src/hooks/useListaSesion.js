@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { useAuth } from "../context/useAuth.js";
 import {
     actualizarLista, guardarBusqueda, leerBusqueda, leerLista, listaDesactualizada,
-    suscribirLista, VIGENCIA_LISTAS_MS, puedeConsultarLista,
+    suscribirLista, VIGENCIA_LISTAS_MS, puedeConsultarLista, registrarListaVisible,
 } from "../services/listasSesion.js";
 
 export function useListaSesion(ruta, consultar, { habilitado = true, pausado = false } = {}) {
-    const { verificarAcceso } = useAuth();
     const montado = useRef(true);
     useEffect(() => {
         montado.current = true;
@@ -18,6 +16,7 @@ export function useListaSesion(ruta, consultar, { habilitado = true, pausado = f
         useCallback(() => leerLista(ruta), [ruta]),
     );
     const recargar = useCallback((forzar = true) => consultar(undefined, { forzar }), [consultar]);
+    useEffect(() => habilitado ? registrarListaVisible(ruta) : undefined, [habilitado, ruta]);
     useEffect(() => {
         if (!habilitado || !puedeConsultarLista(ruta) || pausado || snapshot.pendientes.length || snapshot.consultando || snapshot.error || !listaDesactualizada(snapshot)) return;
         void recargar(false).catch(() => {});
@@ -31,26 +30,21 @@ export function useListaSesion(ruta, consultar, { habilitado = true, pausado = f
             if (detenido || pendiente || pausado || document.visibilityState === "hidden") return;
             pendiente = true;
             try {
-                // No reutilizamos permisos cacheados para autorizar una petición de fondo.
-                const vigente = await verificarAcceso?.();
-                if (!detenido && vigente && (forzar || listaDesactualizada(leerLista(ruta)))) await recargar(forzar);
+                // AuthContext es el único observador de sesión. Laravel autoriza cada GET.
+                if (puedeConsultarLista(ruta) && (forzar || listaDesactualizada(leerLista(ruta)))) await recargar(forzar);
             } catch { /* El snapshot conserva datos y expone el error de GET para reintentar. */ }
             finally { pendiente = false; }
         };
-        const alFoco = () => void revisar();
+        const trasVerificacion = (evento) => void revisar(evento.detail?.forzar === true);
         const alReconectar = () => void revisar(true);
         const timer = window.setInterval(alReconectar, VIGENCIA_LISTAS_MS);
-        window.addEventListener("focus", alFoco);
-        window.addEventListener("online", alReconectar);
-        document.addEventListener("visibilitychange", alFoco);
+        window.addEventListener("pizzerp:session-verified", trasVerificacion);
         return () => {
             detenido = true;
             window.clearInterval(timer);
-            window.removeEventListener("focus", alFoco);
-            window.removeEventListener("online", alReconectar);
-            document.removeEventListener("visibilitychange", alFoco);
+            window.removeEventListener("pizzerp:session-verified", trasVerificacion);
         };
-    }, [habilitado, pausado, verificarAcceso, ruta, recargar]);
+    }, [habilitado, pausado, ruta, recargar]);
     return {
         vigente,
         pendientes: new Set(snapshot.pendientes),

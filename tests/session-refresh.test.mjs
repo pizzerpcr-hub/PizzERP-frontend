@@ -9,7 +9,7 @@ function entorno() {
     const documento = new EventTarget();
     documento.visibilityState = 'visible';
     let tick;
-    ventana.setInterval = (callback, ms) => { assert.equal(ms, 10000); tick = callback; return 1; };
+    ventana.setInterval = (callback, ms) => { assert.equal(ms, 60000); tick = callback; return 1; };
     ventana.clearInterval = () => {};
     return { ventana, documento, tick: () => tick() };
 }
@@ -79,5 +79,29 @@ test('revisa al recuperar foco o recibir rechazo, pero no consulta oculta', asyn
     env.ventana.dispatchEvent(new Event('pizzerp:session-check'));
     await new Promise(setImmediate);
     assert.equal(calls, 2);
+    stop();
+});
+
+test('visibilidad y reconexión revisan sesión; al detener elimina ambos listeners', async () => {
+    const env = entorno(); let llamadas = 0, forzar = false;
+    const stop = observarSesion({ ...env, consultar: async () => { llamadas++; return {}; },
+        actualizar: (_, reconexion) => { forzar = reconexion; } });
+    env.documento.dispatchEvent(new Event('visibilitychange')); await new Promise(setImmediate);
+    assert.equal(llamadas, 1);
+    env.ventana.dispatchEvent(new Event('online')); await new Promise(setImmediate);
+    assert.equal(llamadas, 2); assert.equal(forzar, true);
+    stop(); env.ventana.dispatchEvent(new Event('online'));
+    env.documento.dispatchEvent(new Event('visibilitychange')); await new Promise(setImmediate);
+    assert.equal(llamadas, 2);
+});
+
+test('reconexión simultánea comparte revisión pendiente y conserva el refresco forzado', async () => {
+    const env = entorno(); let resolver, llamadas = 0, forzar = false;
+    const stop = observarSesion({ ...env, consultar: () => { llamadas++; return new Promise(resolve => { resolver = resolve; }); },
+        actualizar: (_, reconexion) => { forzar = reconexion; } });
+    const pendiente = env.tick();
+    env.ventana.dispatchEvent(new Event('online'));
+    resolver({}); await pendiente;
+    assert.equal(llamadas, 1); assert.equal(forzar, true);
     stop();
 });

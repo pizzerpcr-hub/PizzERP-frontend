@@ -1,7 +1,7 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { precargarListas } from "../src/services/precargarListas.js";
-import { consultarLista, leerLista, sincronizarListasSesion, guardarBusqueda, leerBusqueda } from "../src/services/listasSesion.js";
+import { consultarLista, leerLista, sincronizarListasSesion, guardarBusqueda, leerBusqueda, registrarListaVisible } from "../src/services/listasSesion.js";
 
 const permisos = Object.fromEntries(["usuarios", "roles", "categorias", "productos", "ingredientes", "combos"]
     .map(modulo => [modulo, { ver: true, crear: true, editar: true }]));
@@ -32,7 +32,7 @@ test("servicios reales: calentamiento completo hace nueve GET; volver o iniciar 
     } finally { globalThis.fetch = fetchAnterior; }
 });
 
-test("prioriza sección restaurada y dependencia, limita concurrencia a dos y comparte navegación", async () => {
+test("sección inicial y dependencia paralelas; fondo con concurrencia uno y navegación compartida", async () => {
     const llamadas = [], pendientes = [];
     let activas = 0, maximo = 0;
     const recurso = ruta => [ruta, () => consultarLista(ruta, () => {
@@ -53,7 +53,8 @@ test("prioriza sección restaurada y dependencia, limita concurrencia a dos y co
     assert.equal(llamadas.length, 2);
     pendientes.splice(0).forEach(resolve => resolve());
     await navegar; await tick();
-    assert.equal(llamadas.length, 4);
+    assert.equal(llamadas.length, 3);
+    pendientes.splice(0).forEach(resolve => resolve()); await tick();
     pendientes.splice(0).forEach(resolve => resolve()); await tick();
     pendientes.splice(0).forEach(resolve => resolve()); await precarga;
     assert.equal(maximo, 2);
@@ -62,6 +63,70 @@ test("prioriza sección restaurada y dependencia, limita concurrencia a dos y co
     await catalogos.productos[0][1]();
     assert.equal(llamadas.length, 5);
     assert.equal(leerBusqueda("/api/products"), "pizza");
+});
+
+test("navegación inicia sin esperar al fondo; la cola espera la pantalla y comparte su GET", async () => {
+    const llamadas = [], pendientes = new Map();
+    const recurso = ruta => [ruta, () => consultarLista(ruta, () => {
+        llamadas.push(ruta);
+        return new Promise(resolve => pendientes.set(ruta, () => resolve([])));
+    })];
+    const catalogos = {
+        usuarios: [recurso("/api/users")], roles: [recurso("/api/roles")],
+        ingredientes: [recurso("/api/ingredients")], productos: [recurso("/api/products")],
+    };
+    const precarga = precargarListas(cuenta, "/panel/usuarios", catalogos);
+    await tick(); pendientes.get("/api/users")(); await tick();
+    assert.deepEqual(llamadas, ["/api/users", "/api/roles"]);
+    const retirar = registrarListaVisible("/api/products");
+    try {
+        const navegacion = catalogos.productos[0][1](); await tick();
+        assert.equal(llamadas.at(-1), "/api/products");
+        pendientes.get("/api/roles")(); await tick();
+        assert.equal(llamadas.includes("/api/ingredients"), false);
+        pendientes.get("/api/products")(); await navegacion; await tick();
+        assert.equal(llamadas.filter(ruta => ruta === "/api/products").length, 1);
+        pendientes.get("/api/ingredients")(); await precarga;
+    } finally { retirar(); }
+});
+
+test("comparación simulada antes/después: servidor serial, pantalla inicial sin retraso y menor espera al navegar", async () => {
+    const medir = async anterior => {
+        sincronizarListasSesion(null); sincronizarListasSesion(cuenta);
+        let tiempo = 0, inicio, destino, terminada = false;
+        const colaServidor = [], llamadas = [];
+        const recurso = ruta => [ruta, () => consultarLista(ruta, () => {
+            llamadas.push(ruta);
+            return new Promise(resolve => colaServidor.push(() => resolve([])));
+        })];
+        const catalogos = {
+            usuarios: [recurso("/api/users")], roles: [recurso("/api/roles")],
+            ingredientes: [recurso("/api/ingredients")], productos: [recurso("/api/products")],
+        };
+        // Reproducción de la cola anterior de dos trabajadores, sin llamadas reales.
+        const antes = async () => {
+            await catalogos.usuarios[0][1]();
+            const tareas = [catalogos.roles[0], catalogos.ingredientes[0], catalogos.productos[0]];
+            const trabajador = async () => { while (tareas.length) await tareas.shift()[1](); };
+            await Promise.all([trabajador(), trabajador()]);
+        };
+        const precarga = (anterior ? antes() : precargarListas(cuenta, "/panel/usuarios", catalogos))
+            .then(() => { terminada = true; });
+        await tick(); tiempo += 100; colaServidor.shift()(); await tick(); inicio = tiempo;
+        const retirar = registrarListaVisible("/api/products");
+        try {
+            const navegar = catalogos.productos[0][1]().then(() => { destino = tiempo; });
+            await tick();
+            while (!terminada || destino === undefined) {
+                assert.ok(colaServidor.length);
+                tiempo += 100; colaServidor.shift()(); await tick();
+            }
+            await navegar; await precarga;
+            return { inicio, destino, peticiones: llamadas.length };
+        } finally { retirar(); }
+    };
+    assert.deepEqual(await medir(true), { inicio: 100, destino: 400, peticiones: 4 });
+    assert.deepEqual(await medir(false), { inicio: 100, destino: 300, peticiones: 4 });
 });
 
 test("espera permisos y no consulta recursos revocados o ajenos", async () => {

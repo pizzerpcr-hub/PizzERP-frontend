@@ -13,7 +13,9 @@ import {
 import { AuthContext } from "./useAuth.js";
 import { observarSesion } from "../services/observarSesion.js";
 import echo from "../services/echo.js";
-import { obtenerPermisos } from "../services/gestionesService.js";
+import { obtenerAcceso } from "../services/gestionesService.js";
+import { crearConsultasSesion } from "../services/consultasSesion.js";
+import { observarAccesoReverb } from "../services/observarAccesoReverb.js";
 import { sincronizarListasSesion } from "../services/listasSesion.js";
 import { precargarListas } from "../services/precargarListas.js";
 import "../styles/cerrarSesion.css";
@@ -35,12 +37,23 @@ export function AuthProvider({ children }) {
     const versionSesion = useRef(0);
     const usuarioRef = useRef(null);
     const verificacionRef = useRef(null);
+    const accesoConfirmado = useRef(null);
+    const [consultasSesion] = useState(() => crearConsultasSesion(verificarSesion, obtenerAcceso));
     const aceptarUsuario = useCallback((actual) => {
         usuarioRef.current = actual;
         sincronizarListasSesion(actual);
         setUsuario(actual);
         if (actual?.permisos) void precargarListas(actual, window.location.pathname);
     }, []);
+    const confirmarAcceso = useCallback((actual) => {
+        accesoConfirmado.current = actual?.permisos
+            ? { version: versionSesion.current, hasta: Date.now() + 60_000 } : null;
+    }, []);
+    const accesoVigente = useCallback(() => Boolean(
+        usuarioRef.current?.permisos && !verificacionRef.current && !cierreEnCurso.current
+        && accesoConfirmado.current?.version === versionSesion.current
+        && Date.now() < accesoConfirmado.current.hasta
+    ), []);
 
     useEffect(() => {
         montado.current = true;
@@ -49,29 +62,32 @@ export function AuthProvider({ children }) {
             montado.current = false;
             window.clearTimeout(cierreTimer.current);
             verificacionRef.current?.controller.abort();
+            consultasSesion.cancelar();
         };
-    }, []);
+    }, [consultasSesion]);
 
     useEffect(() => {
         const controller = new AbortController();
+        const version = versionSesion.current;
 
         const restaurarSesion = async () => {
             try {
-                const usuarioActual = await verificarSesion(
+                const usuarioActual = await consultasSesion.usuario(
                     controller.signal,
                 );
 
-                const permisos = usuarioActual
-                    ? await obtenerPermisos(controller.signal).catch(() => null)
+                const acceso = usuarioActual
+                    ? await consultasSesion.acceso(controller.signal).catch(() => ({ permisos: null, rol_id: null }))
                     : null;
 
-                if (!controller.signal.aborted) {
-                    aceptarUsuario(usuarioActual ? { ...usuarioActual, permisos } : null);
+                if (!controller.signal.aborted && version === versionSesion.current) {
+                    confirmarAcceso(usuarioActual ? { ...usuarioActual, ...acceso } : null);
+                    aceptarUsuario(usuarioActual ? { ...usuarioActual, ...acceso } : null);
                 }
             } catch (error) {
                 if (
                     error.name !== "AbortError" &&
-                    !controller.signal.aborted
+                    !controller.signal.aborted && version === versionSesion.current
                 ) {
                     aceptarUsuario(null);
                 }
@@ -86,8 +102,9 @@ export function AuthProvider({ children }) {
 
         return () => {
             controller.abort();
+            consultasSesion.cancelar();
         };
-    }, [aceptarUsuario]);
+    }, [aceptarUsuario, confirmarAcceso, consultasSesion]);
 
     /**
      * Muestra el aviso de revocación y retira la sesión tras una pausa breve.
@@ -100,6 +117,7 @@ export function AuthProvider({ children }) {
 
         cierreEnCurso.current = true;
         versionSesion.current++;
+        consultasSesion.cancelar();
         sincronizarListasSesion(null);
 
         setErrorCierre("");
@@ -120,7 +138,7 @@ export function AuthProvider({ children }) {
 
             navigate("/", { replace: true });
         }, 1500);
-    }, [navigate, aceptarUsuario]);
+    }, [navigate, aceptarUsuario, consultasSesion]);
 
     // Comparte verificaciones simultáneas, nunca memoriza una autorización entre solicitudes.
     const verificarAcceso = useCallback(() => {
@@ -129,10 +147,10 @@ export function AuthProvider({ children }) {
         const controller = new AbortController();
         const version = versionSesion.current;
         const promise = (async () => {
-            const actual = await verificarSesion(controller.signal);
-            const actualizado = actual ? { ...actual, permisos: await obtenerPermisos(controller.signal) } : null;
+            const actualizado = await consultasSesion.consultar(controller.signal);
             if (!montado.current || controller.signal.aborted || version !== versionSesion.current) return null;
             if (!actualizado) { cerrarPorPermisos(); return null; }
+            confirmarAcceso(actualizado);
             const previo = usuarioRef.current;
             if (JSON.stringify(previo) !== JSON.stringify(actualizado)) aceptarUsuario(actualizado);
             return actualizado;
@@ -141,7 +159,7 @@ export function AuthProvider({ children }) {
         });
         verificacionRef.current = { controller, promise };
         return promise;
-    }, [aceptarUsuario, cerrarPorPermisos]);
+    }, [aceptarUsuario, cerrarPorPermisos, confirmarAcceso, consultasSesion]);
 
     // La consulta periódica respalda la notificación inmediata por WebSocket.
     useEffect(() => {
@@ -154,7 +172,9 @@ export function AuthProvider({ children }) {
 
         return observarSesion({
             consultar: verificarAcceso,
-            actualizar: () => {},
+            actualizar: (actual, forzar) => {
+                if (actual) window.dispatchEvent(new CustomEvent("pizzerp:session-verified", { detail: { forzar } }));
+            },
         });
     }, [
         usuario?.id_usuario,
@@ -163,51 +183,32 @@ export function AuthProvider({ children }) {
         verificarAcceso,
     ]);
 
-    // WebSocket permite revocar el acceso sin esperar la siguiente consulta.
+    const revisarTrasEvento = useCallback(() => {
+        versionSesion.current++;
+        verificacionRef.current?.controller.abort();
+        verificacionRef.current = null;
+        consultasSesion.cancelar();
+        void verificarAcceso().catch(() => {});
+    }, [consultasSesion, verificarAcceso]);
+
+    // Los cambios de acceso invalidan cualquier revisión anterior al evento.
     useEffect(() => {
         if (!usuario?.id_usuario || cerrandoSesion || !echo) {
             return undefined;
         }
 
-        const nombreCanal = `usuario.${usuario.id_usuario}`;
-        const canal = echo.private(nombreCanal);
-
-        const manejarCambioEstado = (evento) => {
-            const usuarioActualizado = evento?.usuario;
-
-            if (!usuarioActualizado?.id_usuario) {
-                return;
-            }
-
-            const esUsuarioActual =
-                String(usuarioActualizado.id_usuario) ===
-                String(usuario.id_usuario);
-
-            if (!esUsuarioActual) {
-                return;
-            }
-
-            const estado = String(
-                usuarioActualizado.estado ?? "",
-            ).toUpperCase();
-
-            if (estado === "INACTIVO") {
-                cerrarPorPermisos();
-            }
-        };
-
-        canal.listen(".user.status-changed", manejarCambioEstado);
-
-        return () => {
-            echo.leave(nombreCanal);
-        };
-    }, [usuario?.id_usuario, cerrandoSesion, cerrarPorPermisos]);
+        return observarAccesoReverb({ echo, usuario, revisar: revisarTrasEvento, revocar: cerrarPorPermisos, accesoVigente });
+    }, [usuario, cerrandoSesion, cerrarPorPermisos, revisarTrasEvento, accesoVigente]);
 
     const iniciarSesion = useCallback(async (datosUsuario) => {
         const version = ++versionSesion.current;
-        const permisos = await obtenerPermisos().catch(() => null);
-        if (montado.current && version === versionSesion.current) aceptarUsuario({ ...datosUsuario, permisos });
-    }, [aceptarUsuario]);
+        consultasSesion.cancelar();
+        const acceso = await consultasSesion.acceso().catch(() => ({ permisos: null, rol_id: null }));
+        if (montado.current && version === versionSesion.current) {
+            confirmarAcceso({ ...datosUsuario, ...acceso });
+            aceptarUsuario({ ...datosUsuario, ...acceso });
+        }
+    }, [aceptarUsuario, confirmarAcceso, consultasSesion]);
 
     /**
      * Cierra la sesión en el servidor y ejecuta la acción posterior al terminar.
@@ -221,6 +222,7 @@ export function AuthProvider({ children }) {
 
         cierreEnCurso.current = true;
         versionSesion.current++;
+        consultasSesion.cancelar();
 
         setErrorCierre("");
         setMensajeCierre("Un momento, estamos cerrando tu sesión.");
@@ -269,10 +271,11 @@ export function AuthProvider({ children }) {
                     "No fue posible confirmar el cierre de sesión. Revisá tu conexión e intentá nuevamente.",
                 );
             });
-    }, [aceptarUsuario]);
+    }, [aceptarUsuario, consultasSesion]);
 
     const actualizarUsuario = useCallback((datosUsuario) => {
         const version = ++versionSesion.current;
+        consultasSesion.cancelar();
         if (!datosUsuario) {
             aceptarUsuario(null);
             return;
@@ -286,10 +289,10 @@ export function AuthProvider({ children }) {
             ),
         });
         if (datosUsuario.permisos) return;
-        void obtenerPermisos().then((permisos) => {
-            if (montado.current && version === versionSesion.current && usuarioRef.current) aceptarUsuario({ ...usuarioRef.current, permisos });
+        void consultasSesion.acceso().then((acceso) => {
+            if (montado.current && version === versionSesion.current && usuarioRef.current) aceptarUsuario({ ...usuarioRef.current, ...acceso });
         }).catch(() => {});
-    }, [aceptarUsuario]);
+    }, [aceptarUsuario, consultasSesion]);
 
     return (
         <AuthContext.Provider

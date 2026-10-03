@@ -33,6 +33,7 @@ const rechazados = new Set();
 const entradas = new Map();
 const oyentes = new Map();
 const busquedas = new Map();
+const visibles = new Map();
 let sesion = null;
 let generacion = 0;
 let precargaIniciada = false;
@@ -105,6 +106,22 @@ export const leerBusqueda = (ruta) => permitido(ruta) ? busquedas.get(ruta) ?? "
 export const guardarBusqueda = (ruta, texto) => { if (permitido(ruta)) busquedas.set(ruta, texto); };
 export const versionListasSesion = () => generacion;
 export const identidadListasSesion = () => identidadSesion;
+// La pantalla puede iniciar GET inmediatamente; solo la cola de fondo espera.
+export function registrarListaVisible(ruta) {
+    visibles.set(ruta, (visibles.get(ruta) ?? 0) + 1);
+    return () => {
+        const cantidad = (visibles.get(ruta) ?? 1) - 1;
+        if (cantidad) visibles.set(ruta, cantidad);
+        else visibles.delete(ruta);
+    };
+}
+export const esListaVisible = ruta => visibles.has(ruta);
+export async function esperarListasVisibles() {
+    let pendientes;
+    while ((pendientes = [...visibles.keys()].map(ruta => entradas.get(ruta)?.pendiente).filter(Boolean)).length) {
+        await Promise.allSettled(pendientes);
+    }
+}
 export function iniciarPrecargaListas() {
     if (precargaIniciada || !sesion?.permisos || sesion.estado !== "ACTIVO") return false;
     precargaIniciada = true;

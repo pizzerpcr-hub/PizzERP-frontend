@@ -11,15 +11,21 @@ La sesión la establece AuthContext después de restaurar/login y obtener permis
   permisos y refrescan datos vencidos; `online` también fuerza su reconciliación.
 - Tras confirmar cuenta y permisos se precargan las listas permitidas una vez por
   sesión de memoria. La sección inicial (o la ruta restaurada) y su catálogo tienen
-  prioridad; luego se procesan las demás con dos trabajadores como máximo. El panel
+  prioridad y pueden consultar en paralelo; luego las demás usan un trabajador de fondo. El panel
   no espera esa precarga. Navegar comparte la petición ya iniciada. No se consultan
   módulos denegados. Logout/cambio de cuenta cancelan solicitudes y la cola anterior.
+  Las páginas registran sus recursos visibles: sus GET empiezan sin esperar la cola;
+  antes de iniciar otro recurso de fondo se espera a esas consultas y se priorizan
+  sus recursos pendientes. No se cancela un GET de fondo ya iniciado ni se serializan
+  las acciones o las autorizaciones de canales.
 - Solo las páginas/catálogos utilizados tienen observadores periódicos.
 - GET idénticos comparten la petición en curso. Los endpoints de catálogos filtrados
   no se confunden con las listas completas: sus permisos y contenido son diferentes.
 - Las verificaciones simultáneas de sesión/permisos comparten la promesa de AuthContext,
   sin almacenar una autorización para futuras solicitudes. La revisión de sesión de
-  10 segundos existente se conserva. Laravel sigue autorizando cada petición.
+  60 segundos, centralizada en AuthContext. Los temporizadores de listas no hacen
+  consultas adicionales de sesión/permisos; foco, visibilidad y reconexión se notifican
+  a las listas después de la revisión central. Laravel autoriza cada petición.
 - Una respuesta de mutación confirmada incorpora/reemplaza su fila. Categorías invalida
   productos, sus categorías asignables y combos; Productos invalida el conteo de categorías,
   combos y sus productos asignables; Roles invalida Usuarios y roles asignables.
@@ -36,9 +42,17 @@ La sesión la establece AuthContext después de restaurar/login y obtener permis
 
 ## Reverb
 
-Actualmente solo existe la notificación privada `usuario.{id}` de estado de la propia
-cuenta. Se conserva: su revocación limpia también estas listas. No existen eventos de
-catálogo ni se ha reintroducido el canal general `usuarios`, retirado por seguridad.
+Se escuchan `user.status-changed` y `user.access-changed` en `usuario.{id}`, y
+`role.access-changed` en `rol.{rol_id}` (ID entregado por `/api/permissions`). La
+desactivación propia cierra el acceso inmediatamente; los cambios de rol/permisos
+invalidan consultas anteriores y revisan el acceso sin esperar el temporizador.
+Se cambia la suscripción al reasignar el rol y se revisa tras reconectar el socket.
+La primera conexión omite una revisión adicional únicamente si cuenta y permisos
+fueron confirmados hace menos de 60 segundos, sin invalidaciones ni revisión pendiente.
+Las reconexiones y eventos siempre revisan. Dos autorizaciones simultáneas comparten
+solo la promesa CSRF en curso, pero hacen POST independientes por canal; tras un fallo
+o una conexión posterior se permite preparar CSRF otra vez.
+No existen eventos de catálogo ni se ha reintroducido el canal general `usuarios`.
 Los cambios de otros usuarios se detectan por el respaldo, el foco y la reconexión;
 no son instantáneos por WebSocket con la arquitectura actual.
 
@@ -72,3 +86,16 @@ Los catálogos distinguen pendiente, respuesta exitosa vacía y error. Un refres
 
 Verificación automatizada: `node --test tests/*.test.mjs`, `npm run lint`, `npm run build`.
 Las pruebas de caché usan loaders/fetch simulados, nunca la base de datos.
+
+## Ajuste de arranque: comparación aislada
+
+Dos canales: antes 2 GET CSRF + 2 POST de autorización; ahora 1 + 2.
+Primera conexión con acceso confirmado vigente: antes podía añadir 1 GET de sesión
+y 1 de permisos; ahora 0. Los 9 GET distintos de precarga siguen siendo necesarios.
+La sección inicial mantiene sus consultas paralelas y no espera el calentamiento.
+Un servidor simulado serial, con 100 ms por GET, muestra la sección inicial a
+100 ms en ambas estrategias; al navegar durante el fondo, la lista destino aparece
+a 400 ms con dos trabajadores y a 300 ms con uno (mismo total: cuatro GET).
+Es un escenario controlado, no una medición del navegador ni de Laravel/Supabase.
+Con un servidor realmente paralelo, un solo trabajador puede alargar el calentamiento
+completo; no se promete reducirlo. La prioridad es la pantalla utilizada.
