@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { useAuth } from "../context/useAuth.js";
 import {
     actualizarLista, guardarBusqueda, leerBusqueda, leerLista, listaDesactualizada,
-    suscribirLista, VIGENCIA_LISTAS_MS, puedeConsultarLista,
+    suscribirLista, puedeConsultarLista,
 } from "../services/listasSesion.js";
 
 export function useListaSesion(ruta, consultar, { habilitado = true, pausado = false } = {}) {
-    const { verificarAcceso } = useAuth();
     const montado = useRef(true);
     useEffect(() => {
         montado.current = true;
@@ -31,26 +29,22 @@ export function useListaSesion(ruta, consultar, { habilitado = true, pausado = f
             if (detenido || pendiente || pausado || document.visibilityState === "hidden") return;
             pendiente = true;
             try {
-                // No reutilizamos permisos cacheados para autorizar una petición de fondo.
-                const vigente = await verificarAcceso?.();
-                if (!detenido && vigente && (forzar || listaDesactualizada(leerLista(ruta)))) await recargar(forzar);
+                if (!detenido && puedeConsultarLista(ruta) && (forzar || listaDesactualizada(leerLista(ruta)))) await recargar(forzar);
             } catch { /* El snapshot conserva datos y expone el error de GET para reintentar. */ }
             finally { pendiente = false; }
         };
         const alFoco = () => void revisar();
         const alReconectar = () => void revisar(true);
-        const timer = window.setInterval(alReconectar, VIGENCIA_LISTAS_MS);
         window.addEventListener("focus", alFoco);
         window.addEventListener("online", alReconectar);
         document.addEventListener("visibilitychange", alFoco);
         return () => {
             detenido = true;
-            window.clearInterval(timer);
             window.removeEventListener("focus", alFoco);
             window.removeEventListener("online", alReconectar);
             document.removeEventListener("visibilitychange", alFoco);
         };
-    }, [habilitado, pausado, verificarAcceso, ruta, recargar]);
+    }, [habilitado, pausado, ruta, recargar]);
     return {
         vigente,
         pendientes: new Set(snapshot.pendientes),

@@ -111,8 +111,10 @@ test("roles invalidan asignaciones y catálogo; DELETE retira solo ingrediente c
     assert.equal(listaDesactualizada(leerLista("/api/users")), true);
     assert.equal(listaDesactualizada(leerLista("/api/users/roles")), true);
     await consultarLista("/api/ingredients", async () => [{ id_ingrediente: 1 }, { id_ingrediente: 2 }]);
+    await consultarLista("/api/products/ingredientes", async () => [{ id_ingrediente: 1 }]);
     confirmarLista("/api/ingredients/1", "DELETE", {}, versionListasSesion());
     assert.deepEqual(leerLista("/api/ingredients").datos, [{ id_ingrediente: 2 }]);
+    assert.equal(listaDesactualizada(leerLista("/api/products/ingredientes")), true);
 });
 
 test("logout y cambio de cuenta limpian memoria, búsquedas y descartan respuestas pendientes", async () => {

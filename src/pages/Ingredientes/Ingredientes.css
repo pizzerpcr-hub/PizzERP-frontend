@@ -580,20 +580,6 @@ select {
 }
 
 
-/* Eliminar */
-
-.action-button.delete {
-    border: 1px solid #e3c9c4;
-
-    background: #fff;
-    color: #a53d32;
-}
-
-.action-button.delete:hover {
-    background: #fff3f1;
-}
-
-
 /* =========================================================
    MODAL
    ========================================================= */
@@ -802,65 +788,47 @@ select {
    TABLET
    ========================================================= */
 
-@media (max-width: 1100px) {
-
-    .management-sidebar {
-        width: 230px;
-    }
-
-}
-
-
 /* =========================================================
    TABLET PEQUEÑA / MÓVIL
    ========================================================= */
 
 @media (max-width: 850px) {
-
-    .management-sidebar {
-        position: static;
-
-        width: 100%;
-        height: auto;
-    }
-
-
-    .management-header {
+    .ingredients-page .management-header {
         align-items: flex-start;
 
         flex-direction: column;
     }
 
-    .management-primary {
+    .ingredients-page .management-primary {
         width: auto;
     }
 
-    .management-panel {
+    .ingredients-page .management-panel {
         padding: 22px 20px;
     }
 
-    .table-wrap {
+    .ingredients-page .table-wrap {
         overflow: visible;
     }
 
-    .management-table,
-    .management-table tbody,
-    .management-table tr,
-    .management-table td {
+    .ingredients-page .management-table,
+    .ingredients-page .management-table tbody,
+    .ingredients-page .management-table tr,
+    .ingredients-page .management-table td {
         display: block;
 
         width: 100%;
     }
 
-    .management-table {
+    .ingredients-page .management-table {
         min-width: 0;
     }
 
-    .management-table thead {
+    .ingredients-page .management-table thead {
         display: none;
     }
 
-    .management-table tr {
+    .ingredients-page .management-table tr {
         margin-bottom: 14px;
 
         padding: 14px;
@@ -871,7 +839,7 @@ select {
         background: #fff;
     }
 
-    .management-table td {
+    .ingredients-page .management-table td {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -883,11 +851,11 @@ select {
         border-bottom: 1px solid #f0ece9;
     }
 
-    .management-table td:last-child {
+    .ingredients-page .management-table td:last-child {
         border-bottom: 0;
     }
 
-    .management-table td::before {
+    .ingredients-page .management-table td::before {
         content: attr(data-label);
 
         color: #796c66;
@@ -896,7 +864,7 @@ select {
         font-weight: 600;
     }
 
-    .table-actions {
+    .ingredients-page .table-actions {
         justify-content: flex-end;
     }
 }
@@ -909,32 +877,32 @@ select {
 @media (max-width: 600px) {
 
 
-    .management-header h1 {
+    .ingredients-page .management-header h1 {
         font-size: 24px;
     }
 
-    .management-header p {
+    .ingredients-page .management-header p {
         font-size: 14px;
     }
 
-    .management-primary {
+    .ingredients-page .management-primary {
         width: 100%;
     }
 
-    .management-panel {
+    .ingredients-page .management-panel {
         padding: 18px 16px;
     }
 
 
-    .form-actions {
+    .ingredients-page .form-actions {
         flex-direction: column-reverse;
     }
 
-    .form-actions button {
+    .ingredients-page .form-actions button {
         width: 100%;
     }
 
-    .category-modal {
+    .ingredients-page .category-modal {
         padding: 23px 18px;
     }
 }
@@ -1064,7 +1032,7 @@ select {
     background: #fff8f4;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
     .ingredients-page .ingredients-table {
         display: block;
         min-width: 0;
@@ -1082,16 +1050,19 @@ select {
     .ingredients-page .ingredients-table tbody {
         display: grid;
         gap: 14px;
+        min-width: 0;
     }
 
     .ingredients-page .ingredients-table tr {
         display: block;
+        min-width: 0;
     }
 
     .ingredients-page .ingredients-table .ingredient-card {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px 16px;
+        margin: 0;
         padding: 16px;
         border: 1px solid #e4dfda;
         border-radius: 8px;
@@ -1144,6 +1115,8 @@ select {
     .ingredients-page .ingredients-table .ingredient-card {
         grid-template-columns: 1fr;
     }
+
+    .ingredients-page .ingredient-card .table-actions .action-button { flex: 1 1 100%; }
 
     .ingredients-page .management-toast-region {
         top: max(12px, env(safe-area-inset-top));

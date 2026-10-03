@@ -1,0 +1,10 @@
+.status-dialog-copy {
+    color: #5f4a42;
+    line-height: 1.5;
+}
+
+.status-dialog-error {
+    color: #9a352d;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}

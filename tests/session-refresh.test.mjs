@@ -9,7 +9,7 @@ function entorno() {
     const documento = new EventTarget();
     documento.visibilityState = 'visible';
     let tick;
-    ventana.setInterval = (callback, ms) => { assert.equal(ms, 10000); tick = callback; return 1; };
+    ventana.setInterval = (callback, ms) => { assert.equal(ms, 30000); tick = callback; return 1; };
     ventana.clearInterval = () => {};
     return { ventana, documento, tick: () => tick() };
 }
@@ -79,5 +79,15 @@ test('revisa al recuperar foco o recibir rechazo, pero no consulta oculta', asyn
     env.ventana.dispatchEvent(new Event('pizzerp:session-check'));
     await new Promise(setImmediate);
     assert.equal(calls, 2);
+    stop();
+});
+
+test('permite espaciar la revalidación de la sesión', () => {
+    const env = entorno();
+    env.ventana.setInterval = (_callback, ms) => {
+        assert.equal(ms, 60000);
+        return 1;
+    };
+    const stop = observarSesion({ ...env, intervaloMs: 60000, consultar: async () => null, actualizar: () => {} });
     stop();
 });

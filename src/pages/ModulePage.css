@@ -1,10 +1,16 @@
 .module-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
     color: #291b17;
 }
 
 .module-page .management-header {
     display: block;
+    flex-shrink: 0;
     margin: 0 0 15px;
 }
 
@@ -104,8 +110,11 @@
 .module-page .management-secondary:hover { background: #e9ddd5; }
 
 .module-page .management-panel {
-    display: block;
+    display: flex;
+    flex: 0 1 auto;
+    flex-direction: column;
     min-width: 0;
+    min-height: 0;
     padding: 20px;
     border: 1px solid #e4dfda;
     border-radius: 8px;
@@ -114,6 +123,7 @@
 
 .module-page .management-panel-header {
     display: flex;
+    flex-shrink: 0;
     align-items: flex-start;
     justify-content: space-between;
     gap: 14px;
@@ -221,14 +231,29 @@
 }
 
 .module-page .table-wrap {
+    flex: 0 1 auto;
     min-width: 0;
+    min-height: 0;
     width: 100%;
     max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #b78a72 #f3ece7;
+}
+
+.module-page .table-pagination {
+    flex-shrink: 0;
+}
+
+@media (min-width: 1101px) {
+    .module-page .management-table thead,
+    .module-page .ingredients-table thead,
+    .module-page .usuarios-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
 }
 .module-page .management-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px; white-space: nowrap; }
 .module-page .management-table th { padding: 11px 10px; border-bottom: 1px solid #d9dee7; background: #faf9f7; color: #756860; font-size: 14px; font-weight: 600; text-align: left; vertical-align: middle; }
@@ -238,7 +263,7 @@
 .module-page .management-table .management-loading { padding: 0; }
 .module-page .management-table td strong { color: #291b17; font-weight: 600; }
 
-@media (min-width: 901px) {
+@media (min-width: 1101px) {
     .module-page.categorias-page .management-table {
         min-width: 800px;
         table-layout: fixed;
@@ -312,6 +337,9 @@
 
 .module-page .catalog-action:hover { border-color: #bd8d76; background: #fff8f4; }
 
+.module-page .category-table-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.module-page .catalog-action:disabled { opacity: .55; cursor: not-allowed; }
+
 .module-page .modal-overlay {
     position: fixed;
     inset: 0;
@@ -382,7 +410,23 @@
     .module-page .table-wrap { overflow-x: auto; }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
+    .module-page {
+        height: auto;
+        min-height: 100%;
+        overflow: visible;
+    }
+
+    .module-page .management-panel {
+        flex: none;
+    }
+
+    .module-page .table-wrap {
+        flex: none;
+        overflow-x: auto;
+        overflow-y: visible;
+    }
+
     .module-page.categorias-page .management-table td,
     .module-page.productos-page .management-table td {
         width: 100%;
@@ -405,14 +449,16 @@
     .module-page .management-table tbody {
         display: grid;
         gap: 14px;
+        min-width: 0;
     }
 
-    .module-page .management-table tr { display: block; }
+    .module-page .management-table tr { display: block; min-width: 0; }
 
     .module-page .management-table .management-card {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px 16px;
+        margin: 0;
         padding: 16px;
         border: 1px solid #e4dfda;
         border-radius: 8px;
@@ -450,6 +496,11 @@
         min-height: 40px;
     }
 
+    .module-page .management-card .category-table-actions,
+    .module-page .management-card .productos-table-actions {
+        min-width: 0;
+    }
+
     .module-page .management-table .module-empty { padding: 28px 14px; }
 }
 
@@ -480,6 +531,10 @@
 
 @media (max-width: 420px) {
     .module-page .management-table .management-card { grid-template-columns: 1fr; }
+
+    .module-page .management-card .category-table-actions button,
+    .module-page .management-card .productos-table-actions button,
+    .module-page .management-card .roles-actions button { flex: 1 1 100%; }
 }
 
 @media (max-width: 359px) {

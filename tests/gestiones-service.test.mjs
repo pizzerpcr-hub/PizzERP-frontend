@@ -7,7 +7,7 @@ beforeEach(() => sincronizarListasSesion({ id_usuario: 1, estado: "ACTIVO", perm
 afterEach(() => sincronizarListasSesion(null));
 import {
     actualizarCombo, actualizarRol, cambiarEstadoCombo, cambiarEstadoRol,
-    obtenerCombos, obtenerPermisos, obtenerRoles, registrarCombo, registrarRol,
+    obtenerAcceso, obtenerCombos, obtenerPermisos, obtenerRoles, registrarCombo, registrarRol,
 } from "../src/services/gestionesService.js";
 
 test("combos y roles reutilizan CSRF, cookies y métodos correctos", async () => {
@@ -72,5 +72,7 @@ test("una respuesta incompleta de permisos se rechaza y no confirma revocación"
         await assert.rejects(obtenerPermisos(), /confirmar los permisos/);
         globalThis.fetch = async () => new Response(JSON.stringify({ permisos: { usuarios: { ver: false } } }), { status: 200 });
         assert.deepEqual(await obtenerPermisos(), { usuarios: { ver: false } });
+        globalThis.fetch = async () => new Response(JSON.stringify({ permisos: { usuarios: { ver: true } }, rol_id: 7 }), { status: 200 });
+        assert.deepEqual(await obtenerAcceso(), { permisos: { usuarios: { ver: true } }, rol_id: 7 });
     } finally { globalThis.fetch = anterior; }
 });

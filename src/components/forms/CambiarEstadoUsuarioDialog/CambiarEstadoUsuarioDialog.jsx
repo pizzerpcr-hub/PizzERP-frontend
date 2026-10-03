@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import "../UsuarioFormBase.css";
+import "./CambiarEstadoUsuarioDialog.css";
 
 function CambiarEstadoUsuarioDialog({
     usuarioSeleccionado,
@@ -8,6 +10,7 @@ function CambiarEstadoUsuarioDialog({
     entidad = "usuario",
     mensajeError = "",
     textoEnviando = "Guardando...",
+    descripcion,
 }) {
     const dialogRef = useRef(null);
     const envioEnCursoRef = useRef(false);
@@ -106,9 +109,9 @@ function CambiarEstadoUsuarioDialog({
                 </div>
 
                 <p className="status-dialog-copy">
-                    {reactivando
+                    {descripcion ?? (reactivando
                         ? `Se restablecerá el acceso ${entidad === "rol" ? "de las cuentas con el rol" : "de"} ${usuarioSeleccionado?.nombre_completo ?? usuarioSeleccionado?.nombre}.`
-                        : `Se retirará temporalmente el acceso ${entidad === "rol" ? "de las cuentas con el rol" : "de"} ${usuarioSeleccionado?.nombre_completo ?? usuarioSeleccionado?.nombre}.`}
+                        : `Se retirará temporalmente el acceso ${entidad === "rol" ? "de las cuentas con el rol" : "de"} ${usuarioSeleccionado?.nombre_completo ?? usuarioSeleccionado?.nombre}.`)}
                 </p>
 
                 {mensajeError && <p className="status-dialog-error" role="alert">{mensajeError}</p>}

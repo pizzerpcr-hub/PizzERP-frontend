@@ -1,17 +1,16 @@
 import { obtenerRutaInicio } from "../constants/roles.js";
-import { obtenerUsuarios } from "./usuariosService.js";
-import { obtenerCategorias, obtenerCategoriasParaProducto, obtenerProductos } from "./catalogoService.js";
-import { obtenerIngredientes } from "./ingredientesService.js";
-import { obtenerRoles, obtenerRolesAsignables, obtenerCombos, obtenerProductosParaCombo } from "./gestionesService.js";
+import { obtenerCategoriasParaProducto, obtenerIngredientesParaProducto } from "./catalogoService.js";
+import { obtenerRolesAsignables, obtenerProductosParaCombo } from "./gestionesService.js";
 import { iniciarPrecargaListas, identidadListasSesion, puedeConsultarLista } from "./listasSesion.js";
 
 const grupos = {
-    usuarios: [["/api/users", obtenerUsuarios], ["/api/users/roles", obtenerRolesAsignables]],
-    roles: [["/api/roles", obtenerRoles]],
-    categorias: [["/api/categories", obtenerCategorias]],
-    productos: [["/api/products", obtenerProductos], ["/api/products/categorias", obtenerCategoriasParaProducto]],
-    ingredientes: [["/api/ingredients", obtenerIngredientes]],
-    combos: [["/api/combos", obtenerCombos], ["/api/combos/productos", obtenerProductosParaCombo]],
+    usuarios: [["/api/users/roles", obtenerRolesAsignables]],
+    roles: [],
+    categorias: [],
+    productos: [["/api/products/categorias", obtenerCategoriasParaProducto],
+        ["/api/products/ingredientes", obtenerIngredientesParaProducto]],
+    ingredientes: [],
+    combos: [["/api/combos/productos", obtenerProductosParaCombo]],
 };
 
 // No espera al render del panel. Comparte los GET de los servicios habituales.

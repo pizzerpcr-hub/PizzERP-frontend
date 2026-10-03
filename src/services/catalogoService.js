@@ -33,6 +33,20 @@ export const obtenerLista = (ruta, clave, mensaje, signal, opciones = {}) => con
     return Array.isArray(data[clave]) ? data[clave] : [];
 }, { ...opciones, signal });
 
+export const obtenerPaginaTabla = async (ruta, clave, pagina, busqueda, signal) => {
+    const parametros = new URLSearchParams({ page: String(pagina), search: busqueda.trim() });
+    const response = await fetch(`${ruta}?${parametros}`, {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        signal,
+    });
+    const data = await leerRespuesta(response, "No fue posible cargar el listado.");
+    return {
+        datos: Array.isArray(data[clave]) ? data[clave] : [],
+        paginacion: data.paginacion,
+    };
+};
+
 export const enviarMutacion = async (ruta, metodo, datos, mensaje) => {
     const epoch = versionListasSesion();
     const csrf = await fetch("/sanctum/csrf-cookie", {
@@ -66,6 +80,9 @@ export const obtenerCategorias = (signal, opciones) =>
 export const obtenerCategoriasParaProducto = (signal, opciones) =>
     obtenerLista("/api/products/categorias", "categorias", "No fue posible cargar las categorías disponibles.", signal, opciones);
 
+export const obtenerIngredientesParaProducto = (signal, opciones) =>
+    obtenerLista("/api/products/ingredientes", "ingredientes", "No fue posible cargar los ingredientes disponibles.", signal, opciones);
+
 export const registrarCategoria = (datos) =>
     enviarMutacion("/api/categories", "POST", datos, "No fue posible registrar la categoría.");
 
@@ -80,3 +97,6 @@ export const registrarProducto = (datos) =>
 
 export const actualizarProducto = (id, datos) =>
     enviarMutacion(`/api/products/${id}`, "PATCH", datos, "No fue posible actualizar el producto.");
+
+export const cambiarEstadoProducto = (id, estado) =>
+    enviarMutacion(`/api/products/${id}/estado`, "PATCH", { estado }, "No fue posible cambiar el estado del producto.");

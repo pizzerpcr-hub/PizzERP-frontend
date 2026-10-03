@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function CategoriaForm({ categoria, enviando, onGuardar, onCerrar, puedeDesactivar = true }) {
+function CategoriaForm({ categoria, enviando, onGuardar, onCerrar }) {
     const [datos, setDatos] = useState({
         nombre: categoria?.nombre ?? "",
         descripcion: categoria?.descripcion ?? "",
@@ -22,7 +22,7 @@ function CategoriaForm({ categoria, enviando, onGuardar, onCerrar, puedeDesactiv
             await onGuardar({
                 nombre: datos.nombre.trim(),
                 descripcion: datos.descripcion.trim(),
-                estado: datos.estado,
+                ...(!categoria && { estado: datos.estado }),
             });
         } catch (error) {
             if (error.status === 422 && error.errors) {
@@ -61,13 +61,13 @@ function CategoriaForm({ categoria, enviando, onGuardar, onCerrar, puedeDesactiv
                             aria-invalid={Boolean(errores.descripcion)} />
                         {errores.descripcion && <small className="catalog-error">{errores.descripcion}</small>}
                     </div>
-                    <div className="form-group">
+                    {!categoria && <div className="form-group">
                         <label htmlFor="estadoCategoria">Estado</label>
                         <select id="estadoCategoria" value={datos.estado} onChange={(event) => cambiar("estado", event.target.value)}>
                             <option value="ACTIVO">Activa</option>
-                            <option value="INACTIVO" disabled={Boolean(categoria && categoria.estado === "ACTIVO" && !puedeDesactivar)}>Inactiva</option>
+                            <option value="INACTIVO">Inactiva</option>
                         </select>
-                    </div>
+                    </div>}
                     {errorGeneral && <p className="catalog-error" role="alert">{errorGeneral}</p>}
                     <div className="form-actions">
                         <button className="management-secondary" type="button" onClick={onCerrar} disabled={enviando}>Cancelar</button>

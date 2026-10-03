@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/useAuth.js";
 import { puede } from "../../constants/roles.js";
 import "../ModulePage.css";
 import "./Productos.css";
 import ProductoForm from "../../components/forms/ProductoForm/ProductoForm.jsx";
+import CambiarEstadoUsuarioDialog from "../../components/forms/CambiarEstadoUsuarioDialog/CambiarEstadoUsuarioDialog.jsx";
 import LoadingSpinner from "../../components/common/LoadingSpinner/LoadingSpinner.jsx";
 import PageSearch from "../../components/common/PageSearch/PageSearch.jsx";
-import { actualizarProducto, obtenerCategoriasParaProducto, obtenerProductos, registrarProducto } from "../../services/catalogoService.js";
+import Paginacion from "../../components/common/Paginacion/Paginacion.jsx";
+import { actualizarProducto, cambiarEstadoProducto, obtenerCategoriasParaProducto, obtenerIngredientesParaProducto, registrarProducto } from "../../services/catalogoService.js";
 import { useBusquedaLista, useListaSesion } from "../../hooks/useListaSesion.js";
+import { useTablaPaginada } from "../../hooks/useTablaPaginada.js";
 
 const formatoPrecio = new Intl.NumberFormat("es-CR", {
     style: "currency", currency: "CRC", minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -16,16 +19,21 @@ const formatoPrecio = new Intl.NumberFormat("es-CR", {
 function Productos() {
     const { usuario } = useAuth();
     const puedeCambiarProductos = puede(usuario, "productos", "crear") || puede(usuario, "productos", "editar");
-    const { datos: productos, cargando, error: errorLista, recargar, vigente } = useListaSesion(
-        "/api/products", obtenerProductos, { habilitado: puede(usuario, "productos") });
+    const [busqueda, setBusqueda] = useBusquedaLista("/api/products");
+    const { datos: productos, paginacion, cargando, error: errorLista, recargar } = useTablaPaginada(
+        "/api/products", "productos", busqueda, puede(usuario, "productos"));
     const { datos: categorias, disponible: categoriasDisponibles, cargando: cargandoCategorias, error: errorCategorias, recargar: recargarCategorias } = useListaSesion(
         "/api/products/categorias", obtenerCategoriasParaProducto, { habilitado: puedeCambiarProductos });
+    const { datos: ingredientesDisponibles, disponible: catalogoIngredientesDisponible, error: errorIngredientes,
+        recargar: recargarIngredientes } = useListaSesion(
+        "/api/products/ingredientes", obtenerIngredientesParaProducto, { habilitado: puedeCambiarProductos });
     const [error, setError] = useState("");
     const [mensaje, setMensaje] = useState("");
-    const [busqueda, setBusqueda] = useBusquedaLista("/api/products");
     const [productoEditando, setProductoEditando] = useState(null);
     const [modalAbierto, setModalAbierto] = useState(false);
     const [enviando, setEnviando] = useState(false);
+    const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+    const [errorEstado, setErrorEstado] = useState("");
 
     useEffect(() => {
         if (!mensaje) return undefined;
@@ -33,46 +41,43 @@ function Productos() {
         return () => window.clearTimeout(temporizador);
     }, [mensaje]);
 
-    const productosFiltrados = useMemo(() => productos.filter((producto) =>
-        `${producto.codigo_producto} ${producto.nombre} ${producto.descripcion} ${producto.categoria?.nombre ?? ""}`
-            .toLocaleLowerCase().includes(busqueda.trim().toLocaleLowerCase())
-    ), [productos, busqueda]);
-
     const guardarProducto = async (datos) => {
         setEnviando(true);
         try {
             productoEditando
                 ? await actualizarProducto(productoEditando.id_producto, datos)
                 : await registrarProducto(datos);
-            if (!vigente()) return;
             setModalAbierto(false);
             setProductoEditando(null);
             setMensaje(productoEditando ? "Producto actualizado correctamente." : "Producto registrado correctamente.");
             setError("");
         } finally {
-            if (vigente()) setEnviando(false);
+            setEnviando(false);
         }
     };
 
-    const cambiarEstado = async (producto) => {
+    const cambiarEstado = async () => {
+        const producto = productoSeleccionado;
+        if (!producto || enviando) return;
+        const nuevoEstado = producto.estado === "ACTIVO" ? "INACTIVO" : "ACTIVO";
         setEnviando(true);
+        setErrorEstado("");
         try {
-            await actualizarProducto(producto.id_producto, {
-                estado: producto.estado === "ACTIVO" ? "INACTIVO" : "ACTIVO",
-            });
-            if (!vigente()) return;
-            setMensaje("Estado del producto actualizado correctamente.");
+            await cambiarEstadoProducto(producto.id_producto, nuevoEstado);
+            setProductoSeleccionado(null);
+            setMensaje(nuevoEstado === "ACTIVO" ? "Producto activado correctamente." : "Producto desactivado correctamente.");
             setError("");
         } catch (fallo) {
-            if (vigente()) setError(fallo.message);
+            setErrorEstado(fallo.message);
         } finally {
-            if (vigente()) setEnviando(false);
+            setEnviando(false);
         }
     };
 
     const abrirFormulario = (producto = null) => {
         setProductoEditando(producto);
         setModalAbierto(true);
+        if (errorIngredientes) void recargarIngredientes().catch(() => {});
     };
 
     return (
@@ -106,7 +111,7 @@ function Productos() {
                     <div><h2 id="productosTitle">Productos registrados</h2>
                         <p>Consulta y administra los productos disponibles en el menú.</p></div>
                     <PageSearch className="page-search--header" label="Buscar producto" id="buscarProducto"
-                        placeholder="Buscar por nombre, código o categoría..." value={busqueda}
+                        placeholder="Buscar por nombre, código o categoría..." value={busqueda} maxLength={100}
                         onChange={(event) => setBusqueda(event.target.value)} />
                 </div>
                 <div className="table-wrap">
@@ -115,9 +120,9 @@ function Productos() {
                         <tbody>
                             {cargando ? <tr><td colSpan="6" className="management-loading"><LoadingSpinner label="Cargando productos" /></td></tr>
                                 : error && productos.length === 0 ? <tr><td colSpan="6" className="module-empty">No fue posible mostrar los productos.</td></tr>
-                                    : productosFiltrados.length === 0 ? <tr><td colSpan="6" className="module-empty">
+                                    : productos.length === 0 ? <tr><td colSpan="6" className="module-empty">
                                     {busqueda ? "No se encontraron productos." : "No hay productos registrados."}
-                                </td></tr> : productosFiltrados.map((producto) => <tr className="management-card" key={producto.id_producto}>
+                                </td></tr> : productos.map((producto) => <tr className="management-card" key={producto.id_producto}>
                                     <td data-label="Código"><strong>{producto.codigo_producto}</strong></td>
                                     <td data-label="Producto"><div className="productos-product-cell"><strong>{producto.nombre}</strong>
                                         <span className="productos-description">{producto.descripcion}</span></div></td>
@@ -126,21 +131,39 @@ function Productos() {
                                     <td data-label="Estado"><span className={`productos-status ${producto.estado === "ACTIVO" ? "active" : "inactive"}`}>
                                         {producto.estado === "ACTIVO" ? "Activo" : "Inactivo"}</span></td>
                                     <td data-label="Acciones"><div className="productos-table-actions">
-                                        {puede(usuario, "productos", "editar") && <button type="button" disabled={enviando} onClick={() => abrirFormulario(producto)}>Editar</button>}
-                                        {puede(usuario, "productos", producto.estado === "ACTIVO" ? "eliminar" : "editar") && <button type="button" disabled={enviando} onClick={() => cambiarEstado(producto)}>
+                                        {puede(usuario, "productos", "editar") && <button type="button" disabled={enviando} onClick={() => abrirFormulario(producto)}>Modificar</button>}
+                                        {puede(usuario, "productos", producto.estado === "ACTIVO" ? "eliminar" : "editar") && <button type="button" disabled={enviando} onClick={() => {
+                                            setErrorEstado("");
+                                            setProductoSeleccionado(producto);
+                                        }}>
                                             {producto.estado === "ACTIVO" ? "Desactivar" : "Activar"}</button>}
                                     </div></td>
                                 </tr>)}
                         </tbody>
                     </table>
                 </div>
+                {!cargando && <Paginacion paginacion={paginacion} nombre="productos" />}
             </section>
             {modalAbierto && <ProductoForm key={productoEditando?.id_producto ?? "nuevo"}
                 producto={productoEditando} categorias={categorias} enviando={enviando}
                 categoriasDisponibles={categoriasDisponibles} errorCategorias={errorCategorias}
                 onReintentarCategorias={() => void recargarCategorias().catch(() => {})}
+                ingredientesDisponibles={ingredientesDisponibles} catalogoIngredientesDisponible={catalogoIngredientesDisponible}
+                errorIngredientes={errorIngredientes} onReintentarIngredientes={() => void recargarIngredientes().catch(() => {})}
                 puedeDesactivar={puede(usuario, "productos", "eliminar")}
                 onGuardar={guardarProducto} onCerrar={() => !enviando && setModalAbierto(false)} />}
+            <CambiarEstadoUsuarioDialog usuarioSeleccionado={productoSeleccionado} entidad="producto"
+                descripcion={productoSeleccionado && (productoSeleccionado.estado === "ACTIVO"
+                    ? `¿Desea desactivar el producto ${productoSeleccionado.nombre}?`
+                    : `¿Desea activar el producto ${productoSeleccionado.nombre}?`)}
+                isSubmitting={enviando} mensajeError={errorEstado}
+                textoEnviando={productoSeleccionado?.estado === "ACTIVO" ? "Desactivando…" : "Activando…"}
+                onConfirm={cambiarEstado} onClose={() => {
+                    if (!enviando) {
+                        setProductoSeleccionado(null);
+                        setErrorEstado("");
+                    }
+                }} />
         </div>
     );
 }

@@ -1,21 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "../ModulePage.css";
 import "./RolesEstado.css";
 import CambiarEstadoUsuarioDialog from "../../components/forms/CambiarEstadoUsuarioDialog/CambiarEstadoUsuarioDialog.jsx";
 import RolForm from "../../components/forms/RolForm/RolForm.jsx";
 import PageSearch from "../../components/common/PageSearch/PageSearch.jsx";
+import Paginacion from "../../components/common/Paginacion/Paginacion.jsx";
 import LoadingSpinner from "../../components/common/LoadingSpinner/LoadingSpinner.jsx";
 import { useAuth } from "../../context/useAuth.js";
-import { puede } from "../../constants/roles.js";
-import { actualizarRol, cambiarEstadoRol, obtenerRoles, registrarRol } from "../../services/gestionesService.js";
-import { useBusquedaLista, useListaSesion } from "../../hooks/useListaSesion.js";
+import { MODULOS_GESTION, puede } from "../../constants/roles.js";
+import { actualizarRol, cambiarEstadoRol, registrarRol } from "../../services/gestionesService.js";
+import { useBusquedaLista } from "../../hooks/useListaSesion.js";
+import { useTablaPaginada } from "../../hooks/useTablaPaginada.js";
+
+const nombresPestanas = Object.fromEntries([
+    ...MODULOS_GESTION,
+    ["pedidos", "Pedidos"],
+    ["cocina", "Cocina"],
+]);
 
 function RolesPermisos() {
     const { usuario, actualizarUsuario } = useAuth();
-    const { datos: roles, cargando, error: errorCarga, recargar } = useListaSesion(
-        "/api/roles", obtenerRoles, { habilitado: puede(usuario, "roles") });
     const [mensaje, setMensaje] = useState("");
     const [busqueda, setBusqueda] = useBusquedaLista("/api/roles");
+    const { datos: roles, paginacion, cargando, error: errorCarga, recargar } = useTablaPaginada(
+        "/api/roles", "roles", busqueda, puede(usuario, "roles"));
     const [rolEditando, setRolEditando] = useState(null);
     const [modalAbierto, setModalAbierto] = useState(false);
     const [enviandoEstado, setEnviandoEstado] = useState(null);
@@ -35,8 +43,6 @@ function RolesPermisos() {
         return () => window.clearTimeout(timer);
     }, [mensaje]);
 
-    const filtrados = useMemo(() => roles.filter((rol) => rol.nombre.toLocaleLowerCase()
-        .includes(busqueda.trim().toLocaleLowerCase())), [roles, busqueda]);
     const abrir = (rol = null) => {
         setRolEditando(rol);
         setModalAbierto(true);
@@ -49,7 +55,9 @@ function RolesPermisos() {
         if (!montado.current) return;
         setModalAbierto(false);
         setMensaje(rolEditando ? "Rol actualizado correctamente." : "Rol registrado correctamente.");
-        if (rolEditando?.nombre === usuario.rol) actualizarUsuario({
+        if (usuario.rol_id
+            ? String(rolEditando?.id_rol) === String(usuario.rol_id)
+            : rolEditando?.nombre === usuario.rol) actualizarUsuario({
             ...usuario, rol: respuesta.rol.nombre,
             permisos: respuesta.rol.estado === "ACTIVO" ? respuesta.rol.permisos : {},
         });
@@ -77,7 +85,9 @@ function RolesPermisos() {
             if (!montado.current) return;
             setRolSeleccionado(null);
             setMensaje(`Rol ${nuevo === "ACTIVO" ? "activado" : "desactivado"} correctamente.`);
-            if (rol.nombre === usuario.rol) actualizarUsuario({
+            if (usuario.rol_id
+                ? String(rol.id_rol) === String(usuario.rol_id)
+                : rol.nombre === usuario.rol) actualizarUsuario({
                 ...usuario, rol: respuesta.rol.nombre,
                 permisos: respuesta.rol.estado === "ACTIVO" ? respuesta.rol.permisos : {},
             });
@@ -96,7 +106,7 @@ function RolesPermisos() {
             <p className="eyebrow">Administración</p><h1>Roles y permisos</h1>
             <div className="header-description">
                 <p>Crea roles y configura las funciones del sistema disponibles para cada uno.</p>
-                {puede(usuario, "roles", "crear") && <button className="management-primary" type="button" onClick={() => abrir()}>+ Crear rol</button>}
+                {puede(usuario, "roles", "crear") && <button className="management-primary" type="button" disabled={cargando} onClick={() => abrir()}>+ Crear rol</button>}
             </div>
         </div></header>
         {mensaje && <p className="role-page-message" role="status">{mensaje}</p>}
@@ -105,15 +115,23 @@ function RolesPermisos() {
             <div className="management-panel-header"><div><h2>Roles registrados</h2>
                 <p>Consulta los roles configurados y los permisos asignados en el sistema.</p></div>
                 <PageSearch className="page-search--header" label="Buscar rol" id="buscarRol"
-                    placeholder="Buscar por nombre..." value={busqueda} onChange={(event) => setBusqueda(event.target.value)} />
+                    placeholder="Buscar por nombre..." value={busqueda} maxLength={100} onChange={(event) => setBusqueda(event.target.value)} />
             </div>
             <div className="table-wrap"><table className="management-table">
                 <thead><tr><th>Rol</th><th>Pestañas permitidas</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>{cargando ? <tr><td colSpan="4"><LoadingSpinner label="Cargando roles" /></td></tr>
-                    : filtrados.length === 0 ? <tr><td colSpan="4" className="module-empty">{busqueda ? "No se encontraron roles." : "No hay roles registrados."}</td></tr>
-                        : filtrados.map((rol) => <tr className="management-card" key={rol.id_rol}>
+                    : roles.length === 0 ? <tr><td colSpan="4" className="module-empty">{busqueda ? "No se encontraron roles." : "No hay roles registrados."}</td></tr>
+                        : roles.map((rol) => <tr className="management-card" key={rol.id_rol}>
                             <td data-label="Rol">{rol.nombre}</td>
-                            <td data-label="Pestañas permitidas">{Object.entries(rol.permisos ?? {}).filter(([, acciones]) => acciones.ver).map(([modulo]) => modulo).join(", ") || "Ninguna"}</td>
+                            <td data-label="Pestañas permitidas">
+                                {Object.entries(rol.permisos ?? {}).some(([, acciones]) => acciones.ver) ? (
+                                    <ul className="roles-permitted-tabs">
+                                        {Object.entries(rol.permisos).filter(([, acciones]) => acciones.ver).map(([modulo]) => (
+                                            <li key={modulo}>{nombresPestanas[modulo] ?? modulo}</li>
+                                        ))}
+                                    </ul>
+                                ) : <span className="roles-no-tabs">Ninguna</span>}
+                            </td>
                             <td data-label="Estado">{rol.estado === "ACTIVO" ? "Activo" : "Inactivo"}</td>
                             <td data-label="Acciones"><div className="roles-actions" aria-busy={enviandoEstado === rol.id_rol}>
                                 {puede(usuario, "roles", "editar") &&
@@ -127,6 +145,7 @@ function RolesPermisos() {
                             </div></td>
                         </tr>)}</tbody>
             </table></div>
+            {!cargando && <Paginacion paginacion={paginacion} nombre="roles" />}
         </section>
         {modalAbierto && <RolForm key={rolEditando?.id_rol ?? "nuevo"} rol={rolEditando}
             onGuardar={guardar} onCerrar={() => setModalAbierto(false)} />}

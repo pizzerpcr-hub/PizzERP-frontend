@@ -10,7 +10,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 beforeEach(() => { sincronizarListasSesion(null); sincronizarListasSesion(cuenta); });
 afterEach(() => sincronizarListasSesion(null));
 
-test("servicios reales: calentamiento completo hace nueve GET; volver o iniciar otra precarga no añade GET", async () => {
+test("la precarga consulta solo catálogos de formularios y evita descargar tablas completas", async () => {
     const fetchAnterior = globalThis.fetch;
     const llamadas = [];
     globalThis.fetch = async (ruta) => {
@@ -21,14 +21,14 @@ test("servicios reales: calentamiento completo hace nueve GET; volver o iniciar 
     };
     try {
         await precargarListas(cuenta, "/panel/usuarios");
-        assert.equal(llamadas.length, 9);
-        assert.equal(new Set(llamadas).size, 9);
-        assert.deepEqual(llamadas.slice(0, 2), ["/api/users", "/api/users/roles"]);
+        assert.equal(llamadas.length, 4);
+        assert.deepEqual(new Set(llamadas), new Set([
+            "/api/users/roles", "/api/products/categorias",
+            "/api/products/ingredientes", "/api/combos/productos",
+        ]));
+        assert.equal(llamadas[0], "/api/users/roles");
         await precargarListas(cuenta, "/panel/productos");
-        const { obtenerProductos } = await import("../src/services/catalogoService.js");
-        const { obtenerUsuarios } = await import("../src/services/usuariosService.js");
-        await obtenerProductos(); await obtenerUsuarios();
-        assert.equal(llamadas.length, 9);
+        assert.equal(llamadas.length, 4);
     } finally { globalThis.fetch = fetchAnterior; }
 });
 

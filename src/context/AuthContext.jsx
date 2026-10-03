@@ -13,7 +13,8 @@ import {
 import { AuthContext } from "./useAuth.js";
 import { observarSesion } from "../services/observarSesion.js";
 import echo from "../services/echo.js";
-import { obtenerPermisos } from "../services/gestionesService.js";
+import { obtenerAcceso } from "../services/gestionesService.js";
+import { aplicarCambioAcceso } from "../services/accesoEnTiempoReal.js";
 import { sincronizarListasSesion } from "../services/listasSesion.js";
 import { precargarListas } from "../services/precargarListas.js";
 import "../styles/cerrarSesion.css";
@@ -35,7 +36,13 @@ export function AuthProvider({ children }) {
     const versionSesion = useRef(0);
     const usuarioRef = useRef(null);
     const verificacionRef = useRef(null);
+    const ultimaConsultaPermisosRef = useRef(0);
+    const generacionAccesoRef = useRef(0);
+    const revisionesBroadcastRef = useRef({ usuario: 0, rol: 0 });
     const aceptarUsuario = useCallback((actual) => {
+        if (String(usuarioRef.current?.id_usuario ?? "") !== String(actual?.id_usuario ?? "")) {
+            revisionesBroadcastRef.current = { usuario: 0, rol: 0 };
+        }
         usuarioRef.current = actual;
         sincronizarListasSesion(actual);
         setUsuario(actual);
@@ -61,12 +68,13 @@ export function AuthProvider({ children }) {
                     controller.signal,
                 );
 
-                const permisos = usuarioActual
-                    ? await obtenerPermisos(controller.signal).catch(() => null)
+                const acceso = usuarioActual
+                    ? await obtenerAcceso(controller.signal).catch(() => ({ permisos: null, rol_id: null }))
                     : null;
 
                 if (!controller.signal.aborted) {
-                    aceptarUsuario(usuarioActual ? { ...usuarioActual, permisos } : null);
+                    if (acceso?.permisos) ultimaConsultaPermisosRef.current = Date.now();
+                    aceptarUsuario(usuarioActual ? { ...usuarioActual, ...acceso } : null);
                 }
             } catch (error) {
                 if (
@@ -122,18 +130,30 @@ export function AuthProvider({ children }) {
         }, 1500);
     }, [navigate, aceptarUsuario]);
 
-    // Comparte verificaciones simultáneas, nunca memoriza una autorización entre solicitudes.
-    const verificarAcceso = useCallback(() => {
+    // Comparte las verificaciones simultáneas y consulta permisos al cambiar el rol.
+    const verificarAcceso = useCallback((forzarPermisos = false) => {
         if (verificacionRef.current) return verificacionRef.current.promise;
         if (!usuarioRef.current || cierreEnCurso.current) return Promise.resolve(null);
         const controller = new AbortController();
         const version = versionSesion.current;
+        const generacionAcceso = generacionAccesoRef.current;
         const promise = (async () => {
             const actual = await verificarSesion(controller.signal);
-            const actualizado = actual ? { ...actual, permisos: await obtenerPermisos(controller.signal) } : null;
             if (!montado.current || controller.signal.aborted || version !== versionSesion.current) return null;
-            if (!actualizado) { cerrarPorPermisos(); return null; }
+            if (!actual) { cerrarPorPermisos(); return null; }
+            if (generacionAcceso !== generacionAccesoRef.current) return usuarioRef.current;
             const previo = usuarioRef.current;
+            if (actual.rol !== previo.rol) aceptarUsuario({ ...actual, permisos: null, rol_id: null });
+            const consultarPermisos = forzarPermisos || !previo?.permisos
+                || actual.rol !== previo.rol
+                || Date.now() - ultimaConsultaPermisosRef.current >= 300_000;
+            const acceso = consultarPermisos
+                ? await obtenerAcceso(controller.signal)
+                : { permisos: previo.permisos, rol_id: previo.rol_id };
+            if (!montado.current || controller.signal.aborted || version !== versionSesion.current) return null;
+            if (generacionAcceso !== generacionAccesoRef.current) return usuarioRef.current;
+            if (consultarPermisos) ultimaConsultaPermisosRef.current = Date.now();
+            const actualizado = { ...actual, ...acceso };
             if (JSON.stringify(previo) !== JSON.stringify(actualizado)) aceptarUsuario(actualizado);
             return actualizado;
         })().finally(() => {
@@ -142,6 +162,15 @@ export function AuthProvider({ children }) {
         verificacionRef.current = { controller, promise };
         return promise;
     }, [aceptarUsuario, cerrarPorPermisos]);
+
+    const aplicarBroadcast = useCallback((evento, tipo) => {
+        const cambio = aplicarCambioAcceso(usuarioRef.current, evento, tipo, revisionesBroadcastRef.current);
+        if (!cambio) return;
+        revisionesBroadcastRef.current = cambio.revisiones;
+        generacionAccesoRef.current++;
+        ultimaConsultaPermisosRef.current = Date.now();
+        aceptarUsuario(cambio.usuario);
+    }, [aceptarUsuario]);
 
     // La consulta periódica respalda la notificación inmediata por WebSocket.
     useEffect(() => {
@@ -153,8 +182,9 @@ export function AuthProvider({ children }) {
         }
 
         return observarSesion({
-            consultar: verificarAcceso,
+            consultar: () => verificarAcceso(),
             actualizar: () => {},
+            intervaloMs: 30000,
         });
     }, [
         usuario?.id_usuario,
@@ -197,16 +227,39 @@ export function AuthProvider({ children }) {
         };
 
         canal.listen(".user.status-changed", manejarCambioEstado);
+        const manejarCambioAcceso = (evento) => aplicarBroadcast(evento, "usuario");
+        canal.listen(".user.access-changed", manejarCambioAcceso);
 
         return () => {
+            canal.stopListening(".user.status-changed", manejarCambioEstado);
+            canal.stopListening(".user.access-changed", manejarCambioAcceso);
             echo.leave(nombreCanal);
         };
-    }, [usuario?.id_usuario, cerrandoSesion, cerrarPorPermisos]);
+    }, [usuario?.id_usuario, cerrandoSesion, cerrarPorPermisos, aplicarBroadcast]);
+
+    useEffect(() => {
+        if (!usuario?.rol_id || cerrandoSesion || !echo) {
+            return undefined;
+        }
+
+        const nombreCanal = `rol.${usuario.rol_id}`;
+        const canal = echo.private(nombreCanal);
+        const manejarCambioAcceso = (evento) => aplicarBroadcast(evento, "rol");
+        canal.listen(".role.access-changed", manejarCambioAcceso);
+
+        return () => {
+            canal.stopListening(".role.access-changed", manejarCambioAcceso);
+            echo.leave(nombreCanal);
+        };
+    }, [usuario?.rol_id, cerrandoSesion, aplicarBroadcast]);
 
     const iniciarSesion = useCallback(async (datosUsuario) => {
         const version = ++versionSesion.current;
-        const permisos = await obtenerPermisos().catch(() => null);
-        if (montado.current && version === versionSesion.current) aceptarUsuario({ ...datosUsuario, permisos });
+        const acceso = await obtenerAcceso().catch(() => ({ permisos: null, rol_id: null }));
+        if (montado.current && version === versionSesion.current) {
+            if (acceso.permisos) ultimaConsultaPermisosRef.current = Date.now();
+            aceptarUsuario({ ...datosUsuario, ...acceso });
+        }
     }, [aceptarUsuario]);
 
     /**
@@ -273,21 +326,27 @@ export function AuthProvider({ children }) {
 
     const actualizarUsuario = useCallback((datosUsuario) => {
         const version = ++versionSesion.current;
+        const generacionAcceso = generacionAccesoRef.current;
         if (!datosUsuario) {
             aceptarUsuario(null);
             return;
         }
         const actual = usuarioRef.current;
+        const rolCambio = datosUsuario.rol && datosUsuario.rol !== actual?.rol;
+        if (datosUsuario.permisos) ultimaConsultaPermisosRef.current = Date.now();
         aceptarUsuario({
             ...actual,
             ...datosUsuario,
-            permisos: datosUsuario.permisos ?? (
-                datosUsuario.rol && datosUsuario.rol !== actual?.rol ? null : actual?.permisos
-            ),
+            permisos: datosUsuario.permisos ?? (rolCambio ? null : actual?.permisos),
+            rol_id: datosUsuario.rol_id ?? (rolCambio ? null : actual?.rol_id),
         });
-        if (datosUsuario.permisos) return;
-        void obtenerPermisos().then((permisos) => {
-            if (montado.current && version === versionSesion.current && usuarioRef.current) aceptarUsuario({ ...usuarioRef.current, permisos });
+        if (datosUsuario.permisos && (!rolCambio || datosUsuario.rol_id)) return;
+        void obtenerAcceso().then((acceso) => {
+            if (montado.current && version === versionSesion.current
+                && generacionAcceso === generacionAccesoRef.current && usuarioRef.current) {
+                ultimaConsultaPermisosRef.current = Date.now();
+                aceptarUsuario({ ...usuarioRef.current, ...acceso });
+            }
         }).catch(() => {});
     }, [aceptarUsuario]);
 

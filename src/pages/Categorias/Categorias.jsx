@@ -1,22 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import "../ModulePage.css";
 import CategoriaForm from "../../components/forms/CategoriaForm/CategoriaForm.jsx";
+import CambiarEstadoUsuarioDialog from "../../components/forms/CambiarEstadoUsuarioDialog/CambiarEstadoUsuarioDialog.jsx";
 import LoadingSpinner from "../../components/common/LoadingSpinner/LoadingSpinner.jsx";
 import { useAuth } from "../../context/useAuth.js";
 import { puede } from "../../constants/roles.js";
 import PageSearch from "../../components/common/PageSearch/PageSearch.jsx";
-import { actualizarCategoria, obtenerCategorias, registrarCategoria } from "../../services/catalogoService.js";
-import { useBusquedaLista, useListaSesion } from "../../hooks/useListaSesion.js";
+import Paginacion from "../../components/common/Paginacion/Paginacion.jsx";
+import { actualizarCategoria, registrarCategoria } from "../../services/catalogoService.js";
+import { useBusquedaLista } from "../../hooks/useListaSesion.js";
+import { useTablaPaginada } from "../../hooks/useTablaPaginada.js";
 
 function Categorias() {
     const { usuario } = useAuth();
-    const { datos: categorias, cargando, error: errorCarga, recargar, vigente } = useListaSesion(
-        "/api/categories", obtenerCategorias, { habilitado: puede(usuario, "categorias") });
-    const [mensaje, setMensaje] = useState("");
     const [busqueda, setBusqueda] = useBusquedaLista("/api/categories");
+    const { datos: categorias, paginacion, cargando, error: errorCarga, recargar } = useTablaPaginada(
+        "/api/categories", "categorias", busqueda, puede(usuario, "categorias"));
+    const [mensaje, setMensaje] = useState("");
     const [categoriaEditando, setCategoriaEditando] = useState(null);
     const [modalAbierto, setModalAbierto] = useState(false);
     const [enviando, setEnviando] = useState(false);
+    const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
+    const [errorEstado, setErrorEstado] = useState("");
 
     useEffect(() => {
         if (!mensaje) return undefined;
@@ -24,29 +29,40 @@ function Categorias() {
         return () => window.clearTimeout(temporizador);
     }, [mensaje]);
 
-    const categoriasFiltradas = useMemo(() => categorias.filter((categoria) =>
-        `${categoria.nombre} ${categoria.descripcion}`.toLocaleLowerCase()
-            .includes(busqueda.trim().toLocaleLowerCase())
-    ), [categorias, busqueda]);
-
     const guardar = async (datos) => {
         setEnviando(true);
         try {
             categoriaEditando
                 ? await actualizarCategoria(categoriaEditando.id_categoria, datos)
                 : await registrarCategoria(datos);
-            if (!vigente()) return;
             setModalAbierto(false);
             setCategoriaEditando(null);
             setMensaje(categoriaEditando ? "Categoría actualizada correctamente." : "Categoría registrada correctamente.");
         } finally {
-            if (vigente()) setEnviando(false);
+            setEnviando(false);
         }
     };
 
     const abrirFormulario = (categoria = null) => {
         setCategoriaEditando(categoria);
         setModalAbierto(true);
+    };
+
+    const cambiarEstado = async () => {
+        const categoria = categoriaSeleccionada;
+        if (!categoria || enviando) return;
+        const nuevoEstado = categoria.estado === "ACTIVO" ? "INACTIVO" : "ACTIVO";
+        setEnviando(true);
+        setErrorEstado("");
+        try {
+            await actualizarCategoria(categoria.id_categoria, { estado: nuevoEstado });
+            setCategoriaSeleccionada(null);
+            setMensaje(nuevoEstado === "ACTIVO" ? "Categoría activada correctamente." : "Categoría desactivada correctamente.");
+        } catch (error) {
+            setErrorEstado(error.message);
+        } finally {
+            setEnviando(false);
+        }
     };
 
     return (
@@ -57,7 +73,7 @@ function Categorias() {
                     <h1>Categorías</h1>
                     <div className="header-description">
                         <p>Gestiona las categorías utilizadas para organizar los productos del menú.</p>
-                        {puede(usuario, "categorias", "crear") && <button className="management-primary" type="button" onClick={() => abrirFormulario()}>
+                        {puede(usuario, "categorias", "crear") && <button className="management-primary" type="button" disabled={cargando} onClick={() => abrirFormulario()}>
                             + Registrar categoría
                         </button>}
                     </div>
@@ -80,7 +96,7 @@ function Categorias() {
                         <p>Consulta y administra las categorías disponibles en el sistema.</p>
                     </div>
                     <PageSearch className="page-search--header" label="Buscar categoría" id="buscarCategoria"
-                        placeholder="Buscar por nombre o descripción..." value={busqueda}
+                        placeholder="Buscar por nombre o descripción..." value={busqueda} maxLength={100}
                         onChange={(event) => setBusqueda(event.target.value)} />
                 </div>
                 <div className="table-wrap">
@@ -89,25 +105,45 @@ function Categorias() {
                         <tbody>
                             {cargando ? <tr><td colSpan="5"><LoadingSpinner label="Cargando categorías" /></td></tr>
                                 : errorCarga && !categorias.length ? <tr><td colSpan="5" className="module-empty">No fue posible mostrar las categorías.</td></tr>
-                                    : categoriasFiltradas.length === 0 ? <tr><td colSpan="5" className="module-empty">
+                                    : categorias.length === 0 ? <tr><td colSpan="5" className="module-empty">
                                     {busqueda ? "No se encontraron categorías." : "No hay categorías registradas."}
-                                </td></tr> : categoriasFiltradas.map((categoria) => <tr className="management-card" key={categoria.id_categoria}>
+                                </td></tr> : categorias.map((categoria) => <tr className="management-card" key={categoria.id_categoria}>
                                     <td data-label="Nombre"><strong>{categoria.nombre}</strong></td>
                                     <td data-label="Descripción">{categoria.descripcion}</td>
                                     <td data-label="Productos">{categoria.productos_count}</td>
                                     <td data-label="Estado"><span className={`catalog-status ${categoria.estado === "ACTIVO" ? "active" : "inactive"}`}>
                                         {categoria.estado === "ACTIVO" ? "Activo" : "Inactivo"}</span></td>
-                                    <td data-label="Acciones">{puede(usuario, "categorias", "editar") && <button className="catalog-action" type="button" onClick={() => abrirFormulario(categoria)}>Editar</button>}</td>
+                                    <td data-label="Acciones"><div className="category-table-actions">
+                                        {puede(usuario, "categorias", "editar") && <button className="catalog-action" type="button" disabled={enviando}
+                                            onClick={() => abrirFormulario(categoria)}>Modificar</button>}
+                                        {puede(usuario, "categorias", categoria.estado === "ACTIVO" ? "eliminar" : "editar") &&
+                                            <button className="catalog-action" type="button" disabled={enviando} onClick={() => {
+                                                setErrorEstado("");
+                                                setCategoriaSeleccionada(categoria);
+                                            }}>{categoria.estado === "ACTIVO" ? "Desactivar" : "Activar"}</button>}
+                                    </div></td>
                                 </tr>)}
                         </tbody>
                     </table>
                 </div>
+                {!cargando && <Paginacion paginacion={paginacion} nombre="categorías" />}
             </section>
 
             {modalAbierto && <CategoriaForm key={categoriaEditando?.id_categoria ?? "nueva"}
                 categoria={categoriaEditando} enviando={enviando} onGuardar={guardar}
-                puedeDesactivar={puede(usuario, "categorias", "eliminar")}
                 onCerrar={() => !enviando && setModalAbierto(false)} />}
+            <CambiarEstadoUsuarioDialog usuarioSeleccionado={categoriaSeleccionada} entidad="categoría"
+                descripcion={categoriaSeleccionada && (categoriaSeleccionada.estado === "ACTIVO"
+                    ? `¿Desea desactivar la categoría ${categoriaSeleccionada.nombre}? Podrá activarla después.`
+                    : `¿Desea activar la categoría ${categoriaSeleccionada.nombre}?`)}
+                isSubmitting={enviando} mensajeError={errorEstado}
+                textoEnviando={categoriaSeleccionada?.estado === "ACTIVO" ? "Desactivando…" : "Activando…"}
+                onConfirm={cambiarEstado} onClose={() => {
+                    if (!enviando) {
+                        setCategoriaSeleccionada(null);
+                        setErrorEstado("");
+                    }
+                }} />
         </div>
     );
 }

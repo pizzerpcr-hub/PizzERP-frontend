@@ -668,7 +668,7 @@
     }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
     .users-panel .usuarios-table {
         display: block;
         min-width: 0;

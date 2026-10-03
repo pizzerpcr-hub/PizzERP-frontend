@@ -10,6 +10,7 @@ const recursos = {
     "/api/combos": ["combos", "ver"],
     "/api/users/roles": ["usuarios", "crear", "editar"],
     "/api/products/categorias": ["productos", "crear", "editar"],
+    "/api/products/ingredientes": ["productos", "crear", "editar"],
     "/api/combos/productos": ["combos", "crear", "editar"],
 };
 const relaciones = {
@@ -17,7 +18,7 @@ const relaciones = {
     "/api/roles": ["/api/users", "/api/users/roles"],
     "/api/categories": ["/api/products", "/api/products/categorias", "/api/combos", "/api/combos/productos"],
     "/api/products": ["/api/categories", "/api/combos", "/api/combos/productos"],
-    "/api/ingredients": [],
+    "/api/ingredients": ["/api/products", "/api/products/ingredientes"],
     "/api/combos": [],
 };
 const entidades = {
@@ -196,6 +197,11 @@ export function confirmarLista(ruta, metodo, respuesta, epoch) {
         });
     } else invalidarLista(recurso);
     for (const relacionado of relaciones[recurso] ?? []) invalidarLista(relacionado);
+    if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("pizzerp:list-changed", {
+            detail: { rutas: [recurso, ...(relaciones[recurso] ?? [])] },
+        }));
+    }
 }
 
 // Los usuarios se conservan exclusivamente con sus cinco campos públicos.

@@ -271,6 +271,18 @@
 
 @media (max-width: 1100px) {
 
+    .mobile-menu-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 99;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        border: 0;
+        background: rgba(43, 25, 20, 0.3);
+    }
+
     .mobile-menu-bar {
         display: block;
         position: fixed;
@@ -422,7 +434,7 @@
     }
 
     body.mobile-menu-open {
-        overflow: auto;
+        overflow: hidden;
     }
 
     body.mobile-menu-open .management-sidebar {
@@ -458,24 +470,6 @@
         .mobile-menu-toggle
         span:nth-child(3) {
         transform: translateY(-7px) rotate(-45deg);
-    }
-}
-
-@media (max-width: 767px) {
-    body.mobile-menu-open {
-        overflow: hidden;
-    }
-
-    .mobile-menu-backdrop {
-        display: block;
-        position: fixed;
-        inset: 0;
-        z-index: 99;
-        width: 100%;
-        height: 100%;
-        padding: 0;
-        border: 0;
-        background: rgba(43, 25, 20, 0.18);
     }
 }
 

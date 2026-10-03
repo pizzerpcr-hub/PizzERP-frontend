@@ -107,6 +107,14 @@
 .productos-dialog-header h2 { margin: 0 0 6px; color: #38221a; font-size: 18px; font-weight: 600; }
 .productos-form-section { padding: 18px 0; border-top: 1px solid #eee9e5; }
 .productos-form-section h3 { margin: 0 0 14px; font-size: 16px; }
+.productos-ingredients-header h3 { margin-bottom: 6px; }
+.productos-page .productos-ingredients-header p { margin: 0; color: #746761; font-size: 14px; line-height: 1.4; }
+.productos-page .productos-ingredient-row { grid-template-columns: minmax(0, 1fr) minmax(90px, .4fr) 80px 34px; align-items: center; }
+.productos-quantity-field { display: flex; align-items: center; min-width: 0; }
+.productos-quantity-field input { flex: 1; }
+.productos-ingredient-error { grid-column: 1 / -1; }
+.productos-dialog .add-item-button:disabled,
+.productos-dialog .remove-item-button:disabled { opacity: .55; cursor: not-allowed; }
 .productos-form-section label { display: grid; align-content: start; gap: 6px; min-width: 0; margin-bottom: 14px; color: #4a3932; font-size: 13px; font-weight: 600; }
 .productos-form-section label:last-child { margin-bottom: 0; }
 .productos-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -130,4 +138,5 @@
     .productos-form-grid { grid-template-columns: 1fr; gap: 0; }
     .productos-form-actions { flex-direction: column-reverse; }
     .productos-form-actions button { width: 100%; }
+    .productos-page .productos-ingredient-row { grid-template-columns: minmax(0, 1fr) 80px 34px; }
 }
