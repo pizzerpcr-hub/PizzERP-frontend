@@ -18,7 +18,7 @@ export function useListaSesion(ruta, consultar, { habilitado = true, pausado = f
     const recargar = useCallback((forzar = true) => consultar(undefined, { forzar }), [consultar]);
     useEffect(() => habilitado ? registrarListaVisible(ruta) : undefined, [habilitado, ruta]);
     useEffect(() => {
-        if (!habilitado || !puedeConsultarLista(ruta) || pausado || snapshot.pendientes.length || snapshot.consultando || snapshot.error || !listaDesactualizada(snapshot)) return;
+        if (!habilitado || !puedeConsultarLista(ruta) || pausado || document.visibilityState === "hidden" || snapshot.refrescoPendiente || snapshot.pendientes.length || snapshot.consultando || snapshot.error || !listaDesactualizada(snapshot)) return;
         void recargar(false).catch(() => {});
     }, [habilitado, pausado, snapshot, recargar, ruta]);
 
@@ -31,7 +31,7 @@ export function useListaSesion(ruta, consultar, { habilitado = true, pausado = f
             pendiente = true;
             try {
                 // AuthContext es el único observador de sesión. Laravel autoriza cada GET.
-                if (puedeConsultarLista(ruta) && (forzar || listaDesactualizada(leerLista(ruta)))) await recargar(forzar);
+                if (puedeConsultarLista(ruta) && !leerLista(ruta).refrescoPendiente && (forzar || listaDesactualizada(leerLista(ruta)))) await recargar(forzar);
             } catch { /* El snapshot conserva datos y expone el error de GET para reintentar. */ }
             finally { pendiente = false; }
         };

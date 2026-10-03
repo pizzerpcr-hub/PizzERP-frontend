@@ -26,7 +26,7 @@ export function observarAccesoReverb({ echo, usuario, revisar, revocar, accesoVi
     const conectado = () => {
         const primera = !conexionesEstablecidas.has(conexion);
         conexionesEstablecidas.add(conexion);
-        if (!primera || !accesoVigente()) revisar();
+        if (!primera || !accesoVigente()) revisar({ reconexion: true });
     };
     conexion?.bind("connected", conectado);
     return () => {

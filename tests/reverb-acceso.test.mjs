@@ -68,6 +68,16 @@ test("primera conexión con permisos no confirmados o vencidos revisa", () => {
     }
 });
 
+test("reconexión indica reconciliación de listas, después de revisar acceso; eventos conservan su revisión", () => {
+    const env = entorno(), opciones = [];
+    observarAccesoReverb({ echo: env.echo, usuario: { id_usuario: 2 },
+        revisar: detalle => opciones.push(detalle), revocar: () => {}, accesoVigente: () => true });
+    env.conexion.get("connected")(); assert.deepEqual(opciones, []);
+    env.conexion.get("connected")(); assert.deepEqual(opciones, [{ reconexion: true }]);
+    env.canales.get("usuario.2").get(".user.access-changed")({ user_id: 2 });
+    assert.equal(opciones.at(-1), undefined);
+});
+
 test("contrato coincide con clases y canales del backend, sin restaurar usuarios general", () => {
     for (const [archivo, canal, evento] of [
         ["RoleAccessChanged", "rol.", "role.access-changed"],

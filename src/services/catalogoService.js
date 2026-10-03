@@ -1,4 +1,5 @@
 import { confirmarLista, consultarLista, versionListasSesion } from "./listasSesion.js";
+import { cabecerasSocketReverb } from "./socketReverb.js";
 
 const leerRespuesta = async (response, mensajePredeterminado) => {
     if (response.status === 401 || response.status === 403) {
@@ -51,6 +52,7 @@ export const enviarMutacion = async (ruta, metodo, datos, mensaje) => {
             Accept: "application/json",
             "Content-Type": "application/json",
             "X-XSRF-TOKEN": obtenerCookie("XSRF-TOKEN"),
+            ...cabecerasSocketReverb(),
         },
         body: JSON.stringify(datos),
     });

@@ -13,11 +13,11 @@ const recursos = {
     "/api/combos/productos": ["combos", "crear", "editar"],
 };
 const relaciones = {
-    "/api/users": [],
+    "/api/users": ["/api/roles"],
     "/api/roles": ["/api/users", "/api/users/roles"],
     "/api/categories": ["/api/products", "/api/products/categorias", "/api/combos", "/api/combos/productos"],
     "/api/products": ["/api/categories", "/api/combos", "/api/combos/productos"],
-    "/api/ingredients": [],
+    "/api/ingredients": ["/api/products", "/api/combos", "/api/combos/productos"],
     "/api/combos": [],
 };
 const entidades = {
@@ -28,7 +28,7 @@ const entidades = {
     ingredients: ["ingrediente", "id_ingrediente", "nombre"],
     combos: ["combo", "id_combo", "nombre"],
 };
-const vacio = Object.freeze({ datos: undefined, error: null, consultando: false, actualizado: 0, pendientes: [] });
+const vacio = Object.freeze({ datos: undefined, error: null, consultando: false, actualizado: 0, pendientes: [], refrescoPendiente: false, revisionRemota: 0, revisionConsultada: 0 });
 const rechazados = new Set();
 const entradas = new Map();
 const oyentes = new Map();
@@ -101,6 +101,7 @@ export const suscribirLista = (ruta, callback) => {
     };
 };
 export const listaDesactualizada = (snapshot) => snapshot.datos === undefined
+    || snapshot.revisionRemota > snapshot.revisionConsultada
     || !snapshot.actualizado || Date.now() - snapshot.actualizado >= VIGENCIA_LISTAS_MS;
 export const leerBusqueda = (ruta) => permitido(ruta) ? busquedas.get(ruta) ?? "" : "";
 export const guardarBusqueda = (ruta, texto) => { if (permitido(ruta)) busquedas.set(ruta, texto); };
@@ -148,6 +149,7 @@ export function consultarLista(ruta, consultar, { signal, forzar = false } = {})
     if (item.pendiente) return esperar(item.pendiente, signal);
     if (!forzar && !listaDesactualizada(item.snapshot)) return esperar(Promise.resolve(item.snapshot.datos), signal);
     const version = item.version;
+    const revisionRemota = item.snapshot.revisionRemota;
     const epoch = generacion;
     item.controller = new AbortController();
     // Instalar la promesa antes de emitir: otro consumidor puede consultar al notificarse.
@@ -157,7 +159,7 @@ export function consultarLista(ruta, consultar, { signal, forzar = false } = {})
             if (item.snapshot.datos === undefined) throw cancelacion();
             return item.snapshot.datos;
         }
-        publicar(ruta, { datos, error: null, actualizado: Date.now() });
+        publicar(ruta, { datos, error: null, actualizado: Date.now(), revisionConsultada: revisionRemota });
         return datos;
     }).catch((error) => {
         if (epoch === generacion && entradas.get(ruta) === item && version === item.version && permitido(ruta)) {
@@ -188,6 +190,31 @@ export function invalidarLista(ruta) {
     if (!entradas.has(ruta) || !permitido(ruta)) return;
     entrada(ruta).version++;
     publicar(ruta, { actualizado: 0, error: null });
+}
+
+const modulosCrud = {
+    usuarios: "/api/users", roles: "/api/roles", categorias: "/api/categories",
+    productos: "/api/products", ingredientes: "/api/ingredients", combos: "/api/combos",
+};
+
+// Invalida inmediatamente la versión de GET anteriores, pero agrupa la notificación a React.
+export function invalidarAvisoCrud(modulo) {
+    const principal = modulosCrud[modulo];
+    if (!principal) return [];
+    const rutas = [principal, ...(relaciones[principal] ?? [])];
+    return rutas.filter(ruta => {
+        if (!entradas.has(ruta) || !permitido(ruta)) return false;
+        entrada(ruta).version++;
+        publicar(ruta, { actualizado: 0, error: null, refrescoPendiente: true,
+            revisionRemota: entrada(ruta).snapshot.revisionRemota + 1 });
+        return true;
+    });
+}
+
+export function publicarAvisosCrud(rutas) {
+    for (const ruta of rutas) {
+        if (entradas.has(ruta) && permitido(ruta)) publicar(ruta, { refrescoPendiente: false });
+    }
 }
 export function marcarListaPendiente(ruta, id, pendiente) {
     if (!permitido(ruta)) return;

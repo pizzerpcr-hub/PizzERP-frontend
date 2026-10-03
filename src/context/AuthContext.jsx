@@ -16,6 +16,7 @@ import echo from "../services/echo.js";
 import { obtenerAcceso } from "../services/gestionesService.js";
 import { crearConsultasSesion } from "../services/consultasSesion.js";
 import { observarAccesoReverb } from "../services/observarAccesoReverb.js";
+import { observarCrudReverb } from "../services/observarCrudReverb.js";
 import { sincronizarListasSesion } from "../services/listasSesion.js";
 import { precargarListas } from "../services/precargarListas.js";
 import "../styles/cerrarSesion.css";
@@ -183,12 +184,16 @@ export function AuthProvider({ children }) {
         verificarAcceso,
     ]);
 
-    const revisarTrasEvento = useCallback(() => {
+    const revisarTrasEvento = useCallback((opciones = {}) => {
         versionSesion.current++;
         verificacionRef.current?.controller.abort();
         verificacionRef.current = null;
         consultasSesion.cancelar();
-        void verificarAcceso().catch(() => {});
+        void verificarAcceso().then(actual => {
+            if (actual && montado.current && opciones.reconexion) {
+                window.dispatchEvent(new CustomEvent("pizzerp:session-verified", { detail: { forzar: true } }));
+            }
+        }).catch(() => {});
     }, [consultasSesion, verificarAcceso]);
 
     // Los cambios de acceso invalidan cualquier revisión anterior al evento.
@@ -199,6 +204,11 @@ export function AuthProvider({ children }) {
 
         return observarAccesoReverb({ echo, usuario, revisar: revisarTrasEvento, revocar: cerrarPorPermisos, accesoVigente });
     }, [usuario, cerrandoSesion, cerrarPorPermisos, revisarTrasEvento, accesoVigente]);
+
+    useEffect(() => {
+        if (!usuario?.id_usuario || cerrandoSesion) return undefined;
+        return observarCrudReverb({ echo, usuario });
+    }, [usuario, cerrandoSesion]);
 
     const iniciarSesion = useCallback(async (datosUsuario) => {
         const version = ++versionSesion.current;

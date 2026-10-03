@@ -1,4 +1,5 @@
 import { confirmarLista, consultarLista, usuarioListadoPublico, versionListasSesion } from "./listasSesion.js";
+import { cabecerasSocketReverb } from "./socketReverb.js";
 
 const obtenerCookie = (nombre) => {
     const cookies = document.cookie.split(";");
@@ -68,6 +69,7 @@ const enviarMutacion = async (
             Accept: "application/json",
             "Content-Type": "application/json",
             "X-XSRF-TOKEN": xsrfToken,
+            ...cabecerasSocketReverb(),
         },
         body: JSON.stringify(datos),
     });
