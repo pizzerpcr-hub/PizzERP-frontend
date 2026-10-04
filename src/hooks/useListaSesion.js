@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
     actualizarLista, guardarBusqueda, leerBusqueda, leerLista, listaDesactualizada,
-    suscribirLista, puedeConsultarLista,
+    suscribirLista, VIGENCIA_LISTAS_MS, puedeConsultarLista, registrarListaVisible,
 } from "../services/listasSesion.js";
 
 export function useListaSesion(ruta, consultar, { habilitado = true, pausado = false } = {}) {
@@ -16,8 +16,9 @@ export function useListaSesion(ruta, consultar, { habilitado = true, pausado = f
         useCallback(() => leerLista(ruta), [ruta]),
     );
     const recargar = useCallback((forzar = true) => consultar(undefined, { forzar }), [consultar]);
+    useEffect(() => habilitado ? registrarListaVisible(ruta) : undefined, [habilitado, ruta]);
     useEffect(() => {
-        if (!habilitado || !puedeConsultarLista(ruta) || pausado || snapshot.pendientes.length || snapshot.consultando || snapshot.error || !listaDesactualizada(snapshot)) return;
+        if (!habilitado || !puedeConsultarLista(ruta) || pausado || document.visibilityState === "hidden" || snapshot.refrescoPendiente || snapshot.pendientes.length || snapshot.consultando || snapshot.error || !listaDesactualizada(snapshot)) return;
         void recargar(false).catch(() => {});
     }, [habilitado, pausado, snapshot, recargar, ruta]);
 
@@ -29,20 +30,19 @@ export function useListaSesion(ruta, consultar, { habilitado = true, pausado = f
             if (detenido || pendiente || pausado || document.visibilityState === "hidden") return;
             pendiente = true;
             try {
-                if (!detenido && puedeConsultarLista(ruta) && (forzar || listaDesactualizada(leerLista(ruta)))) await recargar(forzar);
+                // AuthContext es el único observador de sesión. Laravel autoriza cada GET.
+                if (!detenido && puedeConsultarLista(ruta) && !leerLista(ruta).refrescoPendiente && (forzar || listaDesactualizada(leerLista(ruta)))) await recargar(forzar);
             } catch { /* El snapshot conserva datos y expone el error de GET para reintentar. */ }
             finally { pendiente = false; }
         };
-        const alFoco = () => void revisar();
+        const trasVerificacion = (evento) => void revisar(evento.detail?.forzar === true);
         const alReconectar = () => void revisar(true);
-        window.addEventListener("focus", alFoco);
-        window.addEventListener("online", alReconectar);
-        document.addEventListener("visibilitychange", alFoco);
+        const timer = window.setInterval(alReconectar, VIGENCIA_LISTAS_MS);
+        window.addEventListener("pizzerp:session-verified", trasVerificacion);
         return () => {
             detenido = true;
-            window.removeEventListener("focus", alFoco);
-            window.removeEventListener("online", alReconectar);
-            document.removeEventListener("visibilitychange", alFoco);
+            window.clearInterval(timer);
+            window.removeEventListener("pizzerp:session-verified", trasVerificacion);
         };
     }, [habilitado, pausado, ruta, recargar]);
     return {

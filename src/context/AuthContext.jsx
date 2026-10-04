@@ -14,7 +14,9 @@ import { AuthContext } from "./useAuth.js";
 import { observarSesion } from "../services/observarSesion.js";
 import echo from "../services/echo.js";
 import { obtenerAcceso } from "../services/gestionesService.js";
-import { aplicarCambioAcceso } from "../services/accesoEnTiempoReal.js";
+import { crearConsultasSesion } from "../services/consultasSesion.js";
+import { observarAccesoReverb } from "../services/observarAccesoReverb.js";
+import { observarCrudReverb } from "../services/observarCrudReverb.js";
 import { sincronizarListasSesion } from "../services/listasSesion.js";
 import { precargarListas } from "../services/precargarListas.js";
 import "../styles/cerrarSesion.css";
@@ -36,18 +38,23 @@ export function AuthProvider({ children }) {
     const versionSesion = useRef(0);
     const usuarioRef = useRef(null);
     const verificacionRef = useRef(null);
-    const ultimaConsultaPermisosRef = useRef(0);
-    const generacionAccesoRef = useRef(0);
-    const revisionesBroadcastRef = useRef({ usuario: 0, rol: 0 });
+    const accesoConfirmado = useRef(null);
+    const [consultasSesion] = useState(() => crearConsultasSesion(verificarSesion, obtenerAcceso));
     const aceptarUsuario = useCallback((actual) => {
-        if (String(usuarioRef.current?.id_usuario ?? "") !== String(actual?.id_usuario ?? "")) {
-            revisionesBroadcastRef.current = { usuario: 0, rol: 0 };
-        }
         usuarioRef.current = actual;
         sincronizarListasSesion(actual);
         setUsuario(actual);
         if (actual?.permisos) void precargarListas(actual, window.location.pathname);
     }, []);
+    const confirmarAcceso = useCallback((actual) => {
+        accesoConfirmado.current = actual?.permisos
+            ? { version: versionSesion.current, hasta: Date.now() + 60_000 } : null;
+    }, []);
+    const accesoVigente = useCallback(() => Boolean(
+        usuarioRef.current?.permisos && !verificacionRef.current && !cierreEnCurso.current
+        && accesoConfirmado.current?.version === versionSesion.current
+        && Date.now() < accesoConfirmado.current.hasta
+    ), []);
 
     useEffect(() => {
         montado.current = true;
@@ -56,30 +63,32 @@ export function AuthProvider({ children }) {
             montado.current = false;
             window.clearTimeout(cierreTimer.current);
             verificacionRef.current?.controller.abort();
+            consultasSesion.cancelar();
         };
-    }, []);
+    }, [consultasSesion]);
 
     useEffect(() => {
         const controller = new AbortController();
+        const version = versionSesion.current;
 
         const restaurarSesion = async () => {
             try {
-                const usuarioActual = await verificarSesion(
+                const usuarioActual = await consultasSesion.usuario(
                     controller.signal,
                 );
 
                 const acceso = usuarioActual
-                    ? await obtenerAcceso(controller.signal).catch(() => ({ permisos: null, rol_id: null }))
+                    ? await consultasSesion.acceso(controller.signal).catch(() => ({ permisos: null, rol_id: null }))
                     : null;
 
-                if (!controller.signal.aborted) {
-                    if (acceso?.permisos) ultimaConsultaPermisosRef.current = Date.now();
+                if (!controller.signal.aborted && version === versionSesion.current) {
+                    confirmarAcceso(usuarioActual ? { ...usuarioActual, ...acceso } : null);
                     aceptarUsuario(usuarioActual ? { ...usuarioActual, ...acceso } : null);
                 }
             } catch (error) {
                 if (
                     error.name !== "AbortError" &&
-                    !controller.signal.aborted
+                    !controller.signal.aborted && version === versionSesion.current
                 ) {
                     aceptarUsuario(null);
                 }
@@ -94,8 +103,9 @@ export function AuthProvider({ children }) {
 
         return () => {
             controller.abort();
+            consultasSesion.cancelar();
         };
-    }, [aceptarUsuario]);
+    }, [aceptarUsuario, confirmarAcceso, consultasSesion]);
 
     /**
      * Muestra el aviso de revocación y retira la sesión tras una pausa breve.
@@ -108,6 +118,7 @@ export function AuthProvider({ children }) {
 
         cierreEnCurso.current = true;
         versionSesion.current++;
+        consultasSesion.cancelar();
         sincronizarListasSesion(null);
 
         setErrorCierre("");
@@ -128,32 +139,20 @@ export function AuthProvider({ children }) {
 
             navigate("/", { replace: true });
         }, 1500);
-    }, [navigate, aceptarUsuario]);
+    }, [navigate, aceptarUsuario, consultasSesion]);
 
-    // Comparte las verificaciones simultáneas y consulta permisos al cambiar el rol.
-    const verificarAcceso = useCallback((forzarPermisos = false) => {
+    // Comparte verificaciones simultáneas, nunca memoriza una autorización entre solicitudes.
+    const verificarAcceso = useCallback(() => {
         if (verificacionRef.current) return verificacionRef.current.promise;
         if (!usuarioRef.current || cierreEnCurso.current) return Promise.resolve(null);
         const controller = new AbortController();
         const version = versionSesion.current;
-        const generacionAcceso = generacionAccesoRef.current;
         const promise = (async () => {
-            const actual = await verificarSesion(controller.signal);
+            const actualizado = await consultasSesion.consultar(controller.signal);
             if (!montado.current || controller.signal.aborted || version !== versionSesion.current) return null;
-            if (!actual) { cerrarPorPermisos(); return null; }
-            if (generacionAcceso !== generacionAccesoRef.current) return usuarioRef.current;
+            if (!actualizado) { cerrarPorPermisos(); return null; }
+            confirmarAcceso(actualizado);
             const previo = usuarioRef.current;
-            if (actual.rol !== previo.rol) aceptarUsuario({ ...actual, permisos: null, rol_id: null });
-            const consultarPermisos = forzarPermisos || !previo?.permisos
-                || actual.rol !== previo.rol
-                || Date.now() - ultimaConsultaPermisosRef.current >= 300_000;
-            const acceso = consultarPermisos
-                ? await obtenerAcceso(controller.signal)
-                : { permisos: previo.permisos, rol_id: previo.rol_id };
-            if (!montado.current || controller.signal.aborted || version !== versionSesion.current) return null;
-            if (generacionAcceso !== generacionAccesoRef.current) return usuarioRef.current;
-            if (consultarPermisos) ultimaConsultaPermisosRef.current = Date.now();
-            const actualizado = { ...actual, ...acceso };
             if (JSON.stringify(previo) !== JSON.stringify(actualizado)) aceptarUsuario(actualizado);
             return actualizado;
         })().finally(() => {
@@ -161,16 +160,7 @@ export function AuthProvider({ children }) {
         });
         verificacionRef.current = { controller, promise };
         return promise;
-    }, [aceptarUsuario, cerrarPorPermisos]);
-
-    const aplicarBroadcast = useCallback((evento, tipo) => {
-        const cambio = aplicarCambioAcceso(usuarioRef.current, evento, tipo, revisionesBroadcastRef.current);
-        if (!cambio) return;
-        revisionesBroadcastRef.current = cambio.revisiones;
-        generacionAccesoRef.current++;
-        ultimaConsultaPermisosRef.current = Date.now();
-        aceptarUsuario(cambio.usuario);
-    }, [aceptarUsuario]);
+    }, [aceptarUsuario, cerrarPorPermisos, confirmarAcceso, consultasSesion]);
 
     // La consulta periódica respalda la notificación inmediata por WebSocket.
     useEffect(() => {
@@ -182,9 +172,10 @@ export function AuthProvider({ children }) {
         }
 
         return observarSesion({
-            consultar: () => verificarAcceso(),
-            actualizar: () => {},
-            intervaloMs: 30000,
+            consultar: verificarAcceso,
+            actualizar: (actual, forzar) => {
+                if (actual) window.dispatchEvent(new CustomEvent("pizzerp:session-verified", { detail: { forzar } }));
+            },
         });
     }, [
         usuario?.id_usuario,
@@ -193,74 +184,41 @@ export function AuthProvider({ children }) {
         verificarAcceso,
     ]);
 
-    // WebSocket permite revocar el acceso sin esperar la siguiente consulta.
+    const revisarTrasEvento = useCallback((opciones = {}) => {
+        versionSesion.current++;
+        verificacionRef.current?.controller.abort();
+        verificacionRef.current = null;
+        consultasSesion.cancelar();
+        void verificarAcceso().then(actual => {
+            if (actual && montado.current && opciones.reconexion) {
+                window.dispatchEvent(new CustomEvent("pizzerp:session-verified", { detail: { forzar: true } }));
+            }
+        }).catch(() => {});
+    }, [consultasSesion, verificarAcceso]);
+
+    // Los cambios de acceso invalidan cualquier revisión anterior al evento.
     useEffect(() => {
         if (!usuario?.id_usuario || cerrandoSesion || !echo) {
             return undefined;
         }
 
-        const nombreCanal = `usuario.${usuario.id_usuario}`;
-        const canal = echo.private(nombreCanal);
-
-        const manejarCambioEstado = (evento) => {
-            const usuarioActualizado = evento?.usuario;
-
-            if (!usuarioActualizado?.id_usuario) {
-                return;
-            }
-
-            const esUsuarioActual =
-                String(usuarioActualizado.id_usuario) ===
-                String(usuario.id_usuario);
-
-            if (!esUsuarioActual) {
-                return;
-            }
-
-            const estado = String(
-                usuarioActualizado.estado ?? "",
-            ).toUpperCase();
-
-            if (estado === "INACTIVO") {
-                cerrarPorPermisos();
-            }
-        };
-
-        canal.listen(".user.status-changed", manejarCambioEstado);
-        const manejarCambioAcceso = (evento) => aplicarBroadcast(evento, "usuario");
-        canal.listen(".user.access-changed", manejarCambioAcceso);
-
-        return () => {
-            canal.stopListening(".user.status-changed", manejarCambioEstado);
-            canal.stopListening(".user.access-changed", manejarCambioAcceso);
-            echo.leave(nombreCanal);
-        };
-    }, [usuario?.id_usuario, cerrandoSesion, cerrarPorPermisos, aplicarBroadcast]);
+        return observarAccesoReverb({ echo, usuario, revisar: revisarTrasEvento, revocar: cerrarPorPermisos, accesoVigente });
+    }, [usuario, cerrandoSesion, cerrarPorPermisos, revisarTrasEvento, accesoVigente]);
 
     useEffect(() => {
-        if (!usuario?.rol_id || cerrandoSesion || !echo) {
-            return undefined;
-        }
-
-        const nombreCanal = `rol.${usuario.rol_id}`;
-        const canal = echo.private(nombreCanal);
-        const manejarCambioAcceso = (evento) => aplicarBroadcast(evento, "rol");
-        canal.listen(".role.access-changed", manejarCambioAcceso);
-
-        return () => {
-            canal.stopListening(".role.access-changed", manejarCambioAcceso);
-            echo.leave(nombreCanal);
-        };
-    }, [usuario?.rol_id, cerrandoSesion, aplicarBroadcast]);
+        if (!usuario?.id_usuario || cerrandoSesion) return undefined;
+        return observarCrudReverb({ echo, usuario });
+    }, [usuario, cerrandoSesion]);
 
     const iniciarSesion = useCallback(async (datosUsuario) => {
         const version = ++versionSesion.current;
-        const acceso = await obtenerAcceso().catch(() => ({ permisos: null, rol_id: null }));
+        consultasSesion.cancelar();
+        const acceso = await consultasSesion.acceso().catch(() => ({ permisos: null, rol_id: null }));
         if (montado.current && version === versionSesion.current) {
-            if (acceso.permisos) ultimaConsultaPermisosRef.current = Date.now();
+            confirmarAcceso({ ...datosUsuario, ...acceso });
             aceptarUsuario({ ...datosUsuario, ...acceso });
         }
-    }, [aceptarUsuario]);
+    }, [aceptarUsuario, confirmarAcceso, consultasSesion]);
 
     /**
      * Cierra la sesión en el servidor y ejecuta la acción posterior al terminar.
@@ -274,6 +232,7 @@ export function AuthProvider({ children }) {
 
         cierreEnCurso.current = true;
         versionSesion.current++;
+        consultasSesion.cancelar();
 
         setErrorCierre("");
         setMensajeCierre("Un momento, estamos cerrando tu sesión.");
@@ -322,33 +281,28 @@ export function AuthProvider({ children }) {
                     "No fue posible confirmar el cierre de sesión. Revisá tu conexión e intentá nuevamente.",
                 );
             });
-    }, [aceptarUsuario]);
+    }, [aceptarUsuario, consultasSesion]);
 
     const actualizarUsuario = useCallback((datosUsuario) => {
         const version = ++versionSesion.current;
-        const generacionAcceso = generacionAccesoRef.current;
+        consultasSesion.cancelar();
         if (!datosUsuario) {
             aceptarUsuario(null);
             return;
         }
         const actual = usuarioRef.current;
         const rolCambio = datosUsuario.rol && datosUsuario.rol !== actual?.rol;
-        if (datosUsuario.permisos) ultimaConsultaPermisosRef.current = Date.now();
         aceptarUsuario({
             ...actual,
             ...datosUsuario,
             permisos: datosUsuario.permisos ?? (rolCambio ? null : actual?.permisos),
             rol_id: datosUsuario.rol_id ?? (rolCambio ? null : actual?.rol_id),
         });
-        if (datosUsuario.permisos && (!rolCambio || datosUsuario.rol_id)) return;
-        void obtenerAcceso().then((acceso) => {
-            if (montado.current && version === versionSesion.current
-                && generacionAcceso === generacionAccesoRef.current && usuarioRef.current) {
-                ultimaConsultaPermisosRef.current = Date.now();
-                aceptarUsuario({ ...usuarioRef.current, ...acceso });
-            }
+        if (datosUsuario.permisos) return;
+        void consultasSesion.acceso().then((acceso) => {
+            if (montado.current && version === versionSesion.current && usuarioRef.current) aceptarUsuario({ ...usuarioRef.current, ...acceso });
         }).catch(() => {});
-    }, [aceptarUsuario]);
+    }, [aceptarUsuario, consultasSesion]);
 
     return (
         <AuthContext.Provider
