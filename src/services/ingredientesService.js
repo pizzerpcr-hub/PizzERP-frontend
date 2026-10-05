@@ -1,13 +1,15 @@
 import { obtenerLista } from "./catalogoService.js";
 import { confirmarLista, versionListasSesion } from "./listasSesion.js";
 import { cabecerasSocketReverb } from "./socketReverb.js";
+import { notificarInactividad } from "./notificarInactividad.js";
 
 const leerRespuesta = async (response, mensajePredeterminado) => {
+    const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
+
     if (response.status === 401 || response.status === 403) {
+        notificarInactividad(response, data);
         window.dispatchEvent(new Event("pizzerp:session-check"));
     }
-
-    const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
 
     if (!response.ok) {
         const mensaje = data.errors ? Object.values(data.errors).flat()[0] : null;

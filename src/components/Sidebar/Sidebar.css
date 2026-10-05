@@ -14,7 +14,7 @@
     width: 258px;
     height: 100dvh;
 
-    gap: 20px;
+    gap: 12px;
     padding: 26px 16px;
 
     box-sizing: border-box;
@@ -66,7 +66,7 @@
     display: grid;
     gap: 3px;
 
-    padding: 0 10px 4px;
+    padding: 0 10px;
 
     flex-shrink: 0;
 }
@@ -96,7 +96,7 @@
 }
 
 .management-nav-label {
-    padding: 12px 10px 5px;
+    padding: 10px 12px 0;
 
     color: rgba(255, 255, 255, 0.42);
 
@@ -360,7 +360,7 @@
 
         box-sizing: border-box;
 
-        gap: 16px;
+        gap: 12px;
 
         overflow-x: hidden;
         overflow-y: auto;
@@ -411,7 +411,7 @@
     .management-nav-label {
         display: block;
 
-        padding: 8px 10px 4px;
+        padding: 2px 10px 0;
     }
 
     .management-nav a,
@@ -487,7 +487,7 @@
 @media (max-width: 480px) {
 
     .management-sidebar {
-        gap: 12px;
+        gap: 10px;
 
         padding: 74px 16px 18px;
 
@@ -538,7 +538,7 @@
     }
 
     .management-nav-label {
-        padding: 8px 8px 4px;
+        padding: 2px 8px 0;
 
         font-size: 12px;
     }

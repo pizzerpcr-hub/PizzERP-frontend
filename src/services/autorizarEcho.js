@@ -1,3 +1,5 @@
+import { notificarInactividad } from "./notificarInactividad.js";
+
 // Solo comparte la preparación en curso; no memoriza cookies ni autorizaciones.
 export function crearAutorizadorEcho(solicitar = (...args) => fetch(...args), cookies = () => document.cookie) {
     let preparacion = null;
@@ -25,7 +27,10 @@ export function crearAutorizadorEcho(solicitar = (...args) => fetch(...args), co
                     },
                     body: JSON.stringify({ socket_id: socketId, channel_name: channel.name }),
                 });
-                if (!response.ok) throw new Error("No fue posible autorizar la suscripción.");
+                if (!response.ok) {
+                    notificarInactividad(response, await response.json().catch(() => ({})));
+                    throw new Error("No fue posible autorizar la suscripción.");
+                }
                 callback(null, await response.json());
             } catch (error) { callback(error, null); }
         },

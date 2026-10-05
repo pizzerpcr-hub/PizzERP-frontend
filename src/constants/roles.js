@@ -10,6 +10,13 @@ const PANEL_DESCONOCIDO = {
     modulos: "MÓDULOS DISPONIBLES",
 };
 
+const TITULOS_PANEL = {
+    ADMINISTRADOR: "Panel de Administración",
+    TI: "Panel de Encargado de Sistemas",
+    CAJA: "Panel de Caja",
+    COCINA: "Panel de Cocina",
+};
+
 export const normalizarRol = (rol) =>
     String(rol ?? "").trim().toUpperCase();
 
@@ -50,4 +57,7 @@ export const obtenerEtiquetaRol = (rol) => {
     return ETIQUETAS_ROL[rolNormalizado] || rolNormalizado || "Sin rol";
 };
 
-export const obtenerInformacionPanel = () => PANEL_DESCONOCIDO;
+export const obtenerInformacionPanel = (rol) => ({
+    ...PANEL_DESCONOCIDO,
+    panel: TITULOS_PANEL[normalizarRol(rol)] || PANEL_DESCONOCIDO.panel,
+});

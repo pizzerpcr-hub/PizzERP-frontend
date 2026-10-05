@@ -108,10 +108,10 @@ export function AuthProvider({ children }) {
     }, [aceptarUsuario, confirmarAcceso, consultasSesion]);
 
     /**
-     * Muestra el aviso de revocación y retira la sesión tras una pausa breve.
+     * Muestra la causa del cierre y retira la sesión tras una pausa breve.
      * @returns {void}
      */
-    const cerrarPorPermisos = useCallback(() => {
+    const cerrarPorPermisos = useCallback((motivo = "permisos") => {
         if (!montado.current || cierreEnCurso.current) {
             return;
         }
@@ -122,9 +122,9 @@ export function AuthProvider({ children }) {
         sincronizarListasSesion(null);
 
         setErrorCierre("");
-        setMensajeCierre(
-            "Tu cuenta ha sido desactivada o ya no tienes permisos para acceder al sistema.",
-        );
+        setMensajeCierre(motivo === "inactividad"
+            ? "Tu sesión se cerró después de 30 minutos de inactividad."
+            : "Tu cuenta ha sido desactivada o ya no tienes permisos para acceder al sistema.");
 
         setCerrandoSesion(true);
 
@@ -138,8 +138,14 @@ export function AuthProvider({ children }) {
             cierreEnCurso.current = false;
 
             navigate("/", { replace: true });
-        }, 1500);
+        }, motivo === "inactividad" ? 2500 : 1500);
     }, [navigate, aceptarUsuario, consultasSesion]);
+
+    useEffect(() => {
+        const cerrarPorInactividad = () => cerrarPorPermisos("inactividad");
+        window.addEventListener("pizzerp:session-idle-expired", cerrarPorInactividad);
+        return () => window.removeEventListener("pizzerp:session-idle-expired", cerrarPorInactividad);
+    }, [cerrarPorPermisos]);
 
     // Comparte verificaciones simultáneas, nunca memoriza una autorización entre solicitudes.
     const verificarAcceso = useCallback(() => {

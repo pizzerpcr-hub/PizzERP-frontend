@@ -65,6 +65,28 @@ test('401/403 confirman ausencia de acceso; 500 no confirma revocación', async 
     } finally {globalThis.fetch=original;}
 });
 
+test('la expiración por inactividad notifica la causa sin confundirla con otros rechazos', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalWindow = globalThis.window;
+    const ventana = new EventTarget();
+    let avisos = 0;
+    ventana.addEventListener('pizzerp:session-idle-expired', () => avisos++);
+    globalThis.window = ventana;
+
+    try {
+        globalThis.fetch = async () => Response.json({ message: 'Unauthenticated.', reason: 'inactivity' }, { status: 401 });
+        assert.equal(await verificarSesion(), null);
+        assert.equal(avisos, 1);
+
+        globalThis.fetch = async () => Response.json({ message: 'El usuario se encuentra inactivo.' }, { status: 403 });
+        assert.equal(await verificarSesion(), null);
+        assert.equal(avisos, 1);
+    } finally {
+        globalThis.fetch = originalFetch;
+        globalThis.window = originalWindow;
+    }
+});
+
 test('revisa al recuperar foco o recibir rechazo, pero no consulta oculta', async () => {
     const env = entorno();
     let calls = 0;

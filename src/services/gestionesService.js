@@ -1,4 +1,5 @@
 import { enviarMutacion, obtenerLista } from "./catalogoService.js";
+import { notificarInactividad } from "./notificarInactividad.js";
 
 export const obtenerAcceso = async (signal) => {
     const response = await fetch("/api/permissions", {
@@ -7,6 +8,7 @@ export const obtenerAcceso = async (signal) => {
         signal,
     });
     const data = await response.json().catch(() => ({}));
+    notificarInactividad(response, data);
     if (!response.ok) throw new Error(data.message || "No fue posible consultar los permisos.");
     if (!data.permisos || typeof data.permisos !== "object" || Array.isArray(data.permisos)) {
         throw new Error("No fue posible confirmar los permisos vigentes.");

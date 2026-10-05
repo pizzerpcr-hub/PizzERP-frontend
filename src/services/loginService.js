@@ -1,3 +1,5 @@
+import { notificarInactividad } from "./notificarInactividad.js";
+
 const API_URL = "";
 const MENSAJE_LOGIN_FALLIDO = "No fue posible iniciar sesión.\nVerifica tus credenciales.";
 const MENSAJE_SESION_FALLIDA = "No fue posible verificar la sesión.";
@@ -58,6 +60,8 @@ export const verificarSesion = async (signal) => {
 
     if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
+            const responseData = await response.json().catch(() => ({}));
+            notificarInactividad(response, responseData);
             return null;
         }
 

@@ -1,5 +1,6 @@
 import { confirmarLista, consultarLista, usuarioListadoPublico, versionListasSesion } from "./listasSesion.js";
 import { cabecerasSocketReverb } from "./socketReverb.js";
+import { notificarInactividad } from "./notificarInactividad.js";
 
 const obtenerCookie = (nombre) => {
     const cookies = document.cookie.split(";");
@@ -16,10 +17,14 @@ const obtenerCookie = (nombre) => {
 };
 
 const leerRespuesta = async (response) => {
+    const data = await response.json().catch(() => ({}));
+
     if (response.status === 401 || response.status === 403) {
+        notificarInactividad(response, data);
         window.dispatchEvent(new Event("pizzerp:session-check"));
     }
-    return response.json().catch(() => ({}));
+
+    return data;
 };
 
 const obtenerMensajeError = (data, mensajePredeterminado) => {
