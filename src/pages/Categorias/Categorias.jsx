@@ -7,7 +7,7 @@ import { useAuth } from "../../context/useAuth.js";
 import { puede } from "../../constants/roles.js";
 import PageSearch from "../../components/common/PageSearch/PageSearch.jsx";
 import Paginacion from "../../components/common/Paginacion/Paginacion.jsx";
-import { actualizarCategoria, registrarCategoria } from "../../services/catalogoService.js";
+import { actualizarCategoria, desactivarCategoriaConProductos, registrarCategoria } from "../../services/catalogoService.js";
 import { useBusquedaLista } from "../../hooks/useListaSesion.js";
 import { useTablaPaginada } from "../../hooks/useTablaPaginada.js";
 
@@ -21,7 +21,11 @@ function Categorias() {
     const [modalAbierto, setModalAbierto] = useState(false);
     const [enviando, setEnviando] = useState(false);
     const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
+    const [confirmandoDesactivacionConProductos, setConfirmandoDesactivacionConProductos] = useState(false);
     const [errorEstado, setErrorEstado] = useState("");
+    const productosActivos = Number(categoriaSeleccionada?.productos_activos_count ?? 0);
+    const tieneProductosActivos = categoriaSeleccionada?.estado === "ACTIVO" && productosActivos > 0;
+    const puedeDesactivarProductos = puede(usuario, "productos", "eliminar");
 
     useEffect(() => {
         if (!mensaje) return undefined;
@@ -55,9 +59,26 @@ function Categorias() {
         setEnviando(true);
         setErrorEstado("");
         try {
-            await actualizarCategoria(categoria.id_categoria, { estado: nuevoEstado });
+            await actualizarCategoria(categoria.id_categoria, { estado: nuevoEstado, motivo: `Cambio de estado de la categoría a ${nuevoEstado}.` });
             setCategoriaSeleccionada(null);
             setMensaje(nuevoEstado === "ACTIVO" ? "Categoría activada correctamente." : "Categoría desactivada correctamente.");
+        } catch (error) {
+            setErrorEstado(error.message);
+        } finally {
+            setEnviando(false);
+        }
+    };
+
+    const desactivarConProductos = async () => {
+        const categoria = categoriaSeleccionada;
+        if (!categoria || enviando) return;
+        setEnviando(true);
+        setErrorEstado("");
+        try {
+            await desactivarCategoriaConProductos(categoria.id_categoria);
+            setCategoriaSeleccionada(null);
+            setConfirmandoDesactivacionConProductos(false);
+            setMensaje("Categoría y todos sus productos activos desactivados correctamente.");
         } catch (error) {
             setErrorEstado(error.message);
         } finally {
@@ -101,13 +122,14 @@ function Categorias() {
                 </div>
                 <div className="table-wrap">
                     <table className="management-table">
-                        <thead><tr><th>Nombre</th><th>Descripción</th><th>Productos</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <thead><tr><th>Código</th><th>Nombre</th><th>Descripción</th><th>Productos</th><th>Estado</th><th>Acciones</th></tr></thead>
                         <tbody>
-                            {cargando ? <tr><td colSpan="5"><LoadingSpinner label="Cargando categorías" /></td></tr>
-                                : errorCarga && !categorias.length ? <tr><td colSpan="5" className="module-empty">No fue posible mostrar las categorías.</td></tr>
-                                    : categorias.length === 0 ? <tr><td colSpan="5" className="module-empty">
+                            {cargando ? <tr><td colSpan="6"><LoadingSpinner label="Cargando categorías" /></td></tr>
+                                : errorCarga && !categorias.length ? <tr><td colSpan="6" className="module-empty">No fue posible mostrar las categorías.</td></tr>
+                                    : categorias.length === 0 ? <tr><td colSpan="6" className="module-empty">
                                     {busqueda ? "No se encontraron categorías." : "No hay categorías registradas."}
                                 </td></tr> : categorias.map((categoria) => <tr className="management-card" key={categoria.id_categoria}>
+                                    <td data-label="Código">{categoria.codigo_categoria}</td>
                                     <td data-label="Nombre"><strong>{categoria.nombre}</strong></td>
                                     <td data-label="Descripción">{categoria.descripcion}</td>
                                     <td data-label="Productos">{categoria.productos_count}</td>
@@ -119,6 +141,7 @@ function Categorias() {
                                         {puede(usuario, "categorias", categoria.estado === "ACTIVO" ? "eliminar" : "editar") &&
                                             <button className="catalog-action" type="button" disabled={enviando} onClick={() => {
                                                 setErrorEstado("");
+                                                setConfirmandoDesactivacionConProductos(false);
                                                 setCategoriaSeleccionada(categoria);
                                             }}>{categoria.estado === "ACTIVO" ? "Desactivar" : "Activar"}</button>}
                                     </div></td>
@@ -132,15 +155,34 @@ function Categorias() {
             {modalAbierto && <CategoriaForm key={categoriaEditando?.id_categoria ?? "nueva"}
                 categoria={categoriaEditando} enviando={enviando} onGuardar={guardar}
                 onCerrar={() => !enviando && setModalAbierto(false)} />}
-            <CambiarEstadoUsuarioDialog usuarioSeleccionado={categoriaSeleccionada} entidad="categoría"
-                descripcion={categoriaSeleccionada && (categoriaSeleccionada.estado === "ACTIVO"
-                    ? `¿Desea desactivar la categoría ${categoriaSeleccionada.nombre}? Podrá activarla después.`
+            <CambiarEstadoUsuarioDialog key={confirmandoDesactivacionConProductos ? "confirmacion" : "inicio"}
+                usuarioSeleccionado={categoriaSeleccionada} entidad="categoría"
+                className="category-status-dialog" showConfirm={confirmandoDesactivacionConProductos || !tieneProductosActivos}
+                title={confirmandoDesactivacionConProductos ? "¿Está seguro?" : tieneProductosActivos
+                    ? puedeDesactivarProductos ? "¿Desactivar categoría y productos?" : "No se puede desactivar todavía"
+                    : undefined}
+                descripcion={categoriaSeleccionada && (confirmandoDesactivacionConProductos
+                    ? `Se desactivarán la categoría ${categoriaSeleccionada.nombre} y sus ${productosActivos} ${productosActivos === 1 ? "producto activo" : "productos activos"}.`
+                    : categoriaSeleccionada.estado === "ACTIVO"
+                    ? tieneProductosActivos
+                        ? puedeDesactivarProductos
+                            ? `La categoría ${categoriaSeleccionada.nombre} tiene ${productosActivos} ${productosActivos === 1 ? "producto activo" : "productos activos"}. Puede desactivar todo junto.`
+                            : `La categoría ${categoriaSeleccionada.nombre} tiene ${productosActivos} ${productosActivos === 1 ? "producto activo" : "productos activos"}. Desactívelos primero para poder desactivar la categoría.`
+                        : `¿Desea desactivar la categoría ${categoriaSeleccionada.nombre}?`
                     : `¿Desea activar la categoría ${categoriaSeleccionada.nombre}?`)}
+                onAlternative={!confirmandoDesactivacionConProductos && tieneProductosActivos && puedeDesactivarProductos
+                    ? () => setConfirmandoDesactivacionConProductos(true) : undefined}
+                alternativeLabel="Desactivar todo"
                 isSubmitting={enviando} mensajeError={errorEstado}
                 textoEnviando={categoriaSeleccionada?.estado === "ACTIVO" ? "Desactivando…" : "Activando…"}
-                onConfirm={cambiarEstado} onClose={() => {
+                confirmLabel={confirmandoDesactivacionConProductos ? "Sí, desactivar" : undefined}
+                onConfirm={confirmandoDesactivacionConProductos ? desactivarConProductos : cambiarEstado} onClose={() => {
                     if (!enviando) {
-                        setCategoriaSeleccionada(null);
+                        if (confirmandoDesactivacionConProductos) {
+                            setConfirmandoDesactivacionConProductos(false);
+                        } else {
+                            setCategoriaSeleccionada(null);
+                        }
                         setErrorEstado("");
                     }
                 }} />

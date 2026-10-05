@@ -10,6 +10,7 @@ const formularioVacio = {
     contrasena: "",
     confirmar_contrasena: "",
     rol: "",
+    motivo: "",
 };
 
 const requisitosContrasena = [
@@ -53,9 +54,14 @@ function UsuarioFormBase({
     const mostrarRequisitosContrasena =
         !requisitosContrasena.every(({ cumple }) => cumple(formData.contrasena));
     const rolesListos = estadoCatalogoRoles === "listo" && rolesDisponibles.length > 0;
+    const hayCambios = Boolean(usuarioInicial) && (
+        formData.nombre_completo.trim() !== usuarioInicial.nombre_completo ||
+        formData.nombre_usuario.trim().toUpperCase() !== usuarioInicial.nombre_usuario ||
+        normalizarRol(formData.rol) !== normalizarRol(usuarioInicial.rol) ||
+        Boolean(formData.contrasena)
+    );
 
     const todosVacios = (datos) =>
-        contrasenaObligatoria &&
         Object.values(datos).every((valor) => !valor.trim());
     const validarCampos = (datos) => {
         const errores = {};
@@ -70,6 +76,7 @@ function UsuarioFormBase({
             else if (datos.confirmar_contrasena !== contrasena) errores.confirmar_contrasena = "Las contraseñas no coinciden.";
         }
         if (!datos.rol) errores.rol = "Selecciona un rol.";
+        if (hayCambios && !datos.motivo.trim()) errores.motivo = "El motivo de la modificación es obligatorio.";
         return errores;
     };
 
@@ -172,6 +179,7 @@ function UsuarioFormBase({
             nombre_completo: formData.nombre_completo.trim(),
             nombre_usuario: formData.nombre_usuario.trim().toUpperCase(),
             rol: normalizarRol(formData.rol),
+            ...(usuarioInicial ? { motivo: formData.motivo.trim() } : {}),
         };
 
         if (contrasena) {
@@ -227,6 +235,7 @@ function UsuarioFormBase({
                         id="formName"
                         name="nombre_completo"
                         value={formData.nombre_completo}
+                        maxLength={50}
                         onChange={handleChange}
                         disabled={isSubmitting}
                         required
@@ -249,6 +258,7 @@ function UsuarioFormBase({
                         id="formUsername"
                         name="nombre_usuario"
                         value={formData.nombre_usuario}
+                        maxLength={50}
                         onChange={handleChange}
                         disabled={isSubmitting}
                         required
@@ -405,11 +415,23 @@ function UsuarioFormBase({
                 </div>
 
                 <p
-                    className={`dialog-hint${contrasenaObligatoria && errorNota ? " error" : ""}`}
-                    role={contrasenaObligatoria && errorNota ? "alert" : undefined}
+                    className={`dialog-hint${errorNota ? " error" : ""}`}
+                    role={errorNota ? "alert" : undefined}
                 >
                     {nota}
                 </p>
+
+                {hayCambios && <div className="dialog-field change-reason">
+                    <label htmlFor="formReason">Motivo de la modificación</label>
+                    <p>Indica por qué realizaste este cambio. El motivo quedará registrado en la bitácora.</p>
+                    <textarea id="formReason" name="motivo" maxLength={50} required placeholder="Ej: Corrección de datos"
+                        value={formData.motivo} onChange={handleChange} disabled={isSubmitting}
+                        aria-invalid={Boolean(avisosCampo.motivo)} />
+                    <small className="field-character-count">{formData.motivo.length}/50</small>
+                    {avisosCampo.motivo && <p className="dialog-message dialog-field-message visible" role="alert">
+                        {avisosCampo.motivo.texto}
+                    </p>}
+                </div>}
 
                 <div className="dialog-actions">
                     <button

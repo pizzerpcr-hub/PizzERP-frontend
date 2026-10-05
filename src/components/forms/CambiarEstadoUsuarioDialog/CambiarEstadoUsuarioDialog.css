@@ -8,3 +8,25 @@
     line-height: 1.5;
     overflow-wrap: anywhere;
 }
+
+.user-dialog.category-status-dialog {
+    width: min(92vw, 480px);
+    max-width: 480px;
+}
+
+.category-status-dialog .status-dialog-copy {
+    overflow-wrap: anywhere;
+}
+
+.category-status-dialog .dialog-actions {
+    flex-direction: row;
+    flex-wrap: nowrap;
+}
+
+.category-status-dialog .dialog-actions button {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    white-space: normal;
+    text-align: center;
+}

@@ -22,7 +22,7 @@ function UsuariosTable({
                     <tr role="row">
                         <th>Nombre Completo</th>
                         <th>Usuario</th>
-                        <th>Rol asignado</th>
+                        <th>Rol Asignado</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>

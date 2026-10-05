@@ -19,7 +19,7 @@ export function crearSincronizadorCrud({ programar = setTimeout, cancelar = clea
                 || !modulos.includes(evento?.modulo)
                 || !["created", "updated", "deleted", "status"].includes(evento?.accion)) return;
             for (const ruta of invalidarAvisoCrud(evento.modulo)) rutas.add(ruta);
-            if (rutas.size && timer === null) timer = programar(publicar, 200);
+            if (rutas.size && timer === null) timer = programar(publicar, 50);
         },
         detener: () => {
             detenido = true;

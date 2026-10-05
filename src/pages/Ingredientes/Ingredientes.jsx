@@ -108,15 +108,16 @@ function Ingredientes() {
                     placeholder="Buscar ingrediente" value={busqueda} maxLength={100} onChange={(event) => setBusqueda(event.target.value)} /></div>
                 <div className="table-wrap">
                     <table className="ingredients-table" aria-label="Ingredientes registrados">
-                        <thead><tr><th>Nombre</th><th>Unidad de medida</th><th>Cantidad disponible</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <thead><tr><th>Nombre</th><th>Unidad de Medida</th><th>Cantidad Disponible</th><th>Stock Mínimo</th><th>Estado</th><th>Acciones</th></tr></thead>
                         <tbody>
-                            {cargando ? <tr><td colSpan="5" className="ingredient-loading"><LoadingSpinner label="Cargando ingredientes" /></td></tr>
-                                : ingredientes.length === 0 ? <tr><td colSpan="5" className="module-empty">
+                            {cargando ? <tr><td colSpan="6" className="ingredient-loading"><LoadingSpinner label="Cargando ingredientes" /></td></tr>
+                                : ingredientes.length === 0 ? <tr><td colSpan="6" className="module-empty">
                                     {busqueda ? "No se encontraron ingredientes." : "No hay ingredientes registrados."}
                                 </td></tr> : ingredientes.map((ingrediente) => <tr className="ingredient-card" key={ingrediente.id_ingrediente}>
                                     <td data-label="Nombre"><strong>{ingrediente.nombre}</strong></td>
-                                    <td data-label="Unidad de medida">{ingrediente.unidad_medida}</td>
-                                    <td data-label="Cantidad disponible">{ingrediente.cantidad_disponible}</td>
+                                    <td data-label="Unidad de Medida">{ingrediente.unidad_medida}</td>
+                                    <td data-label="Cantidad Disponible">{Number(ingrediente.cantidad_disponible).toLocaleString("es-CR", { maximumFractionDigits: 2 })}</td>
+                                    <td data-label="Stock Mínimo">{Number(ingrediente.stock_minimo).toLocaleString("es-CR", { maximumFractionDigits: 2 })}</td>
                                     <td data-label="Estado"><span className={`status ${ingrediente.estado === "ACTIVO" ? "active" : "inactive"}`}>
                                         {ingrediente.estado === "ACTIVO" ? "Activo" : "Inactivo"}</span></td>
                                     <td data-label="Acciones"><div className="table-actions">

@@ -91,6 +91,9 @@ export const registrarCategoria = (datos) =>
 export const actualizarCategoria = (id, datos) =>
     enviarMutacion(`/api/categories/${id}`, "PATCH", datos, "No fue posible actualizar la categoría.");
 
+export const desactivarCategoriaConProductos = (id) =>
+    enviarMutacion(`/api/categories/${id}/desactivar-productos`, "PATCH", {}, "No fue posible desactivar la categoría y sus productos.");
+
 export const obtenerProductos = (signal, opciones) =>
     obtenerLista("/api/products", "productos", "No fue posible cargar los productos.", signal, opciones);
 

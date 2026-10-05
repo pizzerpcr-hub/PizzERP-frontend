@@ -11,6 +11,12 @@ function CambiarEstadoUsuarioDialog({
     mensajeError = "",
     textoEnviando = "Guardando...",
     descripcion,
+    onAlternative,
+    alternativeLabel,
+    showConfirm = true,
+    className = "",
+    title,
+    confirmLabel,
 }) {
     const dialogRef = useRef(null);
     const envioEnCursoRef = useRef(false);
@@ -75,10 +81,20 @@ function CambiarEstadoUsuarioDialog({
         }
     };
 
+    const handleAlternative = async () => {
+        if (!usuarioSeleccionado || isSubmitting || envioEnCursoRef.current || !onAlternative) return;
+        envioEnCursoRef.current = true;
+        try {
+            await onAlternative();
+        } finally {
+            envioEnCursoRef.current = false;
+        }
+    };
+
     return (
         <dialog
             ref={dialogRef}
-            className="user-dialog small"
+            className={`user-dialog small ${className}`.trim()}
             onCancel={handleCancel}
         >
             <form onSubmit={handleSubmit}>
@@ -91,9 +107,9 @@ function CambiarEstadoUsuarioDialog({
                         </p>
 
                         <h2>
-                            {reactivando
+                            {title ?? (reactivando
                                 ? "¿Confirmar activación?"
-                                : "¿Confirmar desactivación?"}
+                                : "¿Confirmar desactivación?")}
                         </h2>
                     </div>
 
@@ -126,7 +142,7 @@ function CambiarEstadoUsuarioDialog({
                         Cancelar
                     </button>
 
-                    <button
+                    {showConfirm && <button
                         className={
                             reactivando
                                 ? "management-primary"
@@ -137,10 +153,12 @@ function CambiarEstadoUsuarioDialog({
                     >
                         {isSubmitting
                             ? textoEnviando
-                            : reactivando
+                            : confirmLabel ?? (reactivando
                               ? "Activar"
-                              : "Desactivar"}
-                    </button>
+                              : "Desactivar")}
+                    </button>}
+                    {onAlternative && <button className="management-danger status-dialog-alternative" type="button"
+                        disabled={isSubmitting} onClick={handleAlternative}>{alternativeLabel}</button>}
                 </div>
             </form>
         </dialog>

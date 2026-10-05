@@ -64,6 +64,3 @@ export const actualizarIngrediente = (id, datos) =>
 
 export const cambiarEstadoIngrediente = (id, estado) =>
     enviarMutacion(`/api/ingredients/${id}/estado`, "PATCH", { estado }, "No fue posible cambiar el estado del ingrediente.");
-
-export const eliminarIngrediente = (id) =>
-    enviarMutacion(`/api/ingredients/${id}`, "DELETE", null, "No fue posible eliminar el ingrediente.");

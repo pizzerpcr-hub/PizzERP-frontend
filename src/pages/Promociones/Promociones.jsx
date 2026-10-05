@@ -89,7 +89,8 @@ function Combos() {
         {errorLista && <p className="combo-page-error" role="alert">{errorLista} <button type="button" onClick={() => void recargar().catch(() => {})}>Reintentar</button></p>}
         <section className="management-panel"><div className="management-panel-header"><div>
             <h2>Combos registrados</h2><p>Consulta y administra los combos y promociones disponibles.</p>
-        </div><PageSearch className="page-search--header" label="Buscar combo" id="buscarCombo"
+        </div>
+        <PageSearch className="page-search--header" label="Buscar combo" id="buscarCombo"
             placeholder="Buscar por nombre o código..." value={busqueda} maxLength={100} onChange={(event) => setBusqueda(event.target.value)} /></div>
             <div className="table-wrap"><table className="management-table">
                 <thead><tr><th>Código</th><th>Combo</th><th>Productos</th><th>Precio</th><th>Vigencia</th><th>Estado</th><th>Acciones</th></tr></thead>
@@ -102,11 +103,11 @@ function Combos() {
                             <td data-label="Precio">{formatoPrecio.format(Number(combo.precio))}</td>
                             <td data-label="Vigencia">{combo.fecha_inicio} — {combo.fecha_fin}</td>
                             <td data-label="Estado">{combo.estado === "ACTIVO" ? "Activo" : "Inactivo"}</td>
-                            <td data-label="Acciones"><div className="table-actions">
-                                {puede(usuario, "combos", "editar") && <button className="action-button edit" type="button"
+                            <td data-label="Acciones"><div className="category-table-actions">
+                                {puede(usuario, "combos", "editar") && <button className="catalog-action" type="button"
                                     onClick={() => abrir(combo)}>Modificar</button>}
                                 {puede(usuario, "combos", combo.estado === "ACTIVO" ? "eliminar" : "editar") &&
-                                    <button className={`action-button ${combo.estado === "ACTIVO" ? "deactivate" : "activate"}`}
+                                    <button className="catalog-action"
                                         type="button" disabled={enviandoEstado !== null} onClick={() => {
                                             setErrorEstado("");
                                             setComboSeleccionado(combo);

@@ -50,6 +50,9 @@ export function useListaSesion(ruta, consultar, { habilitado = true, pausado = f
         pendientes: new Set(snapshot.pendientes),
         datos: habilitado ? snapshot.datos ?? [] : [],
         disponible: habilitado && snapshot.datos !== undefined,
+        cargaCompleta: habilitado && snapshot.datos !== undefined && !snapshot.consultando
+            && !snapshot.refrescoPendiente && !snapshot.pendientes.length && !snapshot.error
+            && !listaDesactualizada(snapshot),
         cargando: habilitado && snapshot.datos === undefined && !snapshot.error,
         error: habilitado ? snapshot.error?.message ?? "" : "",
         consultando: snapshot.consultando,

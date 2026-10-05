@@ -18,12 +18,14 @@ const render = (component, props) => renderToStaticMarkup(createElement(componen
 test("categorías pendiente, vacío confirmado y error no se confunden", () => {
     const pendiente = render(ProductoForm, { categorias: [], categoriasDisponibles: false });
     assert.match(pendiente, /Cargando categorías/);
-    assert.doesNotMatch(pendiente, /Registra una categoría/);
+    assert.doesNotMatch(pendiente, /Necesitas una categoría activa/);
     assert.match(pendiente, /type="submit"[^>]*disabled/);
-    assert.match(render(ProductoForm, { categorias: [], categoriasDisponibles: true }), /Registra una categoría/);
+    assert.doesNotMatch(render(ProductoForm, { categorias: [], categoriasDisponibles: true, categoriasCargadas: false }), /Necesitas una categoría activa/);
+    assert.match(render(ProductoForm, { categorias: [], categoriasDisponibles: true, categoriasCargadas: true }), /Necesitas una categoría activa/);
+    assert.doesNotMatch(render(ProductoForm, { categorias: [{ id_categoria: 1, nombre: "Pizzas" }], categoriasCargadas: true }), /Necesitas una categoría activa/);
     const error = render(ProductoForm, { categorias: [], categoriasDisponibles: false, errorCategorias: "Red no disponible" });
     assert.match(error, /Red no disponible.*Reintentar/);
-    assert.doesNotMatch(error, /Registra una categoría|Cargando categorías/);
+    assert.doesNotMatch(error, /Necesitas una categoría activa|Cargando categorías/);
 });
 
 test("productos de combo pendiente, vacío y error tienen mensajes distintos y bloquean guardar", () => {

@@ -22,7 +22,8 @@ function Productos() {
     const [busqueda, setBusqueda] = useBusquedaLista("/api/products");
     const { datos: productos, paginacion, cargando, error: errorLista, recargar } = useTablaPaginada(
         "/api/products", "productos", busqueda, puede(usuario, "productos"));
-    const { datos: categorias, disponible: categoriasDisponibles, cargando: cargandoCategorias, error: errorCategorias, recargar: recargarCategorias } = useListaSesion(
+    const { datos: categorias, disponible: categoriasDisponibles, cargaCompleta: categoriasCargadas,
+        cargando: cargandoCategorias, error: errorCategorias, recargar: recargarCategorias } = useListaSesion(
         "/api/products/categorias", obtenerCategoriasParaProducto, { habilitado: puedeCambiarProductos });
     const { datos: ingredientesDisponibles, disponible: catalogoIngredientesDisponible, error: errorIngredientes,
         recargar: recargarIngredientes } = useListaSesion(
@@ -89,7 +90,8 @@ function Productos() {
                     <div className="header-description">
                         <p>Gestiona los productos del menú, sus categorías y precios.</p>
                         <button type="button" className="management-primary" onClick={() => abrirFormulario()}
-                            disabled={cargando || categorias.length === 0 || !puede(usuario, "productos", "crear")}>+ Registrar producto</button>
+                            disabled={cargando || Boolean(errorLista) || !categoriasCargadas || categorias.length === 0
+                                || !puede(usuario, "productos", "crear")}>+ Registrar producto</button>
                     </div>
                 </div>
             </header>
@@ -99,13 +101,15 @@ function Productos() {
                     <button type="button" className="management-toast-close" aria-label="Cerrar notificación"
                         onClick={() => setMensaje("")}>×</button>
                 </div>}
+                {categoriasCargadas && categorias.length === 0 && puede(usuario, "productos", "crear") &&
+                    <div className="management-toast error" role="alert">
+                        <span>Necesitas una categoría activa para registrar productos.</span>
+                    </div>}
             </div>
             {error && <p className="productos-error" role="alert">{error}</p>}
             {errorLista && <p className="productos-error" role="alert">{errorLista} <button type="button" onClick={() => void recargar().catch(() => {})}>Reintentar</button></p>}
             {errorCategorias && <p className="productos-error" role="alert">{errorCategorias} <button type="button" onClick={() => void recargarCategorias().catch(() => {})}>Reintentar categorías</button></p>}
             {cargandoCategorias && puedeCambiarProductos && <p role="status">Cargando categorías…</p>}
-            {categoriasDisponibles && !errorCategorias && categorias.length === 0 && puede(usuario, "productos", "crear") &&
-                <p className="productos-error">Registra una categoría antes de crear productos.</p>}
             <section className="management-panel" aria-labelledby="productosTitle">
                 <div className="management-panel-header">
                     <div><h2 id="productosTitle">Productos registrados</h2>
@@ -146,7 +150,7 @@ function Productos() {
             </section>
             {modalAbierto && <ProductoForm key={productoEditando?.id_producto ?? "nuevo"}
                 producto={productoEditando} categorias={categorias} enviando={enviando}
-                categoriasDisponibles={categoriasDisponibles} errorCategorias={errorCategorias}
+                categoriasDisponibles={categoriasDisponibles} categoriasCargadas={categoriasCargadas} errorCategorias={errorCategorias}
                 onReintentarCategorias={() => void recargarCategorias().catch(() => {})}
                 ingredientesDisponibles={ingredientesDisponibles} catalogoIngredientesDisponible={catalogoIngredientesDisponible}
                 errorIngredientes={errorIngredientes} onReintentarIngredientes={() => void recargarIngredientes().catch(() => {})}

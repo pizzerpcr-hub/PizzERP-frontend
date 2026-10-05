@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./RolForm.css";
+import { validarCamposFormulario } from "../validarCamposFormulario.js";
 
 const pestanasSistema = [
     {
@@ -101,9 +102,14 @@ const crearPermisosIniciales = () => {
 function RolForm({ onCerrar, rol = null, onGuardar }) {
     const [nombreRol, setNombreRol] = useState(rol?.nombre ?? "");
     const [permisos, setPermisos] = useState(() => rol?.permisos ?? crearPermisosIniciales());
+    const [motivo, setMotivo] = useState("");
+    const hayCambios = Boolean(rol) && (nombreRol.trim().toUpperCase() !== rol.nombre
+        || JSON.stringify(permisos) !== JSON.stringify(rol.permisos));
     const [expandidos, setExpandidos] = useState([]);
     const [enviando, setEnviando] = useState(false);
     const [error, setError] = useState("");
+    const [erroresCampos, setErroresCampos] = useState({});
+    const [avisoCampos, setAvisoCampos] = useState(false);
     const pendiente = useRef(false);
     const montado = useRef(true);
     useEffect(() => { montado.current = true; return () => { montado.current = false; }; }, []);
@@ -124,6 +130,7 @@ function RolForm({ onCerrar, rol = null, onGuardar }) {
             return total + cantidad;
         }, 0);
     }, [permisos]);
+    const hayDatos = Boolean(nombreRol.trim() || motivo.trim() || seleccionados);
 
     const cambiarPermiso = (moduloId, permisoId) => {
         setPermisos((actual) => ({
@@ -199,12 +206,19 @@ function RolForm({ onCerrar, rol = null, onGuardar }) {
 
     const guardarRol = async (event) => {
         event.preventDefault();
+        const errores = validarCamposFormulario(event.currentTarget);
+        if (Object.keys(errores).length) {
+            setErroresCampos(hayDatos ? errores : {});
+            setAvisoCampos(true);
+            return;
+        }
         if (pendiente.current) return;
         pendiente.current = true;
 
         const datos = {
             nombre: nombreRol.trim(),
             permisos,
+            ...(rol ? { motivo: motivo.trim() } : {}),
         };
 
         setEnviando(true);
@@ -212,7 +226,16 @@ function RolForm({ onCerrar, rol = null, onGuardar }) {
         try {
             await onGuardar(datos);
         } catch (fallo) {
-            if (montado.current) setError(fallo.message || "No fue posible guardar el rol.");
+            if (montado.current) {
+                if (fallo.status === 422 && fallo.errors) {
+                    setAvisoCampos(true);
+                    setErroresCampos(Object.fromEntries(Object.entries(fallo.errors).map(([campo, mensajes]) => [
+                        campo, Array.isArray(mensajes) ? mensajes[0] : mensajes,
+                    ])));
+                } else {
+                    setError(fallo.message || "No fue posible guardar el rol.");
+                }
+            }
         } finally {
             pendiente.current = false;
             if (montado.current) setEnviando(false);
@@ -242,7 +265,7 @@ function RolForm({ onCerrar, rol = null, onGuardar }) {
                     ×
                 </button>
 
-                <form onSubmit={guardarRol}>
+                <form onSubmit={guardarRol} noValidate onInputCapture={() => setAvisoCampos(false)} data-invalid={avisoCampos && hayDatos}>
                     <div className="role-form-header">
                         <h2>{rol ? "Modificar rol" : "Crear rol"}</h2>
 
@@ -259,17 +282,34 @@ function RolForm({ onCerrar, rol = null, onGuardar }) {
 
                         <input
                             id="nombreRol"
+                            name="nombre"
                             type="text"
+                            data-mensaje-obligatorio="Ingresa el nombre del rol."
                             value={nombreRol}
                             maxLength={30}
-                            onChange={(event) =>
-                                setNombreRol(event.target.value)
-                            }
+                            onChange={(event) => {
+                                setNombreRol(event.target.value);
+                                setErroresCampos((actuales) => ({ ...actuales, nombre: undefined }));
+                            }}
                             placeholder="Ej. Administrador, Cocinero..."
                             autoComplete="off"
                             required
+                            aria-invalid={Boolean(erroresCampos.nombre)}
                         />
+                        {erroresCampos.nombre && <p className="required-field-message" role="alert">{erroresCampos.nombre}</p>}
                     </div>
+                    {hayCambios && <div className="role-form-group change-reason">
+                        <label htmlFor="motivoRol">Motivo de la modificación</label>
+                        <p>Indica por qué realizaste este cambio. El motivo quedará registrado en la bitácora.</p>
+                        <textarea id="motivoRol" name="motivo" maxLength={50} required placeholder="Ej: Ajuste de permisos" value={motivo}
+                            data-mensaje-obligatorio="Ingresa el motivo de la modificación."
+                            onChange={(event) => {
+                                setMotivo(event.target.value);
+                                setErroresCampos((actuales) => ({ ...actuales, motivo: undefined }));
+                            }} disabled={enviando} aria-invalid={Boolean(erroresCampos.motivo)} />
+                        <small className="field-character-count">{motivo.length}/50</small>
+                        {erroresCampos.motivo && <p className="required-field-message" role="alert">{erroresCampos.motivo}</p>}
+                    </div>}
 
                     <div className="permissions-section">
                         <div className="permissions-title-row">
@@ -446,8 +486,12 @@ function RolForm({ onCerrar, rol = null, onGuardar }) {
                                 );
                             })}
                         </div>
+                        {erroresCampos.permisos && <p className="required-field-message" role="alert">{erroresCampos.permisos}</p>}
                     </div>
 
+                    <p className={`required-fields-hint${avisoCampos ? " error" : ""}`} role={avisoCampos ? "alert" : undefined}>
+                        Completa los campos obligatorios.
+                    </p>
                     <div className="role-form-actions">
                         <button
                             type="button"
@@ -461,7 +505,7 @@ function RolForm({ onCerrar, rol = null, onGuardar }) {
                         <button
                             type="submit"
                             className="role-save-button"
-                            disabled={!nombreRol.trim() || enviando}
+                            disabled={enviando}
                         >
                             {enviando ? "Guardando..." : rol ? "Guardar cambios" : "Crear rol"}
                         </button>

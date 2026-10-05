@@ -118,12 +118,12 @@ function RolesPermisos() {
                     placeholder="Buscar por nombre..." value={busqueda} maxLength={100} onChange={(event) => setBusqueda(event.target.value)} />
             </div>
             <div className="table-wrap"><table className="management-table">
-                <thead><tr><th>Rol</th><th>Pestañas permitidas</th><th>Estado</th><th>Acciones</th></tr></thead>
+                <thead><tr><th>Rol</th><th>Pestañas Permitidas</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>{cargando ? <tr><td colSpan="4"><LoadingSpinner label="Cargando roles" /></td></tr>
                     : roles.length === 0 ? <tr><td colSpan="4" className="module-empty">{busqueda ? "No se encontraron roles." : "No hay roles registrados."}</td></tr>
                         : roles.map((rol) => <tr className="management-card" key={rol.id_rol}>
                             <td data-label="Rol">{rol.nombre}</td>
-                            <td data-label="Pestañas permitidas">
+                            <td data-label="Pestañas Permitidas">
                                 {Object.entries(rol.permisos ?? {}).some(([, acciones]) => acciones.ver) ? (
                                     <ul className="roles-permitted-tabs">
                                         {Object.entries(rol.permisos).filter(([, acciones]) => acciones.ver).map(([modulo]) => (

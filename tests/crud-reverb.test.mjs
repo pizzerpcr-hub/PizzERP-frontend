@@ -20,7 +20,7 @@ const aviso = (modulo = "productos") => ({ modulo, accion: "updated" });
 const temporizadores = () => {
     const tareas = new Map(); let id = 0;
     return {
-        programar: (fn, ms) => { assert.equal(ms, 200); tareas.set(++id, fn); return id; },
+        programar: (fn, ms) => { assert.equal(ms, 50); tareas.set(++id, fn); return id; },
         cancelar: id => tareas.delete(id),
         ejecutar: () => { const callbacks = [...tareas.values()]; tareas.clear(); callbacks.forEach(fn => fn()); },
         cantidad: () => tareas.size,

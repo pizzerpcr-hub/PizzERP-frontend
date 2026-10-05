@@ -2,6 +2,12 @@
     color: #291b17;
 }
 
+.productos-page .management-toast-region {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .productos-eyebrow {
     display: block;
     color: #a33e16;
@@ -89,10 +95,16 @@
 
 .productos-dialog {
     position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
     width: min(92vw, 760px);
     max-width: 760px;
     max-height: calc(100dvh - 32px);
+    margin: 0;
     padding: 26px;
+    transform: translate(-50%, -50%);
     border: 0;
     border-radius: 14px;
     background: #fff;
@@ -112,6 +124,8 @@
 .productos-page .productos-ingredient-row { grid-template-columns: minmax(0, 1fr) minmax(90px, .4fr) 80px 34px; align-items: center; }
 .productos-quantity-field { display: flex; align-items: center; min-width: 0; }
 .productos-quantity-field input { flex: 1; }
+.productos-row-field { display: grid; gap: 6px; min-width: 0; }
+.productos-price-input.invalid { border-color: #a62c23; }
 .productos-ingredient-error { grid-column: 1 / -1; }
 .productos-dialog .add-item-button:disabled,
 .productos-dialog .remove-item-button:disabled { opacity: .55; cursor: not-allowed; }

@@ -21,6 +21,7 @@ const formatearTiempo = (segundosTotales) => {
 function Login() {
   const [formMessage, setFormMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [avisoCampos, setAvisoCampos] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [segundosRestantes, setSegundosRestantes] = useState(0);
   const bloqueoHastaRef = useRef(0);
@@ -71,6 +72,7 @@ function Login() {
       setFormMessage("");
       setMessageType("");
     }
+    if (name !== "remember") setAvisoCampos(false);
   };
 
   const handleSubmit = async (event) => {
@@ -81,12 +83,14 @@ function Login() {
       }
 
       if (!formData.username.trim() || !formData.password) {
-          setFormMessage("Por favor, completa todos los campos.");
-          setMessageType("error");
+          setAvisoCampos(true);
+          setFormMessage("");
+          setMessageType("");
           return;
       }
 
       setIsSubmitting(true);
+      setAvisoCampos(false);
       setFormMessage("");
       setMessageType("");
 
@@ -199,6 +203,7 @@ function Login() {
             onChange={handleChange}
             onSubmit={handleSubmit}
             messageType={messageType}
+            avisoCampos={avisoCampos}
             isSubmitting={isSubmitting}
             bloqueado={bloqueado}
             tiempoRestante={formatearTiempo(segundosRestantes)}

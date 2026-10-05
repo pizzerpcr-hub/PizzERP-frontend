@@ -1,7 +1,10 @@
 import { useState } from "react";
 
-function LoginForm({ formData, onChange, onSubmit, messageType, isSubmitting, bloqueado, tiempoRestante }) {
+function LoginForm({ formData, onChange, onSubmit, messageType, avisoCampos, isSubmitting, bloqueado, tiempoRestante }) {
   const [showPassword, setShowPassword] = useState(false);
+  const mostrarErroresCampos = avisoCampos && Boolean(formData.username.trim() || formData.password);
+  const errorUsuario = mostrarErroresCampos && !formData.username.trim();
+  const errorContrasena = mostrarErroresCampos && !formData.password;
 
   return (
           <form
@@ -20,14 +23,17 @@ function LoginForm({ formData, onChange, onSubmit, messageType, isSubmitting, bl
                 id="username"
                 name="username"
                 type="text"
+                maxLength={50}
                 autoComplete="username"
                 placeholder="Ingresa tu usuario"
                 value={formData.username}
                 onChange={onChange}
-                aria-invalid={messageType === "error"}
+                aria-invalid={errorUsuario || (messageType === "error" && !avisoCampos)}
+                aria-describedby={errorUsuario ? "loginUsernameError" : undefined}
                 disabled={isSubmitting || bloqueado}
                 required
               />
+              {errorUsuario && <p id="loginUsernameError" className="required-field-message" role="alert">Ingresa el nombre de usuario.</p>}
             </div>
 
             <div className="form-field">
@@ -49,7 +55,8 @@ function LoginForm({ formData, onChange, onSubmit, messageType, isSubmitting, bl
                   minLength={8}
                   value={formData.password}
                   onChange={onChange}
-                  aria-invalid={messageType === "error"}
+                  aria-invalid={errorContrasena || (messageType === "error" && !avisoCampos)}
+                  aria-describedby={errorContrasena ? "loginPasswordError" : undefined}
                   disabled={isSubmitting || bloqueado}
                   required
                 />
@@ -73,7 +80,12 @@ function LoginForm({ formData, onChange, onSubmit, messageType, isSubmitting, bl
                   {showPassword ? "Ocultar" : "Mostrar"}
                 </button>
               </div>
+              {errorContrasena && <p id="loginPasswordError" className="required-field-message" role="alert">Ingresa la contraseña.</p>}
             </div>
+
+            <p className={`login-required-hint${avisoCampos ? " error" : ""}`} role={avisoCampos ? "alert" : undefined}>
+              Completa todos los campos.
+            </p>
 
             <label className="remember">
               <input

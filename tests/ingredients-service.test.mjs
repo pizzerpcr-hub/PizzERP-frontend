@@ -5,7 +5,7 @@ beforeEach(() => sincronizarListasSesion({ id_usuario: 1, estado: "ACTIVO", perm
 afterEach(() => sincronizarListasSesion(null));
 import {
     actualizarIngrediente,
-    eliminarIngrediente,
+    cambiarEstadoIngrediente,
     obtenerIngredientes,
 } from "../src/services/ingredientesService.js";
 
@@ -15,7 +15,7 @@ const respuesta = (status, data) => ({
     json: async () => data,
 });
 
-test("consulta ingredientes y envía motivo al actualizar con CSRF", async () => {
+test("consulta ingredientes, actualiza y cambia estado con CSRF", async () => {
     const anteriorFetch = globalThis.fetch;
     const anteriorDocument = globalThis.document;
     const anteriorWindow = globalThis.window;
@@ -37,8 +37,10 @@ test("consulta ingredientes y envía motivo al actualizar con CSRF", async () =>
         assert.equal(llamadas[2].opciones.method, "PATCH");
         assert.equal(llamadas[2].opciones.headers["X-XSRF-TOKEN"], "token seguro");
         assert.equal(JSON.parse(llamadas[2].opciones.body).motivo, "Conteo físico");
-        await eliminarIngrediente(3);
-        assert.equal(llamadas[4].opciones.method, "DELETE");
+        await cambiarEstadoIngrediente(3, "INACTIVO");
+        assert.equal(llamadas[4].ruta, "/api/ingredients/3/estado");
+        assert.equal(llamadas[4].opciones.method, "PATCH");
+        assert.equal(JSON.parse(llamadas[4].opciones.body).estado, "INACTIVO");
     } finally {
         globalThis.fetch = anteriorFetch;
         globalThis.document = anteriorDocument;
