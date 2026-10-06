@@ -55,7 +55,9 @@
   display: block;
 
   width: 100%;
-  height: auto;
+  aspect-ratio: 17 / 10;
+  object-fit: cover;
+  object-position: center top;
 
   border-radius: 5px;
 }
