@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -90 800 800" fill="none" stroke="#b94a1c" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <g id="pepperoni" stroke-width="2">
+      <circle r="39"/><circle r="31"/>
+      <path d="M-24-7c13-13 30-15 43-5M-26 13c11 13 30 18 47 6M-5-28c7 2 12 6 16 10M-17-17c6-4 11-3 15 0M11 11c4-4 9-4 13-1"/>
+    </g>
+    <g id="mushroom" stroke-width="2.2">
+      <path d="M-34 4c1-26 19-42 37-42S37-22 39 4c-11 7-22 10-34 8l-3 28c-12 2-19-5-19-15l1-16c-7 0-13-2-18-5Z"/>
+      <path d="M-30 1c15-11 48-16 64 1M-15 11l-1 18M4 13l-2 21"/>
+    </g>
+    <g id="leaf" stroke-width="2">
+      <path d="M0 0C-41-14-59-55-43-91c13-30 42-45 57-73 18 39 17 77-1 112C7-31 3-14 0 0Z"/>
+      <path d="M0 0C0-48 5-101 14-164M-3-30c-15-8-30-18-38-33M-2-54c-15-8-27-21-32-38M4-79c-11-7-19-19-23-33M5-42c12-11 23-23 31-36M8-71c13-14 21-28 25-45"/>
+    </g>
+    <clipPath id="pizza-area"><circle cx="640" cy="635" r="285"/></clipPath>
+  </defs>
+
+  <g stroke-width="2">
+    <circle cx="640" cy="635" r="313" stroke-width="4"/>
+    <circle cx="640" cy="635" r="301"/>
+    <circle cx="640" cy="635" r="285" stroke-width="3"/>
+    <path d="M360 490c-19 47-29 96-30 145m33 108c12 42 34 81 62 115M532 339c38-15 78-23 120-24M770 344c37 17 70 41 96 70" stroke-width="4"/>
+    <g clip-path="url(#pizza-area)">
+      <path d="M640 635 367 518M640 635 558 364M640 635 815 414M640 635 922 677M640 635 650 942M640 635 382 790"/>
+      <use href="#pepperoni" transform="translate(512 460) rotate(-16)"/>
+      <use href="#pepperoni" transform="translate(664 430) rotate(19)"/>
+      <use href="#pepperoni" transform="translate(785 549) rotate(-8)"/>
+      <use href="#pepperoni" transform="translate(537 704) rotate(24)"/>
+      <use href="#pepperoni" transform="translate(723 760) rotate(-21)"/>
+      <use href="#mushroom" transform="translate(427 603) rotate(18)"/>
+      <use href="#mushroom" transform="translate(619 525) rotate(-29)"/>
+      <use href="#mushroom" transform="translate(786 677) rotate(28)"/>
+      <use href="#mushroom" transform="translate(612 816) rotate(-14)"/>
+      <use href="#leaf" transform="translate(585 591) rotate(35) scale(.44)"/>
+      <use href="#leaf" transform="translate(747 467) rotate(-26) scale(.4)"/>
+      <use href="#leaf" transform="translate(475 787) rotate(16) scale(.45)"/>
+      <path d="M389 664c20-11 38-10 52 3m-50 12c19-8 37-5 52 8m-41 6c15-4 28-1 40 8M555 380c17-9 35-9 51 2m-40 8c18-5 32 0 46 9M731 606c20-12 42-12 62 0m-53 11c19-6 37-3 50 7"/>
+      <circle cx="565" cy="525" r="5"/><circle cx="704" cy="558" r="4"/><circle cx="461" cy="715" r="5"/><circle cx="633" cy="738" r="4"/>
+    </g>
+  </g>
+
+  <g stroke-width="2.5">
+    <use href="#leaf" transform="translate(177 641) rotate(26) scale(.9)"/>
+    <use href="#leaf" transform="translate(292 728) rotate(-75) scale(.7)"/>
+    <use href="#leaf" transform="translate(600 300) rotate(57) scale(.58)"/>
+    <path d="M263 332c9-9 21-11 31-4m-33 15c10-6 21-7 30-3m-51 80c7-6 16-8 24-4m-22 13c8-3 16-3 22 2M320 569c8-7 17-9 26-5"/>
+    <circle cx="119" cy="508" r="4"/><circle cx="307" cy="491" r="5"/><circle cx="392" cy="321" r="3"/>
+  </g>
+</svg>

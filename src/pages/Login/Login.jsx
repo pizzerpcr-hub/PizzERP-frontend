@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./Login.css";
 import logoMabet from "../../assets/images/logo-mabet.webp";
+import loginPizzaLineart from "../../assets/images/login-pizza-lineart.svg";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth.js";
 import { obtenerRutaInicio } from "../../constants/roles.js";
@@ -150,6 +151,7 @@ function Login() {
         className="login-sidebar"
         aria-label="Información de PizzERP"
       >
+        <img className="login-sidebar-art" src={loginPizzaLineart} alt="" aria-hidden="true" />
         <a 
           className="login-logo"
           href="/"
@@ -164,7 +166,9 @@ function Login() {
         <div className="sidebar-copy">
           <p className="kicker">Sistema de gestión</p>
 
-          <h1>Todo el negocio, en un solo lugar.</h1>
+          <h1>
+            Todo el negocio,<br /> en <span>un solo lugar.</span>
+          </h1>
 
           <p>
             Administra pedidos, ventas e inventario con PizzERP
