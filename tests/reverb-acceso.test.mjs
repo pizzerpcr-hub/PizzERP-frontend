@@ -84,7 +84,7 @@ test("contrato coincide con clases y canales del backend, sin restaurar usuarios
         ["UserAccessChanged", "usuario.", "user.access-changed"],
         ["UserStatus", "usuario.", "user.status-changed"],
     ]) {
-        const fuente = readFileSync(new URL(`../../../PizzERP-backend/app/Events/${archivo}.php`, import.meta.url), "utf8");
+        const fuente = readFileSync(new URL(`../../PizzERP-backend/app/Events/${archivo}.php`, import.meta.url), "utf8");
         assert.ok(fuente.includes(`'${canal}'`));
         assert.ok(fuente.includes(`return '${evento}';`));
     }

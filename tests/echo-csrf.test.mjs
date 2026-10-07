@@ -8,16 +8,18 @@ const autorizar = (factory, canal) => new Promise(resolve => {
 
 test("dos canales comparten un CSRF pero conservan autorizaciones independientes", async () => {
     const llamadas = [];
+    let cookies = "";
     let resolver;
     const factory = crearAutorizadorEcho((ruta, opciones) => {
         llamadas.push({ ruta, opciones });
         if (ruta === "/sanctum/csrf-cookie") return new Promise(resolve => { resolver = resolve; });
         return Promise.resolve(new Response(JSON.stringify({ auth: "autorizado" })));
-    }, () => "XSRF-TOKEN=valor%20seguro");
+    }, () => cookies);
     const uno = autorizar(factory, "private-usuario.1");
     const dos = autorizar(factory, "private-rol.2");
     await Promise.resolve();
     assert.equal(llamadas.length, 1);
+    cookies = "XSRF-TOKEN=valor%20seguro";
     resolver({ ok: true });
     assert.ok(!(await uno).error); assert.ok(!(await dos).error);
     assert.equal(llamadas.length, 3); // Antes: dos CSRF + dos autorizaciones = cuatro.
@@ -51,4 +53,21 @@ test("un rechazo de canal no autoriza ni impide el otro; conexiones posteriores 
     const [uno, dos] = await Promise.all([autorizar(factory, "denegado"), autorizar(factory, "permitido")]);
     assert.ok(uno.error); assert.ok(!dos.error); assert.equal(csrf, 1);
     await autorizar(factory, "permitido"); assert.equal(csrf, 2);
+});
+
+test("nuevo socket autoriza cada canal de nuevo, sin reutilizar firmas de otra conexión", async () => {
+    const llamadas = [];
+    const factory = crearAutorizadorEcho(async (ruta, opciones) => {
+        assert.equal(ruta, "/broadcasting/auth");
+        const datos = JSON.parse(opciones.body);
+        llamadas.push(datos);
+        return Response.json({ auth: `${datos.socket_id}:${datos.channel_name}` });
+    }, () => "XSRF-TOKEN=vigente");
+    const conectar = socket => Promise.all(["private-usuario.2", "private-rol.1"].map(canal =>
+        new Promise((resolve, reject) => factory({ name: canal }).authorize(socket,
+            (error, datos) => error ? reject(error) : resolve(datos)))));
+    const primera = await conectar("1.1"), segunda = await conectar("1.2");
+    assert.equal(llamadas.length, 4);
+    assert.deepEqual(llamadas.map(item => item.socket_id), ["1.1", "1.1", "1.2", "1.2"]);
+    assert.notDeepEqual(primera, segunda);
 });

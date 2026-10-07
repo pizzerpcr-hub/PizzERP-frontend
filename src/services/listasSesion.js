@@ -1,6 +1,5 @@
 import { puede } from "../constants/roles.js";
 
-export const VIGENCIA_LISTAS_MS = 60_000;
 const recursos = {
     "/api/users": ["usuarios", "ver"],
     "/api/roles": ["roles", "ver"],
@@ -34,16 +33,32 @@ const rechazados = new Set();
 const entradas = new Map();
 const oyentes = new Map();
 const busquedas = new Map();
+const paginas = new Map();
 const visibles = new Map();
 let sesion = null;
 let generacion = 0;
 let precargaIniciada = false;
 let identidadSesion = 0;
+const acciones = new Set();
 
+export function iniciarAccionLista() {
+    let resolver;
+    const pendiente = new Promise(resolve => { resolver = resolve; });
+    acciones.add(pendiente);
+    return () => { acciones.delete(pendiente); resolver(); };
+}
+
+export async function esperarAccionesLista() {
+    while (acciones.size) await Promise.allSettled([...acciones]);
+}
+
+const recursoBase = ruta => ruta.split("?")[0];
 const permitido = (ruta) => {
-    const [modulo, ...acciones] = recursos[ruta] ?? [];
-    return Boolean(sesion && !rechazados.has(ruta) && acciones.some((accion) => puede(sesion, modulo, accion)));
+    const recurso = recursoBase(ruta);
+    const [modulo, ...acciones] = recursos[recurso] ?? [];
+    return Boolean(sesion && !rechazados.has(recurso) && acciones.some((accion) => puede(sesion, modulo, accion)));
 };
+const consultasDe = recurso => [...entradas.keys()].filter(ruta => recursoBase(ruta) === recurso);
 const emitir = (ruta) => oyentes.get(ruta)?.forEach((callback) => callback());
 const entrada = (ruta) => {
     if (!entradas.has(ruta)) entradas.set(ruta, { snapshot: vacio, version: 0, pendiente: null });
@@ -62,6 +77,7 @@ const retirar = (ruta) => {
         entradas.delete(ruta);
     }
     busquedas.delete(ruta);
+    paginas.delete(ruta);
     emitir(ruta);
 };
 
@@ -78,17 +94,27 @@ export function sincronizarListasSesion(usuario) {
         precargaIniciada = false;
         for (const ruta of [...entradas.keys()]) retirar(ruta);
         busquedas.clear();
+        paginas.clear();
     } else if (cambioPermisos) {
         generacion++;
         for (const ruta of [...entradas.keys()]) {
-            if (!permitido(ruta) || !relaciones[ruta]) retirar(ruta);
+            if (!permitido(ruta) || !relaciones[recursoBase(ruta)]) retirar(ruta);
             else {
                 entradas.get(ruta).controller?.abort();
-                publicar(ruta, { pendientes: [] });
+                entradas.get(ruta).pendiente = null;
+                publicar(ruta, { pendientes: [], consultando: false });
                 invalidarLista(ruta);
             }
         }
+        for (const recurso of Object.keys(recursos)) {
+            if (!permitido(recurso)) {
+                busquedas.delete(recurso);
+                paginas.delete(recurso);
+            }
+            emitir(recurso);
+        }
     }
+    if (cambioCuenta || !usuario) for (const recurso of Object.keys(recursos)) emitir(recurso);
 }
 
 export const leerLista = (ruta) => permitido(ruta) ? entradas.get(ruta)?.snapshot ?? vacio : vacio;
@@ -103,9 +129,21 @@ export const suscribirLista = (ruta, callback) => {
 };
 export const listaDesactualizada = (snapshot) => snapshot.datos === undefined
     || snapshot.revisionRemota > snapshot.revisionConsultada
-    || !snapshot.actualizado || Date.now() - snapshot.actualizado >= VIGENCIA_LISTAS_MS;
+    || !snapshot.actualizado;
 export const leerBusqueda = (ruta) => permitido(ruta) ? busquedas.get(ruta) ?? "" : "";
-export const guardarBusqueda = (ruta, texto) => { if (permitido(ruta)) busquedas.set(ruta, texto); };
+export const guardarBusqueda = (ruta, texto) => {
+    if (!permitido(ruta)) return;
+    if (leerBusqueda(ruta).trim() !== texto.trim()) paginas.delete(ruta);
+    busquedas.set(ruta, texto);
+    emitir(ruta);
+};
+export const leerPagina = (ruta, busqueda = leerBusqueda(ruta)) => permitido(ruta)
+    && paginas.get(ruta)?.busqueda === busqueda.trim() ? paginas.get(ruta).pagina : 1;
+export const guardarPagina = (ruta, busqueda, pagina) => {
+    if (!permitido(ruta)) return;
+    paginas.set(ruta, { busqueda: busqueda.trim(), pagina: Math.max(1, pagina) });
+    emitir(ruta);
+};
 export const versionListasSesion = () => generacion;
 export const identidadListasSesion = () => identidadSesion;
 // La pantalla puede iniciar GET inmediatamente; solo la cola de fondo espera.
@@ -117,7 +155,7 @@ export function registrarListaVisible(ruta) {
         else visibles.delete(ruta);
     };
 }
-export const esListaVisible = ruta => visibles.has(ruta);
+export const esListaVisible = ruta => [...visibles.keys()].some(visible => recursoBase(visible) === recursoBase(ruta));
 export async function esperarListasVisibles() {
     let pendientes;
     while ((pendientes = [...visibles.keys()].map(ruta => entradas.get(ruta)?.pendiente).filter(Boolean)).length) {
@@ -152,9 +190,13 @@ export function consultarLista(ruta, consultar, { signal, forzar = false } = {})
     const version = item.version;
     const revisionRemota = item.snapshot.revisionRemota;
     const epoch = generacion;
-    item.controller = new AbortController();
+    const controller = new AbortController();
+    item.controller = controller;
     // Instalar la promesa antes de emitir: otro consumidor puede consultar al notificarse.
-    item.pendiente = Promise.resolve().then(() => consultar(item.controller.signal)).then((datos) => {
+    const promesa = Promise.resolve().then(() => {
+        if (controller.signal.aborted) throw cancelacion();
+        return consultar(controller.signal);
+    }).then((datos) => {
         if (epoch !== generacion || entradas.get(ruta) !== item || !permitido(ruta)) throw cancelacion();
         if (version !== item.version) {
             if (item.snapshot.datos === undefined) throw cancelacion();
@@ -165,17 +207,24 @@ export function consultarLista(ruta, consultar, { signal, forzar = false } = {})
     }).catch((error) => {
         if (epoch === generacion && entradas.get(ruta) === item && version === item.version && permitido(ruta)) {
             if (error.status === 401 || error.status === 403) {
-                rechazados.add(ruta);
-                retirar(ruta);
+                const recurso = recursoBase(ruta);
+                rechazados.add(recurso);
+                for (const consulta of consultasDe(recurso)) retirar(consulta);
+                busquedas.delete(recurso);
+                paginas.delete(recurso);
+                emitir(recurso);
                 if (typeof window !== "undefined") window.dispatchEvent(new Event("pizzerp:session-check"));
             }
             else if (error.name !== "AbortError") publicar(ruta, { error });
         }
         throw error;
     }).finally(() => {
-        item.pendiente = null;
-        if (entradas.get(ruta) === item) publicar(ruta, { consultando: false });
+        if (item.pendiente === promesa) {
+            item.pendiente = null;
+            if (entradas.get(ruta) === item) publicar(ruta, { consultando: false });
+        }
     });
+    item.pendiente = promesa;
     publicar(ruta, { consultando: true });
     return esperar(item.pendiente, signal);
 }
@@ -188,9 +237,12 @@ export function actualizarLista(ruta, actualizar) {
     publicar(ruta, { datos, error: null, actualizado: Date.now() });
 }
 export function invalidarLista(ruta) {
-    if (!entradas.has(ruta) || !permitido(ruta)) return;
-    entrada(ruta).version++;
-    publicar(ruta, { actualizado: 0, error: null });
+    const consultas = ruta.includes("?") ? [ruta] : consultasDe(ruta);
+    for (const consulta of consultas) {
+        if (!entradas.has(consulta) || !permitido(consulta)) continue;
+        entrada(consulta).version++;
+        publicar(consulta, { actualizado: 0, error: null });
+    }
 }
 
 const modulosCrud = {
@@ -202,7 +254,7 @@ const modulosCrud = {
 export function invalidarAvisoCrud(modulo) {
     const principal = modulosCrud[modulo];
     if (!principal) return [];
-    const rutas = [principal, ...(relaciones[principal] ?? [])];
+    const rutas = [principal, ...(relaciones[principal] ?? [])].flatMap(consultasDe);
     return rutas.filter(ruta => {
         if (!entradas.has(ruta) || !permitido(ruta)) return false;
         entrada(ruta).version++;
@@ -233,14 +285,29 @@ export function confirmarLista(ruta, metodo, respuesta, epoch) {
     const [campo, id, orden] = entidades[match[1]];
     const confirmado = recurso === "/api/users" && respuesta[campo]
         ? usuarioListadoPublico(respuesta[campo]) : respuesta[campo];
+    // Retiene las consultas hasta completar invalidación y reemplazo de filas.
+    const paginadas = consultasDe(recurso).filter(ruta => ruta.includes("?"));
+    const refrescosPrevios = new Map(paginadas.map(consulta => [consulta, leerLista(consulta).refrescoPendiente]));
+    for (const consulta of paginadas) publicar(consulta, { refrescoPendiente: true });
     // Una respuesta puntual no significa que se haya recibido el listado completo.
     if (leerLista(recurso).datos !== undefined && (confirmado || metodo === "DELETE")) {
         actualizarLista(recurso, (datos) => {
             const resto = datos.filter((item) => String(item[id]) !== String(confirmado?.[id] ?? match[2]));
             return (confirmado ? [...resto, confirmado] : resto).sort((a, b) => String(a[orden]).localeCompare(String(b[orden])));
         });
-    } else invalidarLista(recurso);
+    } else if (entradas.has(recurso)) invalidarLista(recurso);
+    // Una mutación puntual no permite calcular límites, búsqueda ni totales del servidor.
+    // Conserva filas confirmadas y reconcilia todas las variantes paginadas.
+    for (const consulta of paginadas) {
+        invalidarLista(consulta);
+        const contenido = leerLista(consulta).datos;
+        if (!contenido?.datos || (!confirmado && metodo !== "DELETE")) continue;
+        publicar(consulta, { datos: { ...contenido, datos: contenido.datos
+            .filter(item => metodo !== "DELETE" || String(item[id]) !== String(match[2]))
+            .map(item => confirmado && String(item[id]) === String(confirmado[id]) ? confirmado : item) } });
+    }
     for (const relacionado of relaciones[recurso] ?? []) invalidarLista(relacionado);
+    for (const consulta of paginadas) publicar(consulta, { refrescoPendiente: refrescosPrevios.get(consulta) });
     if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("pizzerp:list-changed", {
             detail: { rutas: [recurso, ...(relaciones[recurso] ?? [])] },

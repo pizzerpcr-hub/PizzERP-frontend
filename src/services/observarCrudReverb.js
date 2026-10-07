@@ -2,6 +2,7 @@ import { puede } from "../constants/roles.js";
 import { identidadListasSesion, invalidarAvisoCrud, publicarAvisosCrud } from "./listasSesion.js";
 
 const modulos = ["usuarios", "roles", "categorias", "productos", "ingredientes", "combos"];
+const conexionesEstablecidas = new WeakSet();
 
 export function crearSincronizadorCrud({ programar = setTimeout, cancelar = clearTimeout } = {}) {
     const identidad = identidadListasSesion();
@@ -36,7 +37,20 @@ export function observarCrudReverb({ echo, usuario, temporizadores }) {
     const canales = modulos.filter(modulo => puede(usuario, modulo, "ver"))
         .map(modulo => `crud.usuario.${usuario.id_usuario}.${modulo}`);
     for (const nombre of canales) echo.private(nombre).listen(".crud.changed", sincronizador.recibir);
+    const conexion = echo.connector?.pusher?.connection;
+    if (conexion?.state === "connected") conexionesEstablecidas.add(conexion);
+    const conectado = () => {
+        const primera = !conexionesEstablecidas.has(conexion);
+        conexionesEstablecidas.add(conexion);
+        if (primera) return;
+        // Recupera avisos perdidos: visibles se reconcilian y ocultas quedan invalidadas.
+        for (const modulo of modulos) {
+            if (puede(usuario, modulo, "ver")) sincronizador.recibir({ modulo, accion: "updated" });
+        }
+    };
+    conexion?.bind("connected", conectado);
     return () => {
+        conexion?.unbind("connected", conectado);
         sincronizador.detener();
         for (const nombre of canales) echo.leave(nombre);
     };

@@ -36,18 +36,26 @@ export const obtenerLista = (ruta, clave, mensaje, signal, opciones = {}) => con
     return Array.isArray(data[clave]) ? data[clave] : [];
 }, { ...opciones, signal });
 
-export const obtenerPaginaTabla = async (ruta, clave, pagina, busqueda, signal) => {
-    const parametros = new URLSearchParams({ page: String(pagina), search: busqueda.trim() });
-    const response = await fetch(`${ruta}?${parametros}`, {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-        signal,
-    });
-    const data = await leerRespuesta(response, "No fue posible cargar el listado.");
-    return {
-        datos: Array.isArray(data[clave]) ? data[clave] : [],
-        paginacion: data.paginacion,
-    };
+export const rutaPaginaTabla = (ruta, pagina, busqueda, parametrosExtra = {}) => {
+    const parametros = new URLSearchParams({ ...parametrosExtra, page: String(pagina), search: busqueda.trim() });
+    parametros.sort();
+    return `${ruta}?${parametros}`;
+};
+
+export const obtenerPaginaTabla = (ruta, clave, pagina, busqueda, signal, opciones = {}) => {
+    const consulta = rutaPaginaTabla(ruta, pagina, busqueda, opciones.parametros);
+    return consultarLista(consulta, async signalCompartida => {
+        const response = await fetch(consulta, {
+            credentials: "include",
+            headers: { Accept: "application/json" },
+            signal: signalCompartida,
+        });
+        const data = await leerRespuesta(response, "No fue posible cargar el listado.");
+        return {
+            datos: Array.isArray(data[clave]) ? data[clave] : [],
+            paginacion: data.paginacion,
+        };
+    }, { ...opciones, signal });
 };
 
 export const enviarMutacion = async (ruta, metodo, datos, mensaje) => {

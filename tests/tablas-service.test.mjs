@@ -1,6 +1,9 @@
-import { test } from "node:test";
+import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { obtenerPaginaTabla } from "../src/services/catalogoService.js";
+import { sincronizarListasSesion } from "../src/services/listasSesion.js";
+beforeEach(() => sincronizarListasSesion({ id_usuario: 1, estado: "ACTIVO", permisos: { productos: { ver: true } } }));
+afterEach(() => sincronizarListasSesion(null));
 
 test("la consulta de tabla solicita la página y búsqueda al servidor", async () => {
     const fetchAnterior = globalThis.fetch;
@@ -19,7 +22,8 @@ test("la consulta de tabla solicita la página y búsqueda al servidor", async (
 
         assert.equal(solicitud.ruta, "/api/products?page=2&search=pizza");
         assert.equal(solicitud.opciones.credentials, "include");
-        assert.equal(solicitud.opciones.signal, controller.signal);
+        assert.ok(solicitud.opciones.signal instanceof AbortSignal);
+        assert.notEqual(solicitud.opciones.signal, controller.signal);
         assert.deepEqual(resultado.datos, [{ id_producto: 11, nombre: "Pizza" }]);
         assert.equal(resultado.paginacion.totalElementos, 21);
     } finally {
