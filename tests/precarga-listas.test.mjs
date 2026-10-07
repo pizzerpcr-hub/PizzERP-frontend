@@ -10,7 +10,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 beforeEach(() => { sincronizarListasSesion(null); sincronizarListasSesion(cuenta); });
 afterEach(() => sincronizarListasSesion(null));
 
-test("la precarga consulta solo catálogos de formularios y evita descargar tablas completas", async () => {
+test("la precarga consulta una página por módulo y catálogos separados, sin descargar tablas completas", async () => {
     const fetchAnterior = globalThis.fetch;
     const llamadas = [];
     globalThis.fetch = async (ruta) => {
@@ -21,14 +21,15 @@ test("la precarga consulta solo catálogos de formularios y evita descargar tabl
     };
     try {
         await precargarListas(cuenta, "/panel/usuarios");
-        assert.equal(llamadas.length, 4);
-        assert.deepEqual(new Set(llamadas), new Set([
+        assert.equal(llamadas.length, 10);
+        assert.deepEqual(new Set(llamadas.filter(ruta => !ruta.includes("?"))), new Set([
             "/api/users/roles", "/api/products/categorias",
             "/api/products/ingredientes", "/api/combos/productos",
         ]));
-        assert.equal(llamadas[0], "/api/users/roles");
+        assert.equal(llamadas[0], "/api/users?page=1&search=");
+        assert.equal(llamadas.filter(ruta => ruta.includes("?page=1&search=")).length, 6);
         await precargarListas(cuenta, "/panel/productos");
-        assert.equal(llamadas.length, 4);
+        assert.equal(llamadas.length, 10);
     } finally { globalThis.fetch = fetchAnterior; }
 });
 

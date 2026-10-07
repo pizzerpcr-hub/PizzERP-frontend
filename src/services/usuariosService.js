@@ -1,20 +1,8 @@
 import { confirmarLista, consultarLista, usuarioListadoPublico, versionListasSesion } from "./listasSesion.js";
 import { cabecerasSocketReverb } from "./socketReverb.js";
 import { notificarInactividad } from "./notificarInactividad.js";
-
-const obtenerCookie = (nombre) => {
-    const cookies = document.cookie.split(";");
-
-    for (const cookie of cookies) {
-        const [clave, valor] = cookie.trim().split("=");
-
-        if (clave === nombre) {
-            return decodeURIComponent(valor);
-        }
-    }
-
-    return null;
-};
+import { solicitarConCsrf } from "./csrfSesion.js";
+import { iniciarAccionLista } from "./listasSesion.js";
 
 const leerRespuesta = async (response) => {
     const data = await response.json().catch(() => ({}));
@@ -35,22 +23,6 @@ const obtenerMensajeError = (data, mensajePredeterminado) => {
     return primerError || data.message || mensajePredeterminado;
 };
 
-const solicitarCsrf = async () => {
-    const response = await fetch("/sanctum/csrf-cookie", {
-        method: "GET",
-        credentials: "include",
-        headers: {
-            Accept: "application/json",
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("No fue posible iniciar la conexión segura.");
-    }
-
-    return obtenerCookie("XSRF-TOKEN");
-};
-
 /**
  * Envía una escritura autenticada y conserva los errores de validación por campo.
  * @param {string} ruta - Ruta de la API.
@@ -66,35 +38,35 @@ const enviarMutacion = async (
     mensajePredeterminado
 ) => {
     const epoch = versionListasSesion();
-    const xsrfToken = await solicitarCsrf();
-    const response = await fetch(ruta, {
-        method: metodo,
-        credentials: "include",
-        headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            "X-XSRF-TOKEN": xsrfToken,
-            ...cabecerasSocketReverb(),
-        },
-        body: JSON.stringify(datos),
-    });
-    const data = await leerRespuesta(response);
+    const terminar = iniciarAccionLista();
+    try {
+        const response = await solicitarConCsrf(ruta, {
+            method: metodo,
+            credentials: "include",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+                ...cabecerasSocketReverb(),
+            },
+            body: JSON.stringify(datos),
+        });
+        const data = await leerRespuesta(response);
 
-    if (!response.ok) {
-        const error = new Error(
-            obtenerMensajeError(data, mensajePredeterminado)
-        );
+        if (!response.ok) {
+            const error = new Error(
+                obtenerMensajeError(data, mensajePredeterminado)
+            );
 
-        if (response.status === 422) {
-            error.status = response.status;
-            error.errors = data.errors;
+            if (response.status === 422) {
+                error.status = response.status;
+                error.errors = data.errors;
+            }
+
+            throw error;
         }
-
-        throw error;
-    }
-
-    confirmarLista(ruta, metodo, data, epoch);
-    return data;
+        confirmarLista(ruta, metodo, data, epoch);
+        return data;
+    } finally { terminar(); }
 };
 
 export const registrarUsuario = async (usuarioNuevo) => {

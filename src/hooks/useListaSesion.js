@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import {
     actualizarLista, guardarBusqueda, leerBusqueda, leerLista, listaDesactualizada,
-    suscribirLista, VIGENCIA_LISTAS_MS, puedeConsultarLista, registrarListaVisible,
+    suscribirLista, puedeConsultarLista, registrarListaVisible,
 } from "../services/listasSesion.js";
 
 export function useListaSesion(ruta, consultar, { habilitado = true, pausado = false } = {}) {
@@ -11,9 +11,10 @@ export function useListaSesion(ruta, consultar, { habilitado = true, pausado = f
         return () => { montado.current = false; };
     }, []);
     const vigente = useCallback(() => montado.current && puedeConsultarLista(ruta), [ruta]);
+    const leerSnapshot = useCallback(() => leerLista(ruta), [ruta]);
     const snapshot = useSyncExternalStore(
         useCallback((callback) => suscribirLista(ruta, callback), [ruta]),
-        useCallback(() => leerLista(ruta), [ruta]),
+        leerSnapshot, leerSnapshot,
     );
     const recargar = useCallback((forzar = true) => consultar(undefined, { forzar }), [consultar]);
     useEffect(() => habilitado ? registrarListaVisible(ruta) : undefined, [habilitado, ruta]);
@@ -26,22 +27,20 @@ export function useListaSesion(ruta, consultar, { habilitado = true, pausado = f
         if (!habilitado) return undefined;
         let detenido = false;
         let pendiente = false;
-        const revisar = async (forzar = false) => {
+        const revisar = async () => {
             if (detenido || pendiente || pausado || document.visibilityState === "hidden") return;
             pendiente = true;
             try {
                 // AuthContext es el único observador de sesión. Laravel autoriza cada GET.
-                if (!detenido && puedeConsultarLista(ruta) && !leerLista(ruta).refrescoPendiente && (forzar || listaDesactualizada(leerLista(ruta)))) await recargar(forzar);
+                if (!detenido && puedeConsultarLista(ruta) && !leerLista(ruta).refrescoPendiente && listaDesactualizada(leerLista(ruta))) await recargar(false);
             } catch { /* El snapshot conserva datos y expone el error de GET para reintentar. */ }
             finally { pendiente = false; }
         };
-        const trasVerificacion = (evento) => void revisar(evento.detail?.forzar === true);
-        const alReconectar = () => void revisar(true);
-        const timer = window.setInterval(alReconectar, VIGENCIA_LISTAS_MS);
+        // Una revisión de acceso no invalida listas; Reverb administra sus cambios y reconexiones.
+        const trasVerificacion = () => void revisar();
         window.addEventListener("pizzerp:session-verified", trasVerificacion);
         return () => {
             detenido = true;
-            window.clearInterval(timer);
             window.removeEventListener("pizzerp:session-verified", trasVerificacion);
         };
     }, [habilitado, pausado, ruta, recargar]);
@@ -62,10 +61,11 @@ export function useListaSesion(ruta, consultar, { habilitado = true, pausado = f
 }
 
 export function useBusquedaLista(ruta) {
-    const [busqueda, setBusqueda] = useState(() => leerBusqueda(ruta));
-    const cambiar = (texto) => {
-        guardarBusqueda(ruta, texto);
-        setBusqueda(texto);
-    };
+    const leer = useCallback(() => leerBusqueda(ruta), [ruta]);
+    const busqueda = useSyncExternalStore(
+        useCallback(callback => suscribirLista(ruta, callback), [ruta]),
+        leer, leer,
+    );
+    const cambiar = texto => guardarBusqueda(ruta, texto);
     return [busqueda, cambiar];
 }

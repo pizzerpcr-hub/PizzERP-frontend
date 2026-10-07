@@ -586,6 +586,23 @@
     .module-page .management-card td:nth-child(2),
     .module-page .management-card td:last-child { grid-column: 1 / -1; }
 
+    /* Las celdas de una tarjeta no conservan porcentajes de columnas de tabla. */
+    .module-page .management-table .management-card > td {
+        width: auto;
+        max-width: none;
+        word-break: normal;
+        overflow-wrap: break-word;
+    }
+
+    .module-page.combos-page .management-card > td:nth-child(3),
+    .module-page.combos-page .management-card > td:nth-child(5) {
+        grid-column: 1 / -1;
+    }
+
+    .module-page.productos-page .management-card .productos-description {
+        max-width: none;
+    }
+
     .module-page .management-card td::before {
         content: attr(data-label);
         display: block;
@@ -614,6 +631,7 @@
 }
 
 @media (max-width: 600px) {
+    .module-page .management-table .management-card { grid-template-columns: 1fr; }
     .module-page .management-header .management-primary { width: 100%; }
     .module-page .management-panel { padding: 16px 14px; }
     .module-page .management-header .eyebrow { font-size: 16px; }

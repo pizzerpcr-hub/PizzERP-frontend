@@ -1,6 +1,7 @@
 import {
     useCallback,
     useEffect,
+    useEffectEvent,
     useRef,
     useState,
 } from "react";
@@ -168,6 +169,8 @@ export function AuthProvider({ children }) {
         return promise;
     }, [aceptarUsuario, cerrarPorPermisos, confirmarAcceso, consultasSesion]);
 
+    const verificarAccesoEvento = useEffectEvent(() => verificarAcceso());
+
     // La consulta periódica respalda la notificación inmediata por WebSocket.
     useEffect(() => {
         if (
@@ -178,7 +181,7 @@ export function AuthProvider({ children }) {
         }
 
         return observarSesion({
-            consultar: verificarAcceso,
+            consultar: () => verificarAccesoEvento(),
             actualizar: (actual, forzar) => {
                 if (actual) window.dispatchEvent(new CustomEvent("pizzerp:session-verified", { detail: { forzar } }));
             },
@@ -186,8 +189,6 @@ export function AuthProvider({ children }) {
     }, [
         usuario?.id_usuario,
         cerrandoSesion,
-        cerrarPorPermisos,
-        verificarAcceso,
     ]);
 
     const revisarTrasEvento = useCallback((opciones = {}) => {
@@ -202,14 +203,27 @@ export function AuthProvider({ children }) {
         }).catch(() => {});
     }, [consultasSesion, verificarAcceso]);
 
+    const revisarAccesoEvento = useEffectEvent(opciones => revisarTrasEvento(opciones));
+    const revocarAccesoEvento = useEffectEvent(() => cerrarPorPermisos());
+    const accesoVigenteEvento = useEffectEvent(() => accesoVigente());
+    const idUsuarioCanal = usuario?.id_usuario;
+    const idRolCanal = usuario?.rol_id;
+    const estadoUsuarioCanal = usuario?.estado;
+
     // Los cambios de acceso invalidan cualquier revisión anterior al evento.
     useEffect(() => {
-        if (!usuario?.id_usuario || cerrandoSesion || !echo) {
+        if (!idUsuarioCanal || estadoUsuarioCanal !== "ACTIVO" || cerrandoSesion || !echo) {
             return undefined;
         }
 
-        return observarAccesoReverb({ echo, usuario, revisar: revisarTrasEvento, revocar: cerrarPorPermisos, accesoVigente });
-    }, [usuario, cerrandoSesion, cerrarPorPermisos, revisarTrasEvento, accesoVigente]);
+        return observarAccesoReverb({
+            echo,
+            usuario: { id_usuario: idUsuarioCanal, rol_id: idRolCanal },
+            revisar: opciones => revisarAccesoEvento(opciones),
+            revocar: () => revocarAccesoEvento(),
+            accesoVigente: () => accesoVigenteEvento(),
+        });
+    }, [idUsuarioCanal, idRolCanal, estadoUsuarioCanal, cerrandoSesion]);
 
     useEffect(() => {
         if (!usuario?.id_usuario || cerrandoSesion) return undefined;
