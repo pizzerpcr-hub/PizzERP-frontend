@@ -115,7 +115,7 @@ function Productos() {
                     <div><h2 id="productosTitle">Productos registrados</h2>
                         <p>Consulta y administra los productos disponibles en el menú.</p></div>
                     <PageSearch className="page-search--header" label="Buscar producto" id="buscarProducto"
-                        placeholder="Buscar por nombre, código o categoría..." value={busqueda} maxLength={100}
+                        placeholder="Buscar por nombre, código, categoría, tamaño o precio..." value={busqueda} maxLength={100}
                         onChange={(event) => setBusqueda(event.target.value)} />
                 </div>
                 <div className="table-wrap">

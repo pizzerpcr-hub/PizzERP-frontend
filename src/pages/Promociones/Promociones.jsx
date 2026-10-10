@@ -91,7 +91,7 @@ function Combos() {
             <h2>Combos registrados</h2><p>Consulta y administra los combos y promociones disponibles.</p>
         </div>
         <PageSearch className="page-search--header" label="Buscar combo" id="buscarCombo"
-            placeholder="Buscar por nombre o código..." value={busqueda} maxLength={100} onChange={(event) => setBusqueda(event.target.value)} /></div>
+            placeholder="Buscar por nombre, código o precio..." value={busqueda} maxLength={100} onChange={(event) => setBusqueda(event.target.value)} /></div>
             <div className="table-wrap"><table className="management-table">
                 <thead><tr><th>Código</th><th>Combo</th><th>Productos</th><th>Precio</th><th>Vigencia</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>{cargando ? <tr><td colSpan="7"><LoadingSpinner label="Cargando combos" /></td></tr>
