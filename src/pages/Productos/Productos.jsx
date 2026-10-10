@@ -120,11 +120,11 @@ function Productos() {
                 </div>
                 <div className="table-wrap">
                     <table className="management-table">
-                        <thead><tr><th>Código</th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <thead><tr><th>Código</th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Tamaño</th><th>Estado</th><th>Acciones</th></tr></thead>
                         <tbody>
-                            {cargando ? <tr><td colSpan="6" className="management-loading"><LoadingSpinner label="Cargando productos" /></td></tr>
-                                : error && productos.length === 0 ? <tr><td colSpan="6" className="module-empty">No fue posible mostrar los productos.</td></tr>
-                                    : productos.length === 0 ? <tr><td colSpan="6" className="module-empty">
+                            {cargando ? <tr><td colSpan="7" className="management-loading"><LoadingSpinner label="Cargando productos" /></td></tr>
+                                : error && productos.length === 0 ? <tr><td colSpan="7" className="module-empty">No fue posible mostrar los productos.</td></tr>
+                                    : productos.length === 0 ? <tr><td colSpan="7" className="module-empty">
                                     {busqueda ? "No se encontraron productos." : "No hay productos registrados."}
                                 </td></tr> : productos.map((producto) => <tr className="management-card" key={producto.id_producto}>
                                     <td data-label="Código"><strong>{producto.codigo_producto}</strong></td>
@@ -132,6 +132,9 @@ function Productos() {
                                         <span className="productos-description">{producto.descripcion}</span></div></td>
                                     <td data-label="Categoría">{producto.categoria?.nombre ?? "Sin categoría"}</td>
                                     <td data-label="Precio"><strong>{formatoPrecio.format(Number(producto.precio))}</strong></td>
+                                    <td data-label="Tamaño"><span className="productos-status">
+                                        {producto.tamano ? producto.tamano.charAt(0).toUpperCase() + producto.tamano.slice(1) : "No aplica"}
+                                    </span></td>
                                     <td data-label="Estado"><span className={`productos-status ${producto.estado === "ACTIVO" ? "active" : "inactive"}`}>
                                         {producto.estado === "ACTIVO" ? "Activo" : "Inactivo"}</span></td>
                                     <td data-label="Acciones"><div className="productos-table-actions">

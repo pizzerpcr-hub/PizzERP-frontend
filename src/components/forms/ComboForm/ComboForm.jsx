@@ -125,8 +125,9 @@ function ComboForm({ combo = null, productosDisponibles = [], onGuardar, onCerra
                     <div className="form-group"><label htmlFor="descripcionCombo">Descripción</label>
                         <textarea id="descripcionCombo" rows="3" value={datos.descripcion}
                             onChange={(event) => cambiar("descripcion", event.target.value)} maxLength={50} disabled={enviando}
-                            placeholder="Describe el combo o promoción..." />
-                        <small className="field-character-count">{datos.descripcion.length}/50</small></div>
+                            placeholder="Describe el combo o promoción..." aria-invalid={Boolean(erroresCampos.descripcion)} />
+                        <small className="field-character-count">{datos.descripcion.length}/50</small>
+                        {erroresCampos.descripcion && <p className="required-field-message" role="alert">{erroresCampos.descripcion}</p>}</div>
                     <div className="form-grid">
                         <div className="form-group"><label htmlFor="precioCombo">Precio del combo</label>
                             <div className={`price-input${erroresCampos.precio ? " invalid" : ""}`}><span>₡</span><input id="precioCombo" name="precio" type="number" min="0.01" step="0.01"
@@ -164,7 +165,7 @@ function ComboForm({ combo = null, productosDisponibles = [], onGuardar, onCerra
                                 onChange={(event) => cambiarProducto(indice, "id_producto", event.target.value)}>
                                 <option value="">{!catalogoDisponible && !errorProductos ? "Cargando productos…" : "Seleccionar producto"}</option>
                                 {productosDisponibles.map((disponible) => <option key={disponible.id_producto} value={disponible.id_producto}>
-                                    {disponible.codigo_producto} · {disponible.nombre}
+                                    {disponible.codigo_producto} · {disponible.nombre}{disponible.tamano ? ` · ${disponible.tamano}` : ""}
                                 </option>)}
                                 {combo?.productos?.filter((anterior) => anterior.estado !== "ACTIVO" && String(anterior.id_producto) === producto.id_producto)
                                     .map((anterior) => <option key={anterior.id_producto} value={anterior.id_producto} disabled>
@@ -184,6 +185,7 @@ function ComboForm({ combo = null, productosDisponibles = [], onGuardar, onCerra
                                     setErroresCampos({});
                                 }}>×</button>
                         </div>)}</div>
+                    {erroresCampos.productos && <p className="required-field-message" role="alert">{erroresCampos.productos}</p>}
                 </div>
                 {hayCambios && <div className="form-group change-reason"><label htmlFor="motivoCombo">Motivo de la modificación</label>
                     <p>Indica por qué realizaste este cambio. El motivo quedará registrado en la bitácora.</p>

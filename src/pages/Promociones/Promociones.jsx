@@ -99,7 +99,7 @@ function Combos() {
                         : combos.map((combo) => <tr className="management-card" key={combo.id_combo}>
                             <td data-label="Código"><strong>{combo.codigo_combo}</strong></td>
                             <td data-label="Combo"><strong>{combo.nombre}</strong><span className="combo-description">{combo.descripcion}</span></td>
-                            <td data-label="Productos">{combo.productos.map((producto) => `${producto.nombre} ×${producto.cantidad}`).join(", ")}</td>
+                            <td data-label="Productos">{combo.productos.map((producto) => `${producto.nombre}${producto.tamano ? ` (${producto.tamano})` : ""} ×${producto.cantidad}`).join(", ")}</td>
                             <td data-label="Precio">{formatoPrecio.format(Number(combo.precio))}</td>
                             <td data-label="Vigencia">{combo.fecha_inicio} — {combo.fecha_fin}</td>
                             <td data-label="Estado">{combo.estado === "ACTIVO" ? "Activo" : "Inactivo"}</td>
