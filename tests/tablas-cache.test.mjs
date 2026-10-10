@@ -21,6 +21,35 @@ beforeEach(() => {
 });
 afterEach(() => { globalThis.fetch = fetchAnterior; globalThis.window = windowAnterior; sincronizarListasSesion(null); });
 
+for (const recurso of ["products", "combos"]) test(`${recurso}: filtro de precio comparte GET, conserva navegación y se reconcilia por eventos y guardado`, async () => {
+    const ruta = `/api/${recurso}`, clave = modulos[recurso], filtro = " ₡3 500,00 ";
+    const llamadas = [];
+    globalThis.fetch = async url => { llamadas.push(url); return Response.json(contenido(clave, [{ precio: "3500.00" }], 13)); };
+    guardarBusqueda(ruta, "2000"); guardarPagina(ruta, "2000", 3);
+    guardarBusqueda(ruta, filtro); assert.equal(leerPagina(ruta), 1);
+    const [a, b] = await Promise.all([
+        obtenerPaginaTabla(ruta, clave, 1, filtro), obtenerPaginaTabla(ruta, clave, 1, filtro.trim()),
+    ]);
+    assert.equal(a, b); assert.equal(llamadas.length, 1);
+    assert.equal(new URL(llamadas[0], "http://localhost").searchParams.get("search"), filtro.trim());
+    guardarPagina(ruta, filtro, 2);
+    await obtenerPaginaTabla(ruta, clave, leerPagina(ruta), leerBusqueda(ruta));
+    await obtenerPaginaTabla(ruta, clave, leerPagina(ruta), leerBusqueda(ruta));
+    assert.equal(llamadas.length, 2);
+    publicarAvisosCrud(invalidarAvisoCrud(clave));
+    await obtenerPaginaTabla(ruta, clave, leerPagina(ruta), leerBusqueda(ruta));
+    assert.equal(llamadas.length, 3);
+    confirmarLista(`${ruta}/5`, "PATCH", {}, versionListasSesion());
+    globalThis.fetch = async url => {
+        llamadas.push(url); return Response.json(contenido(clave, [], 10));
+    };
+    const resultado = await obtenerPaginaTabla(ruta, clave, leerPagina(ruta), leerBusqueda(ruta));
+    assert.equal(llamadas.length, 4); assert.equal(resultado.paginacion.totalElementos, 10);
+    assert.deepEqual(resultado.datos, []);
+    assert.equal(leerBusqueda(ruta), filtro); assert.equal(leerPagina(ruta), 2);
+    guardarBusqueda(ruta, ""); assert.equal(leerPagina(ruta), 1);
+});
+
 for (const [recurso, clave] of Object.entries(modulos)) {
     test(`${recurso}: volver conserva búsqueda/página y consulta vigente sin otro GET`, async () => {
         const ruta = `/api/${recurso}`;
@@ -34,6 +63,66 @@ for (const [recurso, clave] of Object.entries(modulos)) {
         assert.equal(leerPagina(ruta), 2);
         assert.equal(leerBusqueda(ruta), " dato ");
         guardarBusqueda(ruta, "otra"); assert.equal(leerPagina(ruta), 1);
+        guardarPagina(ruta, "otra", 3);
+        guardarBusqueda(ruta, ""); assert.equal(leerPagina(ruta), 1);
+        const fechaAnterior = Date.now;
+        Date.now = () => fechaAnterior() + 86400000;
+        try {
+            await obtenerPaginaTabla(ruta, clave, 2, " dato ");
+            assert.equal(llamadas, 1, "el tiempo no invalida el listado");
+        } finally { Date.now = fechaAnterior; }
+    });
+
+    test(`${recurso}: búsquedas rápidas comparten GET y respuestas antiguas no cambian la consulta visible`, async () => {
+        const ruta = `/api/${recurso}`, pendientes = new Map(); let llamadas = 0;
+        globalThis.fetch = url => { llamadas++; return new Promise(resolve => pendientes.set(url, resolve)); };
+        guardarBusqueda(ruta, "ca");
+        const vieja = obtenerPaginaTabla(ruta, clave, 1, "ca"); await tick();
+        guardarBusqueda(ruta, "cafe");
+        const nueva = obtenerPaginaTabla(ruta, clave, 1, "cafe");
+        const compartida = obtenerPaginaTabla(ruta, clave, 1, " cafe "); await tick();
+        assert.equal(llamadas, 2);
+        pendientes.get(rutaPaginaTabla(ruta, 1, "cafe"))(Response.json(contenido(clave, [{ nombre: "Actual" }], 1)));
+        assert.equal(await nueva, await compartida);
+        pendientes.get(rutaPaginaTabla(ruta, 1, "ca"))(Response.json(contenido(clave, [{ nombre: "Anterior" }], 21)));
+        await vieja;
+        const visible = leerLista(rutaPaginaTabla(ruta, leerPagina(ruta), leerBusqueda(ruta)));
+        assert.equal(visible.datos.datos[0].nombre, "Actual");
+        assert.equal(visible.datos.paginacion.totalElementos, 1);
+    });
+
+    test(`${recurso}: eventos agrupados y cambio propio reconcilian el filtro; búsquedas ocultas quedan invalidadas`, async () => {
+        const ruta = `/api/${recurso}`, visible = rutaPaginaTabla(ruta, 1, "cafe"), oculta = rutaPaginaTabla(ruta, 2, "otra");
+        guardarBusqueda(ruta, "cafe");
+        globalThis.fetch = async () => Response.json(contenido(clave, [{ nombre: "Inicial" }], 12));
+        await obtenerPaginaTabla(ruta, clave, 1, "cafe");
+        await obtenerPaginaTabla(ruta, clave, 2, "otra");
+        let publicar, llamadas = 0;
+        globalThis.fetch = async url => {
+            llamadas++; assert.equal(url, visible);
+            return Response.json(contenido(clave, [], 0));
+        };
+        const sincronizador = crearSincronizadorCrud({ programar: callback => { publicar = callback; return 1; }, cancelar: () => {} });
+        const retirar = suscribirLista(visible, () => {
+            const snapshot = leerLista(visible);
+            if (!snapshot.consultando && !snapshot.refrescoPendiente && listaDesactualizada(snapshot)) {
+                void obtenerPaginaTabla(ruta, clave, 1, "cafe");
+            }
+        });
+        try {
+            sincronizador.recibir({ modulo: clave, accion: "updated" });
+            sincronizador.recibir({ modulo: clave, accion: "status" });
+            publicar(); await tick(); await tick();
+            assert.equal(llamadas, 1);
+            assert.equal(leerLista(oculta).actualizado, 0);
+            assert.equal(leerLista(visible).datos.paginacion.totalElementos, 0);
+            confirmarLista(`${ruta}/5/estado`, "PATCH", {}, versionListasSesion());
+            await tick(); await tick();
+            await obtenerPaginaTabla(ruta, clave, 1, leerBusqueda(ruta));
+            assert.equal(llamadas, 2);
+            assert.equal(leerBusqueda(ruta), "cafe");
+            assert.deepEqual(leerLista(visible).datos.datos, []);
+        } finally { retirar(); sincronizador.detener(); }
     });
 }
 
@@ -194,4 +283,100 @@ test("GET inicial descartado por evento no deja consultando permanente y permite
     globalThis.fetch = async () => Response.json(contenido("productos", [{ nombre: "Actual" }]));
     await obtenerPaginaTabla("/api/products", "productos", 1, "");
     assert.equal(leerLista(key).datos.datos[0].nombre, "Actual");
+});
+
+test("Productos: cambiar búsqueda y limpiarla vuelve a página uno; navegar reutiliza filas, filtro y página", async () => {
+    const ruta = "/api/products", llamadas = [];
+    globalThis.fetch = async url => {
+        llamadas.push(url);
+        const params = new URL(url, "http://localhost").searchParams;
+        const pagina = Number(params.get("page"));
+        const filtrado = params.get("search") !== "";
+        return Response.json({ productos: [{ id_producto: filtrado ? 21 : 1, nombre: filtrado ? "Pizza Familiar" : "Producto" }],
+            paginacion: { pagina, totalPaginas: filtrado ? 2 : 3, totalElementos: filtrado ? 12 : 23 } });
+    };
+    guardarBusqueda(ruta, "mediana"); guardarPagina(ruta, "mediana", 3);
+    guardarBusqueda(ruta, " familiar ");
+    assert.equal(leerPagina(ruta), 1);
+    const datos = await obtenerPaginaTabla(ruta, "productos", leerPagina(ruta), leerBusqueda(ruta));
+    assert.equal(datos.paginacion.totalElementos, 12);
+    assert.equal(llamadas[0], "/api/products?page=1&search=familiar");
+    guardarPagina(ruta, leerBusqueda(ruta), 2);
+    await obtenerPaginaTabla(ruta, "productos", leerPagina(ruta), leerBusqueda(ruta));
+    const antes = llamadas.length;
+    await obtenerPaginaTabla(ruta, "productos", leerPagina(ruta), leerBusqueda(ruta));
+    assert.equal(llamadas.length, antes);
+    assert.equal(leerBusqueda(ruta), " familiar "); assert.equal(leerPagina(ruta), 2);
+    guardarBusqueda(ruta, ""); assert.equal(leerPagina(ruta), 1);
+    const completa = await obtenerPaginaTabla(ruta, "productos", leerPagina(ruta), leerBusqueda(ruta));
+    assert.equal(completa.paginacion.totalElementos, 23);
+    assert.equal(completa.paginacion.totalPaginas, 3);
+});
+
+test("Productos: escritura rápida comparte GET idénticos y una respuesta anterior no cambia el filtro visible", async () => {
+    const ruta = "/api/products", respuestas = new Map(), llamadas = [];
+    globalThis.fetch = url => {
+        llamadas.push(url);
+        return new Promise(resolve => respuestas.set(url, resolve));
+    };
+    guardarBusqueda(ruta, "per");
+    const vieja = obtenerPaginaTabla(ruta, "productos", 1, leerBusqueda(ruta)); await tick();
+    guardarBusqueda(ruta, "personal");
+    const actual = obtenerPaginaTabla(ruta, "productos", 1, leerBusqueda(ruta));
+    const compartida = obtenerPaginaTabla(ruta, "productos", 1, " personal "); await tick();
+    assert.equal(llamadas.length, 2);
+    respuestas.get(rutaPaginaTabla(ruta, 1, "personal"))(Response.json(contenido("productos", [{ nombre: "Actual" }], 1)));
+    assert.equal(await actual, await compartida);
+    respuestas.get(rutaPaginaTabla(ruta, 1, "per"))(Response.json(contenido("productos", [{ nombre: "Anterior" }], 20)));
+    await vieja;
+    assert.equal(leerBusqueda(ruta), "personal");
+    const visible = leerLista(rutaPaginaTabla(ruta, leerPagina(ruta), leerBusqueda(ruta)));
+    assert.equal(visible.datos.datos[0].nombre, "Actual");
+    assert.equal(visible.datos.paginacion.totalElementos, 1);
+});
+
+for (const modulo of ["productos", "categorias"]) test(`Productos: evento de ${modulo} reconcilia el filtro visible e invalida búsquedas ocultas`, async () => {
+    const ruta = "/api/products", visible = rutaPaginaTabla(ruta, 2, "personal"), oculta = rutaPaginaTabla(ruta, 1, "familiar");
+    globalThis.fetch = async () => Response.json(contenido("productos", [{ id_producto: 21, nombre: "Antes" }], 12));
+    await obtenerPaginaTabla(ruta, "productos", 2, "personal");
+    await obtenerPaginaTabla(ruta, "productos", 1, "familiar");
+    guardarBusqueda(ruta, "personal"); guardarPagina(ruta, "personal", 2);
+    let publicar, llamadas = 0;
+    globalThis.fetch = async url => {
+        llamadas++; assert.equal(url, visible);
+        return Response.json(contenido("productos", [{ id_producto: 22, nombre: "Resultado actualizado" }], 11));
+    };
+    const sincronizador = crearSincronizadorCrud({ programar: callback => { publicar = callback; return 1; }, cancelar: () => {} });
+    const retirar = suscribirLista(visible, () => {
+        const snapshot = leerLista(visible);
+        if (!snapshot.consultando && !snapshot.refrescoPendiente && listaDesactualizada(snapshot)) {
+            void obtenerPaginaTabla(ruta, "productos", 2, "personal");
+        }
+    });
+    try {
+        sincronizador.recibir({ modulo, accion: "updated" });
+        sincronizador.recibir({ modulo, accion: "status" });
+        assert.equal(llamadas, 0); publicar(); await tick(); await tick();
+        assert.equal(llamadas, 1);
+        assert.equal(leerLista(visible).datos.paginacion.totalElementos, 11);
+        assert.equal(leerLista(oculta).actualizado, 0);
+        assert.equal(leerBusqueda(ruta), "personal"); assert.equal(leerPagina(ruta), 2);
+    } finally { retirar(); sincronizador.detener(); }
+});
+
+test("Productos: cambio propio confirmado reconcilia resultados y totales sin perder el filtro", async () => {
+    const ruta = "/api/products", key = rutaPaginaTabla(ruta, 1, "personal");
+    guardarBusqueda(ruta, "personal");
+    globalThis.fetch = async () => Response.json({ productos: [{ id_producto: 5, nombre: "Pizza", tamano: "personal" }],
+        paginacion: { pagina: 1, totalPaginas: 1, totalElementos: 1 } });
+    await obtenerPaginaTabla(ruta, "productos", 1, "personal");
+    confirmarLista("/api/products/5", "PATCH", { producto: { id_producto: 5, nombre: "Pizza", tamano: "mediana" } }, versionListasSesion());
+    assert.equal(leerLista(key).actualizado, 0);
+    globalThis.fetch = async url => {
+        assert.equal(url, key);
+        return Response.json({ productos: [], paginacion: { pagina: 1, totalPaginas: 1, totalElementos: 0 } });
+    };
+    const resultado = await obtenerPaginaTabla(ruta, "productos", 1, leerBusqueda(ruta));
+    assert.deepEqual(resultado.datos, []); assert.equal(resultado.paginacion.totalElementos, 0);
+    assert.equal(leerBusqueda(ruta), "personal");
 });

@@ -5,13 +5,13 @@ import react from "@vitejs/plugin-react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-let server, ProductoForm, ComboForm, UsuarioForm, CategoriaForm, Productos, categoryHooks;
+let server, ProductoForm, ComboForm, UsuarioForm, CategoriaForm, Productos, Combos, categoryHooks;
 before(async () => {
     server = await createServer({ configFile: false, envDir: false, cacheDir: "node_modules/.vite-dependencias-test", plugins: [
         {
             name: "category-validation-test-hooks",
             transform(source, id) {
-                if (id.replaceAll("\\", "/").endsWith("/pages/Productos/Productos.jsx")) {
+                if (["/pages/Productos/Productos.jsx", "/pages/Promociones/Promociones.jsx"].some(path => id.replaceAll("\\", "/").endsWith(path))) {
                     return source.replace('from "react"', 'from "virtual:category-test-hooks"')
                         .replace('from "../../context/useAuth.js"', 'from "virtual:product-page-test"')
                         .replace('from "../../hooks/useListaSesion.js"', 'from "virtual:product-page-test"')
@@ -24,10 +24,10 @@ before(async () => {
             resolveId(id) { if (["virtual:category-test-hooks", "virtual:product-page-test"].includes(id)) return "\0" + id; },
             load(id) {
                 if (id === "\0virtual:product-page-test") return `
-                    export const useAuth = () => ({ usuario: { permisos: { productos: { ver: true } } } });
+                    export const useAuth = () => ({ usuario: { permisos: { productos: { ver: true }, combos: { ver: true } } } });
                     export const useBusquedaLista = () => ['', () => {}];
                     export const useListaSesion = () => ({ datos: [], disponible: true, cargaCompleta: true, cargando: false, recargar: () => {} });
-                    export const useTablaPaginada = () => ({ datos: [
+                    export const useTablaPaginada = ruta => ({ datos: ruta === '/api/combos' ? [] : [
                         { id_producto: 1, codigo_producto: 'PIZ-001', nombre: 'Pizza', precio: '2000.00', tamano: 'personal', estado: 'ACTIVO' },
                         { id_producto: 2, codigo_producto: 'BEB-001', nombre: 'Bebida', precio: '500.00', tamano: '', estado: 'ACTIVO' }
                     ], paginacion: null, cargando: false, recargar: () => {} });
@@ -54,6 +54,7 @@ before(async () => {
     CategoriaForm = (await server.ssrLoadModule("/src/components/forms/CategoriaForm/CategoriaForm.jsx")).default;
     categoryHooks = await server.ssrLoadModule("virtual:category-test-hooks");
     Productos = (await server.ssrLoadModule("/src/pages/Productos/Productos.jsx")).default;
+    Combos = (await server.ssrLoadModule("/src/pages/Promociones/Promociones.jsx")).default;
 });
 after(async () => { await server?.close(); });
 const render = (component, props) => {
@@ -70,9 +71,19 @@ const findElements = (element, predicate) => {
         ...[element.props?.children].flat(Infinity).flatMap(child => findElements(child, predicate))];
 };
 
+test("buscador de Combos anuncia precio en el mismo control sin agregar filtros", () => {
+    categoryHooks.reset();
+    const tree = categoryHooks.render(Combos, {});
+    const searches = findElements(tree, element => element.props?.id === "buscarCombo");
+    assert.equal(searches.length, 1);
+    assert.match(renderToStaticMarkup(searches[0]), /placeholder="Buscar por nombre, código o precio\.\.\."/);
+});
+
 test("listado muestra Tamaño como campo independiente después de Precio y No aplica cuando está vacío", () => {
     categoryHooks.reset();
     const tree = categoryHooks.render(Productos, {});
+    const search = findElements(tree, element => element.props?.id === "buscarProducto")[0];
+    assert.match(renderToStaticMarkup(search), /placeholder="Buscar por nombre, código, categoría, tamaño o precio\.\.\."/);
     const rows = findElements(tree, element => element.type === "tr" && element.props.className === "management-card");
     assert.equal(rows.length, 2);
     const price = findElements(rows[0], element => element.props?.["data-label"] === "Precio")[0];
