@@ -102,6 +102,7 @@ function UsuariosTable({
                                         </td>
 
                                         {mostrarAcciones && <td role="cell" className="user-actions">
+                                            <span className="usuario-field-label user-actions-label" aria-hidden="true">Acciones</span>
                                             {puedeEditar && <button
                                                 type="button"
                                                 onClick={() =>

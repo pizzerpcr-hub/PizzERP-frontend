@@ -739,7 +739,13 @@
         border-top: 1px solid #e4dfda;
     }
 
+    .usuario-card .user-actions-label {
+        flex: 0 0 100%;
+        margin-bottom: 0;
+    }
+
     .usuario-card .user-actions button {
+        flex: 1 1 140px;
         min-height: 40px;
         max-width: 100%;
         margin: 0;
@@ -755,5 +761,9 @@
 @media (max-width: 420px) {
     .usuarios-table .usuario-card {
         grid-template-columns: 1fr;
+    }
+
+    .usuario-card .user-actions button {
+        flex-basis: 100%;
     }
 }

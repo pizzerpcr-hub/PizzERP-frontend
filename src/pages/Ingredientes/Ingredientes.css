@@ -1097,12 +1097,16 @@ select {
     }
 
     .ingredients-page .ingredient-card .table-actions {
+        justify-content: flex-start;
         flex-wrap: wrap;
         gap: 8px;
     }
 
     .ingredients-page .ingredient-card .table-actions .action-button {
+        flex: 1 1 140px;
         min-height: 40px;
+        margin: 0;
+        white-space: normal;
     }
 
     .ingredients-page .ingredients-table .module-empty {
