@@ -53,7 +53,7 @@
 
 @media (min-width: 1101px) {
     .roles-page .roles-actions { flex-wrap: nowrap; }
-    .roles-page .management-table :is(th, td):last-child { min-width: 190px; }
+    .roles-page .management-table :is(th.actions-column, td[data-label="Acciones"]) { min-width: 190px; }
     .roles-page .table-wrap { overflow-x: auto; }
 }
 

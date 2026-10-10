@@ -37,6 +37,8 @@ function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar, pue
         motivo: "",
     });
     const [errores, setErrores] = useState({});
+    const categoriaSeleccionada = categorias.find((categoria) => Number(categoria.id_categoria) === Number(datos.id_categoria))
+        ?? (Number(producto?.id_categoria) === Number(datos.id_categoria) ? producto?.categoria : null);
     const [errorGeneral, setErrorGeneral] = useState("");
     const [avisoCampos, setAvisoCampos] = useState(false);
     const [ingredientes, setIngredientes] = useState(() => producto?.ingredientes?.map((ingrediente) => ({
@@ -186,7 +188,10 @@ function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar, pue
                     </label>
                     <div className="productos-form-grid">
                         <label>Categoría
-                            <select name="id_categoria" value={datos.id_categoria} required onChange={(event) => cambiar("id_categoria", event.target.value)}
+                            <select name="id_categoria" value={datos.id_categoria} required onChange={(event) => {
+                                setDatos((actual) => ({ ...actual, id_categoria: event.target.value, tamano: "" }));
+                                setErrores((actual) => ({ ...actual, id_categoria: undefined, tamano: undefined }));
+                            }}
                                 data-mensaje-obligatorio="Selecciona una categoría."
                                 disabled={!categoriasDisponibles || enviando} aria-busy={!categoriasDisponibles && !errorCategorias}
                                 aria-invalid={Boolean(errores.id_categoria)}>
@@ -210,17 +215,19 @@ function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar, pue
                         </label>
                     </div>
                     <div className="productos-form-grid">
-                        <label>Tamaño de pizza
+                        {categoriaSeleccionada?.usa_tamanos && <label>Tamaño
                             <select name="tamano" value={datos.tamano} disabled={enviando}
+                                required={!(producto && !producto.tamano && Number(producto.id_categoria) === Number(datos.id_categoria))}
+                                data-mensaje-obligatorio="Selecciona un tamaño."
                                 onChange={(event) => cambiar("tamano", event.target.value)} aria-invalid={Boolean(errores.tamano)}>
-                                <option value="">No aplica</option>
-                                <option value="personal">Personal</option>
-                                <option value="mediana">Mediana</option>
-                                <option value="grande">Grande</option>
-                                <option value="familiar">Familiar</option>
+                                <option value="">{producto && !producto.tamano && Number(producto.id_categoria) === Number(datos.id_categoria)
+                                    ? "Sin tamaño (producto existente)" : "Seleccionar tamaño"}</option>
+                                {(categoriaSeleccionada.tamanos ?? []).map((tamano) => <option key={tamano} value={tamano}>
+                                    {tamano.charAt(0).toUpperCase() + tamano.slice(1)}
+                                </option>)}
                             </select>
                             {errores.tamano && <span className="required-field-message" role="alert">{errores.tamano}</span>}
-                        </label>
+                        </label>}
                         <label>Estado
                             <select value={datos.estado} onChange={(event) => cambiar("estado", event.target.value)}>
                                 <option value="ACTIVO">Activo</option>

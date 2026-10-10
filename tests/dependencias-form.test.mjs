@@ -30,7 +30,9 @@ before(async () => {
                     export const useTablaPaginada = ruta => ({ datos: ruta === '/api/combos' ? [] : [
                         { id_producto: 1, codigo_producto: 'PIZ-001', nombre: 'Pizza', precio: '2000.00', tamano: 'personal', estado: 'ACTIVO' },
                         { id_producto: 2, codigo_producto: 'BEB-001', nombre: 'Bebida', precio: '500.00', tamano: '', estado: 'ACTIVO' }
-                    ], paginacion: null, cargando: false, recargar: () => {} });
+                    ], paginacion: { pagina: 1, totalPaginas: 1, totalElementos: 2, inicio: 1, fin: 2,
+                        cambiarPagina: () => {} }, orden: { campo: '', direccion: 'asc' },
+                        cambiarOrden: () => {}, establecerOrden: () => {}, cargando: false, recargar: () => {} });
                 `;
                 if (id !== "\0virtual:category-test-hooks") return;
                 return `
@@ -94,7 +96,7 @@ test("listado muestra Tamaño como campo independiente después de Precio y No a
         ["Código", "Producto", "Categoría", "Precio", "Tamaño", "Estado", "Acciones"]);
     const size = findElements(rows[0], element => element.props?.["data-label"] === "Tamaño")[0];
     assert.match(renderToStaticMarkup(size), /<span class="productos-status">Personal<\/span>/);
-    assert.equal(findElements(tree, element => element.type === "th").length, 7);
+    assert.equal((renderToStaticMarkup(tree).match(/<th\b/g) ?? []).length, 7);
     const name = findElements(rows[0], element => element.props?.["data-label"] === "Producto")[0];
     assert.doesNotMatch(renderToStaticMarkup(name), /Personal|personal|Tamaño/);
     const plain = findElements(rows[1], element => element.props?.["data-label"] === "Tamaño")[0];
@@ -180,7 +182,8 @@ test("producto con tamaño se reabre, edita precio y conserva valores ante dupli
     let payload;
     let cierres = 0;
     const props = {
-        categorias: [{ id_categoria: 1, nombre: "Categoría editable" }],
+        categorias: [{ id_categoria: 1, nombre: "Categoría editable", usa_tamanos: true,
+            tamanos: ["personal", "mediana", "grande", "familiar"] }],
         producto: { id_producto: 5, id_categoria: 1, nombre: "Pizza", descripcion: "Receta", precio: "25.00",
             tamano: "mediana", estado: "ACTIVO", ingredientes: [{ id_ingrediente: 1, nombre: "Harina", unidad_medida: "kg",
                 pivot: { cantidad_requerida: "250.00", unidad_medida: "g" } }], codigo_producto: "PIZ-005" },
@@ -192,6 +195,7 @@ test("producto con tamaño se reabre, edita precio y conserva valores ante dupli
     };
     const tree = () => categoryHooks.render(ProductoForm, props);
     const field = name => findElements(tree(), element => element.props?.name === name)[0];
+    assert.equal(field("motivo"), undefined);
     assert.equal(field("tamano").props.value, "mediana");
     assert.equal(field("precio").props.value, "25.00");
     const opciones = findElements(field("tamano"), element => element.type === "option").map(element => element.props.value);
@@ -225,10 +229,10 @@ test("producto con tamaño se reabre, edita precio y conserva valores ante dupli
 
 test("producto existente sin tamaño no recibe una variante ni un precio inventados", () => {
     const html = render(ProductoForm, {
-        categorias: [{ id_categoria: 1, nombre: "Pizzas" }],
+        categorias: [{ id_categoria: 1, nombre: "Pizzas", usa_tamanos: false, tamanos: [] }],
         producto: { nombre: "Pizza antigua", descripcion: "Existente", precio: "73.25", id_categoria: 1, estado: "ACTIVO", ingredientes: [] },
     });
-    assert.match(html, /value="" selected="">No aplica/);
+    assert.doesNotMatch(html, /name="tamano"/);
     assert.match(html, /value="73.25"/);
 });
 
@@ -304,6 +308,32 @@ for (const conDatos of [false, true]) {
         assert.deepEqual({ envios, cierres }, { envios: 0, cierres: 0 });
     });
 }
+
+test("el motivo de categoría aparece solo cuando cambian los datos que se guardarán", () => {
+    categoryHooks.reset();
+    const props = {
+        categoria: { nombre: "Pizzas", codigo_categoria: "PIZ", descripcion: "Pizzas artesanales",
+            estado: "ACTIVO", usa_tamanos: false, tamanos: [] },
+        onGuardar: async () => {}, onCerrar: () => {},
+    };
+    const tree = () => categoryHooks.render(CategoriaForm, props);
+    const field = name => findElements(tree(), element => element.props?.name === name)[0];
+    const hasMotivo = () => Boolean(field("motivo"));
+    const toggle = checked => findElements(tree(), element => element.props?.type === "checkbox")[0]
+        .props.onChange({ target: { checked } });
+
+    assert.equal(hasMotivo(), false);
+    toggle(true);
+    findElements(tree(), element => element.props?.className === "add-item-button")[0].props.onClick();
+    field("tamanos.0").props.onChange({ target: { value: "Grande" } });
+    assert.equal(hasMotivo(), true);
+    toggle(false);
+    assert.equal(hasMotivo(), false);
+    field("nombre").props.onChange({ target: { value: "Pizzas nuevas" } });
+    assert.equal(hasMotivo(), true);
+    field("nombre").props.onChange({ target: { value: "Pizzas" } });
+    assert.equal(hasMotivo(), false);
+});
 
 test("registro de producto renderiza las categorías del catálogo activo sin opción inactiva heredada", () => {
     const html = render(ProductoForm, {

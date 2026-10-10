@@ -36,7 +36,6 @@ export const MODULOS_GESTION = [
 
 export const obtenerRutaInicio = (usuario) => {
     if (String(usuario?.estado ?? "").trim().toUpperCase() !== "ACTIVO") return null;
-    if (puede(usuario, "usuarios")) return "/panel/usuarios";
     const primero = MODULOS_GESTION.find(([modulo]) => puede(usuario, modulo));
     if (primero) return `/panel/${primero[0]}`;
     if (puede(usuario, "pedidos")) return "/caja";

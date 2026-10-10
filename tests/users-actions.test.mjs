@@ -15,7 +15,7 @@ after(async () => { await server?.close(); });
 
 const tabla = (props = {}) => renderToStaticMarkup(createElement(UsuariosTable, {
     usuarios: [{ id_usuario: 2, nombre_completo: "Cuenta de prueba", nombre_usuario: "PRUEBA", rol: "CAJA", estado: "ACTIVO" }],
-    usuariosPendientes: new Set(), onEditar: () => {}, onCambiarEstado: () => {}, ...props,
+    usuariosPendientes: new Set(), onEditar: () => {}, onCambiarEstado: () => {}, mostrarAcciones: true, ...props,
 }));
 
 test("permiso confirmado muestra Modificar aunque el catálogo siga pendiente", () => {
@@ -34,8 +34,9 @@ test("el catálogo listo conserva el texto simple de Modificar", () => {
 });
 
 test("datos disponibles nunca habilitan una acción sin permiso", () => {
-    const html = tabla({ puedeEditar: false, edicionDisponible: true, puedeCambiarEstado: () => false });
-    assert.doesNotMatch(html, /Modificar|Activar|Desactivar|<button/);
+    const html = tabla({ puedeEditar: false, edicionDisponible: true, puedeCambiarEstado: () => false, mostrarAcciones: false });
+    assert.doesNotMatch(html, /Modificar|Activar|Desactivar/);
+    assert.doesNotMatch(html, /Acciones|user-actions/);
 });
 
 test("fallo del catálogo no impide abrir el formulario", () => {
@@ -74,6 +75,23 @@ test("roles disponibles permiten guardar y una actualización no borra las opcio
     const html = formulario({ rolesDisponibles, estadoCatalogoRoles: "cargando" });
     assert.match(html, /value="CAJA" selected=""/);
     assert.match(html, /type="submit" disabled=""/);
+});
+
+test("el correo electrónico aparece como opcional solo para Administrador", () => {
+    assert.doesNotMatch(formulario(), /id="formEmail"/);
+    const html = formulario({ usuarioInicial: { nombre_completo: "Administradora", nombre_usuario: "ADMIN",
+        rol: "ADMINISTRADOR", correo_electronico: "admin@ejemplo.com" } });
+    const campo = html.match(/<input id="formEmail"[^>]*>/)?.[0];
+    assert.match(campo, /type="email"/);
+    assert.match(campo, /value="admin@ejemplo.com"/);
+    assert.doesNotMatch(campo, /required=""/);
+});
+
+test("modificar usuario no muestra el aviso de obligatorios con los campos completos", () => {
+    const html = formulario({ avisoCamposObligatorios: true,
+        nota: "Deja la contraseña vacía para conservar la actual.", rolesDisponibles: [{ nombre: "CAJA" }] });
+    assert.match(html, /Deja la contraseña vacía para conservar la actual\./);
+    assert.doesNotMatch(html, /Completa los campos obligatorios\./);
 });
 
 test("una mutación pendiente mantiene ambas acciones deshabilitadas", () => {

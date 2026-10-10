@@ -22,6 +22,16 @@ test('los permisos efectivos, no el nombre del rol, determinan el acceso', () =>
     assert.equal(obtenerRutaInicio({rol:'AUDITOR',estado:'ACTIVO',permisos:{productos:{ver:true}}}), '/panel/productos');
 });
 
+test('el inicio abre la primera opción disponible del sidebar', () => {
+    const usuario = {rol:'ADMINISTRADOR',estado:'ACTIVO',permisos:{
+        usuarios:{ver:true}, categorias:{ver:true}, productos:{ver:true},
+    }};
+    const primeraOpcion = obtenerItemsNavegacion(usuario).find(item => !item.disabled);
+
+    assert.equal(primeraOpcion.ruta, '/panel/categorias');
+    assert.equal(obtenerRutaInicio(usuario), primeraOpcion.ruta);
+});
+
 for (const rol of ['ADMINISTRADOR','TI','CAJA','COCINA','RENOMBRADO']) {
     test(`${rol} no aporta privilegios ni navegación por su nombre`, () => {
         const usuario = {rol,estado:'ACTIVO',permisos:{}};

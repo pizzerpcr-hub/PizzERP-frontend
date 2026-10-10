@@ -8,7 +8,8 @@ function ModificarUsuarioForm(props) {
             titulo="Modificar usuario"
             etiquetaContrasena="Contraseña (opcional)"
             placeholderContrasena="Sin cambios"
-            nota="Completa los campos obligatorios. Deja la contraseña vacía para conservar la actual."
+            nota="Deja la contraseña vacía para conservar la actual."
+            avisoCamposObligatorios
             textoGuardar="Guardar cambios"
             contrasenaObligatoria={false}
         />

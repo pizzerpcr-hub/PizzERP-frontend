@@ -7,6 +7,7 @@ import {
 const formularioVacio = {
     nombre_completo: "",
     nombre_usuario: "",
+    correo_electronico: "",
     contrasena: "",
     confirmar_contrasena: "",
     rol: "",
@@ -23,6 +24,7 @@ const obtenerDatosIniciales = (usuarioInicial) => ({
     ...formularioVacio,
     nombre_completo: usuarioInicial?.nombre_completo ?? "",
     nombre_usuario: usuarioInicial?.nombre_usuario?.toUpperCase() ?? "",
+    correo_electronico: usuarioInicial?.correo_electronico ?? "",
     rol: normalizarRol(usuarioInicial?.rol),
 });
 
@@ -36,6 +38,7 @@ function UsuarioFormBase({
     etiquetaContrasena,
     placeholderContrasena,
     nota,
+    avisoCamposObligatorios = false,
     textoGuardar,
     contrasenaObligatoria,
     onSubmit,
@@ -44,22 +47,31 @@ function UsuarioFormBase({
     notificacion = null,
 }) {
     const dialogRef = useRef(null);
+    const confirmacionCorreoRef = useRef(null);
     const envioEnCursoRef = useRef(false);
     const [mostrarPassword, setMostrarPassword] = useState(false);
     const [avisosCampo, setAvisosCampo] = useState({});
     const [errorNota, setErrorNota] = useState(false);
+    const [confirmarSinCorreo, setConfirmarSinCorreo] = useState(false);
     const [formData, setFormData] = useState(() =>
         obtenerDatosIniciales(usuarioInicial),
     );
     const mostrarRequisitosContrasena =
         !requisitosContrasena.every(({ cumple }) => cumple(formData.contrasena));
     const rolesListos = estadoCatalogoRoles === "listo" && rolesDisponibles.length > 0;
-    const hayCambios = Boolean(usuarioInicial) && (
-        formData.nombre_completo.trim() !== usuarioInicial.nombre_completo ||
-        formData.nombre_usuario.trim().toUpperCase() !== usuarioInicial.nombre_usuario ||
-        normalizarRol(formData.rol) !== normalizarRol(usuarioInicial.rol) ||
-        Boolean(formData.contrasena)
+    const esAdministrador = normalizarRol(formData.rol) === "ADMINISTRADOR";
+    const tieneCambios = (datos) => Boolean(usuarioInicial) && (
+        datos.nombre_completo.trim() !== usuarioInicial.nombre_completo ||
+        datos.nombre_usuario.trim().toUpperCase() !== usuarioInicial.nombre_usuario ||
+        (normalizarRol(datos.rol) === "ADMINISTRADOR" && datos.correo_electronico.trim().toLowerCase() !== (usuarioInicial.correo_electronico ?? "").toLowerCase()) ||
+        normalizarRol(datos.rol) !== normalizarRol(usuarioInicial.rol) ||
+        Boolean(datos.contrasena)
     );
+    const hayCambios = tieneCambios(formData);
+    const faltanCamposObligatorios = (datos) =>
+        !datos.nombre_completo.trim() || !datos.nombre_usuario.trim() || !datos.rol ||
+        (Boolean(datos.contrasena) && !datos.confirmar_contrasena.trim()) ||
+        (tieneCambios(datos) && !datos.motivo.trim());
 
     const todosVacios = (datos) =>
         Object.values(datos).every((valor) => !valor.trim());
@@ -76,6 +88,10 @@ function UsuarioFormBase({
             else if (datos.confirmar_contrasena !== contrasena) errores.confirmar_contrasena = "Las contraseñas no coinciden.";
         }
         if (!datos.rol) errores.rol = "Selecciona un rol.";
+        if (normalizarRol(datos.rol) === "ADMINISTRADOR") {
+            const correo = datos.correo_electronico.trim();
+            if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) errores.correo_electronico = "Ingresa un correo electrónico válido.";
+        }
         if (hayCambios && !datos.motivo.trim()) errores.motivo = "El motivo de la modificación es obligatorio.";
         return errores;
     };
@@ -100,11 +116,24 @@ function UsuarioFormBase({
     }, []);
 
     useEffect(() => {
+        const dialog = confirmacionCorreoRef.current;
+        if (confirmarSinCorreo && dialog && !dialog.open) {
+            dialog.showModal();
+        } else if (!confirmarSinCorreo && dialog?.open) {
+            dialog.close();
+        }
+        return () => {
+            if (dialog?.open) dialog.close();
+        };
+    }, [confirmarSinCorreo]);
+
+    useEffect(() => {
         /* eslint-disable react-hooks/set-state-in-effect */
         setFormData(obtenerDatosIniciales(usuarioInicial));
         setMostrarPassword(false);
         setAvisosCampo({});
         setErrorNota(false);
+        setConfirmarSinCorreo(false);
         /* eslint-enable react-hooks/set-state-in-effect */
         envioEnCursoRef.current = false;
     }, [usuarioInicial]);
@@ -124,7 +153,13 @@ function UsuarioFormBase({
             ...(name === "contrasena" && !value ? { confirmar_contrasena: "" } : {}),
         };
         setFormData(datosActualizados);
-        setErrorNota(false);
+        if (avisoCamposObligatorios) {
+            const campoVaciado = !value.trim() && ["nombre_completo", "nombre_usuario", "rol",
+                "confirmar_contrasena", "motivo"].includes(name);
+            setErrorNota((actual) => faltanCamposObligatorios(datosActualizados) && (actual || campoVaciado));
+        } else {
+            setErrorNota(false);
+        }
 
         if (errorNota && todosVacios(datosActualizados)) {
             setAvisosCampo({});
@@ -133,6 +168,7 @@ function UsuarioFormBase({
                 ...actuales,
                 [name]: null,
                 ...(name === "contrasena" ? { confirmar_contrasena: null } : {}),
+                ...(name === "rol" ? { correo_electronico: null } : {}),
             }));
         }
     };
@@ -151,39 +187,19 @@ function UsuarioFormBase({
         cerrarDialogo();
     };
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-
-        if (isSubmitting || envioEnCursoRef.current || !rolesListos) {
-            return;
-        }
-
-        if (todosVacios(formData)) {
-            setErrorNota(true);
-            setAvisosCampo({});
-            return;
-        }
-
-        const contrasena = formData.contrasena;
-        const errores = validarCampos(formData);
-
-        if (Object.keys(errores).length) {
-            setErrorNota(true);
-            mostrarErroresCampo(errores);
-            return;
-        }
-
-        setErrorNota(false);
-
+    const guardarUsuario = async (datos) => {
+        if (isSubmitting || envioEnCursoRef.current) return;
         const datosUsuario = {
-            nombre_completo: formData.nombre_completo.trim(),
-            nombre_usuario: formData.nombre_usuario.trim().toUpperCase(),
-            rol: normalizarRol(formData.rol),
-            ...(usuarioInicial ? { motivo: formData.motivo.trim() } : {}),
+            nombre_completo: datos.nombre_completo.trim(),
+            nombre_usuario: datos.nombre_usuario.trim().toUpperCase(),
+            rol: normalizarRol(datos.rol),
+            ...(normalizarRol(datos.rol) === "ADMINISTRADOR"
+                ? { correo_electronico: datos.correo_electronico.trim().toLowerCase() || null } : {}),
+            ...(usuarioInicial ? { motivo: datos.motivo.trim() } : {}),
         };
 
-        if (contrasena) {
-            datosUsuario.contrasena = contrasena;
+        if (datos.contrasena) {
+            datosUsuario.contrasena = datos.contrasena;
         }
 
         envioEnCursoRef.current = true;
@@ -199,10 +215,41 @@ function UsuarioFormBase({
         }
     };
 
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+
+        if (isSubmitting || envioEnCursoRef.current || !rolesListos) {
+            return;
+        }
+
+        if (todosVacios(formData)) {
+            setErrorNota(true);
+            setAvisosCampo({});
+            return;
+        }
+
+        const errores = validarCampos(formData);
+
+        if (Object.keys(errores).length) {
+            setErrorNota(!avisoCamposObligatorios || faltanCamposObligatorios(formData));
+            mostrarErroresCampo(errores);
+            return;
+        }
+
+        setErrorNota(false);
+        if (esAdministrador && !formData.correo_electronico.trim()) {
+            setConfirmarSinCorreo(true);
+            return;
+        }
+
+        await guardarUsuario(formData);
+    };
+
     return (
+        <>
         <dialog
             ref={dialogRef}
-            className="user-dialog"
+            className={`user-dialog${avisoCamposObligatorios ? " modificar-usuario-dialog" : ""}`}
             onCancel={handleCancel}
         >
             <form id="userForm" onSubmit={handleSubmit} noValidate>
@@ -414,11 +461,29 @@ function UsuarioFormBase({
                     )}
                 </div>
 
+                {esAdministrador && <div className="dialog-field">
+                    <label htmlFor="formEmail">Correo electrónico (opcional)</label>
+                    <input id="formEmail" name="correo_electronico" type="email"
+                        value={formData.correo_electronico} maxLength={254} onChange={handleChange}
+                        disabled={isSubmitting} autoComplete="email"
+                        placeholder="nombre@ejemplo.com"
+                        aria-invalid={Boolean(avisosCampo.correo_electronico)}
+                        aria-describedby={avisosCampo.correo_electronico ? "formEmailError" : undefined} />
+                    {avisosCampo.correo_electronico && <p id="formEmailError"
+                        className="dialog-message dialog-field-message visible" role="alert">
+                        {avisosCampo.correo_electronico.texto}
+                    </p>}
+                </div>}
+
                 <p
-                    className={`dialog-hint${errorNota ? " error" : ""}`}
-                    role={errorNota ? "alert" : undefined}
+                    className={`dialog-hint${errorNota && !avisoCamposObligatorios ? " error" : ""}`}
+                    role={errorNota && !avisoCamposObligatorios ? "alert" : undefined}
                 >
                     {nota}
+                    {avisoCamposObligatorios && errorNota && <span
+                        className="modificar-usuario-hint-second-line" role="alert">
+                        Completa los campos obligatorios.
+                    </span>}
                 </p>
 
                 {hayCambios && <div className="dialog-field change-reason">
@@ -455,6 +520,21 @@ function UsuarioFormBase({
                 </div>
             </form>
         </dialog>
+        {confirmarSinCorreo && <dialog ref={confirmacionCorreoRef} className="email-confirmation-dialog"
+            aria-labelledby="emailConfirmationTitle" aria-describedby="emailConfirmationDescription"
+            onCancel={(event) => { event.preventDefault(); setConfirmarSinCorreo(false); }}>
+            <h2 id="emailConfirmationTitle">Continuar sin correo electrónico</h2>
+            <p id="emailConfirmationDescription">
+                Este usuario no podrá recibir notificaciones ni alertas por correo electrónico. ¿Deseas continuar?
+            </p>
+            <div className="dialog-actions">
+                <button type="button" className="management-secondary"
+                    onClick={() => setConfirmarSinCorreo(false)}>Cancelar</button>
+                <button type="button" className="management-primary"
+                    onClick={() => { setConfirmarSinCorreo(false); void guardarUsuario(formData); }}>Aceptar</button>
+            </div>
+        </dialog>}
+        </>
     );
 }
 

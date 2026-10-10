@@ -11,6 +11,8 @@ import Paginacion from "../../components/common/Paginacion/Paginacion.jsx";
 import { actualizarProducto, cambiarEstadoProducto, obtenerCategoriasParaProducto, obtenerIngredientesParaProducto, registrarProducto } from "../../services/catalogoService.js";
 import { useBusquedaLista, useListaSesion } from "../../hooks/useListaSesion.js";
 import { useTablaPaginada } from "../../hooks/useTablaPaginada.js";
+import SortableHeader from "../../components/common/SortableHeader.jsx";
+import TableSortSelect from "../../components/common/TableSortSelect.jsx";
 
 const formatoPrecio = new Intl.NumberFormat("es-CR", {
     style: "currency", currency: "CRC", minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -19,8 +21,9 @@ const formatoPrecio = new Intl.NumberFormat("es-CR", {
 function Productos() {
     const { usuario } = useAuth();
     const puedeCambiarProductos = puede(usuario, "productos", "crear") || puede(usuario, "productos", "editar");
+    const mostrarAcciones = puede(usuario, "productos", "editar") || puede(usuario, "productos", "eliminar");
     const [busqueda, setBusqueda] = useBusquedaLista("/api/products");
-    const { datos: productos, paginacion, cargando, error: errorLista, recargar } = useTablaPaginada(
+    const { datos: productos, paginacion, cargando, error: errorLista, recargar, orden, cambiarOrden, establecerOrden } = useTablaPaginada(
         "/api/products", "productos", busqueda, puede(usuario, "productos"));
     const { datos: categorias, disponible: categoriasDisponibles, cargaCompleta: categoriasCargadas,
         cargando: cargandoCategorias, error: errorCategorias, recargar: recargarCategorias } = useListaSesion(
@@ -118,13 +121,26 @@ function Productos() {
                         placeholder="Buscar por nombre, código, categoría, tamaño o precio..." value={busqueda} maxLength={100}
                         onChange={(event) => setBusqueda(event.target.value)} />
                 </div>
+                <TableSortSelect orden={orden} onOrdenar={establecerOrden} opciones={[
+                    { campo: "codigo", label: "Código" }, { campo: "nombre", label: "Producto" },
+                    { campo: "categoria", label: "Categoría" }, { campo: "precio", label: "Precio", mayorAMenor: true },
+                    { campo: "tamano", label: "Tamaño" }, { campo: "estado", label: "Estado" },
+                ]} />
                 <div className="table-wrap">
                     <table className="management-table">
-                        <thead><tr><th>Código</th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Tamaño</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <thead><tr>
+                            <SortableHeader label="Código" campo="codigo" orden={orden} onOrdenar={cambiarOrden} />
+                            <SortableHeader label="Producto" campo="nombre" orden={orden} onOrdenar={cambiarOrden} />
+                            <SortableHeader label="Categoría" campo="categoria" orden={orden} onOrdenar={cambiarOrden} />
+                            <SortableHeader label="Precio" campo="precio" orden={orden} onOrdenar={cambiarOrden} direccionInicial="desc" />
+                            <SortableHeader label="Tamaño" campo="tamano" orden={orden} onOrdenar={cambiarOrden} />
+                            <SortableHeader label="Estado" campo="estado" orden={orden} onOrdenar={cambiarOrden} />
+                            {mostrarAcciones && <th>Acciones</th>}
+                        </tr></thead>
                         <tbody>
-                            {cargando ? <tr><td colSpan="7" className="management-loading"><LoadingSpinner label="Cargando productos" /></td></tr>
-                                : error && productos.length === 0 ? <tr><td colSpan="7" className="module-empty">No fue posible mostrar los productos.</td></tr>
-                                    : productos.length === 0 ? <tr><td colSpan="7" className="module-empty">
+                            {cargando ? <tr><td colSpan={mostrarAcciones ? 7 : 6} className="management-loading"><LoadingSpinner label="Cargando productos" /></td></tr>
+                                : error && productos.length === 0 ? <tr><td colSpan={mostrarAcciones ? 7 : 6} className="module-empty">No fue posible mostrar los productos.</td></tr>
+                                    : productos.length === 0 ? <tr><td colSpan={mostrarAcciones ? 7 : 6} className="module-empty">
                                     {busqueda ? "No se encontraron productos." : "No hay productos registrados."}
                                 </td></tr> : productos.map((producto) => <tr className="management-card" key={producto.id_producto}>
                                     <td data-label="Código"><strong>{producto.codigo_producto}</strong></td>
@@ -137,14 +153,14 @@ function Productos() {
                                     </span></td>
                                     <td data-label="Estado"><span className={`productos-status ${producto.estado === "ACTIVO" ? "active" : "inactive"}`}>
                                         {producto.estado === "ACTIVO" ? "Activo" : "Inactivo"}</span></td>
-                                    <td data-label="Acciones"><div className="productos-table-actions">
+                                    {mostrarAcciones && <td data-label="Acciones"><div className="productos-table-actions">
                                         {puede(usuario, "productos", "editar") && <button type="button" disabled={enviando} onClick={() => abrirFormulario(producto)}>Modificar</button>}
                                         {puede(usuario, "productos", producto.estado === "ACTIVO" ? "eliminar" : "editar") && <button type="button" disabled={enviando} onClick={() => {
                                             setErrorEstado("");
                                             setProductoSeleccionado(producto);
                                         }}>
                                             {producto.estado === "ACTIVO" ? "Desactivar" : "Activar"}</button>}
-                                    </div></td>
+                                    </div></td>}
                                 </tr>)}
                         </tbody>
                     </table>

@@ -7,18 +7,26 @@ function CategoriaForm({ categoria, enviando, onGuardar, onCerrar }) {
         codigo_categoria: categoria?.codigo_categoria ?? "",
         descripcion: categoria?.descripcion ?? "",
         estado: categoria?.estado ?? "ACTIVO",
+        usa_tamanos: categoria?.usa_tamanos ?? false,
+        tamanos: categoria?.tamanos ?? [],
         motivo: "",
     });
     const [errores, setErrores] = useState({});
     const [errorGeneral, setErrorGeneral] = useState("");
     const [avisoCampos, setAvisoCampos] = useState(false);
+    const tamanosActuales = datos.usa_tamanos
+        ? datos.tamanos.map((tamano) => tamano.trim().toLowerCase()) : [];
+    const tamanosOriginales = categoria?.usa_tamanos
+        ? (categoria.tamanos ?? []).map((tamano) => tamano.trim().toLowerCase()) : [];
     const hayCambios = Boolean(categoria) && (
         datos.nombre.trim() !== categoria.nombre ||
         datos.codigo_categoria.trim().toUpperCase() !== categoria.codigo_categoria ||
-        datos.descripcion.trim() !== categoria.descripcion
+        datos.descripcion.trim() !== categoria.descripcion ||
+        datos.usa_tamanos !== Boolean(categoria.usa_tamanos) ||
+        JSON.stringify(tamanosActuales) !== JSON.stringify(tamanosOriginales)
     );
     const hayDatos = [datos.nombre, datos.codigo_categoria, datos.descripcion, datos.motivo]
-        .some((valor) => valor.trim());
+        .some((valor) => valor.trim()) || datos.tamanos.some((tamano) => tamano.trim());
 
     const cambiar = (campo, valor) => {
         setDatos((actual) => ({ ...actual, [campo]: valor }));
@@ -34,12 +42,21 @@ function CategoriaForm({ categoria, enviando, onGuardar, onCerrar }) {
             return;
         }
         setErrorGeneral("");
+        if (datos.usa_tamanos) {
+            const tamanos = datos.tamanos.map((tamano) => tamano.trim().toLowerCase());
+            if (!tamanos.length || new Set(tamanos).size !== tamanos.length) {
+                setErrores({ tamanos: "Agrega tamaños distintos para esta categoría." });
+                return;
+            }
+        }
 
         try {
             await onGuardar({
                 nombre: datos.nombre.trim(),
                 codigo_categoria: datos.codigo_categoria.trim().toUpperCase(),
                 descripcion: datos.descripcion.trim(),
+                usa_tamanos: datos.usa_tamanos,
+                tamanos: datos.usa_tamanos ? datos.tamanos.map((tamano) => tamano.trim()) : [],
                 ...(!categoria && { estado: datos.estado }),
                 ...(categoria && { motivo: datos.motivo.trim() }),
             });
@@ -100,6 +117,40 @@ function CategoriaForm({ categoria, enviando, onGuardar, onCerrar }) {
                             <option value="INACTIVO">Inactiva</option>
                         </select>
                     </div>}
+                    <div className="form-group">
+                        <label className="category-sizes-toggle">
+                            <input type="checkbox" checked={datos.usa_tamanos} disabled={enviando}
+                                onChange={(event) => {
+                                    const activo = event.target.checked;
+                                    setDatos((actual) => ({ ...actual, usa_tamanos: activo }));
+                                    setErrores((actual) => ({ ...actual, tamanos: undefined }));
+                                }} />
+                            Esta categoría usa tamaños
+                        </label>
+                        {datos.usa_tamanos && <div className="category-sizes-list">
+                            {datos.tamanos.map((tamano, indice) => <div key={indice}>
+                                <div className="category-size-row">
+                                <input name={`tamanos.${indice}`} aria-label={`Tamaño ${indice + 1}`} value={tamano}
+                                    maxLength="50" required placeholder="Ej: Personal" disabled={enviando}
+                                    aria-invalid={Boolean(errores[`tamanos.${indice}`])}
+                                    data-mensaje-obligatorio={`Ingresa el tamaño ${indice + 1}.`}
+                                    onChange={(event) => {
+                                        const valor = event.target.value;
+                                        setDatos((actual) => ({ ...actual, tamanos: actual.tamanos.map((previo, posicion) =>
+                                            posicion === indice ? valor : previo) }));
+                                        setErrores((actual) => ({ ...actual, [`tamanos.${indice}`]: undefined, tamanos: undefined }));
+                                    }} />
+                                <button type="button" className="remove-item-button" aria-label={`Quitar tamaño ${indice + 1}`}
+                                    disabled={enviando} onClick={() => setDatos((actual) => ({ ...actual,
+                                        tamanos: actual.tamanos.filter((_, posicion) => posicion !== indice) }))}>×</button>
+                                </div>
+                                {errores[`tamanos.${indice}`] && <small className="required-field-message" role="alert">{errores[`tamanos.${indice}`]}</small>}
+                            </div>)}
+                            <button type="button" className="add-item-button" disabled={enviando || datos.tamanos.length >= 20}
+                                onClick={() => setDatos((actual) => ({ ...actual, tamanos: [...actual.tamanos, ""] }))}>+ Agregar tamaño</button>
+                        </div>}
+                        {errores.tamanos && <small className="required-field-message" role="alert">{errores.tamanos}</small>}
+                    </div>
                     {hayCambios && <div className="form-group change-reason">
                         <label htmlFor="motivoCategoria">Motivo de la modificación</label>
                         <p>Indica por qué realizaste este cambio. El motivo quedará registrado en la bitácora.</p>

@@ -1,1 +1,12 @@
 @import "../UsuarioFormBase.css";
+
+.modificar-usuario-hint-second-line {
+    display: block;
+    margin-top: 4px;
+    color: #a62c23;
+    font-weight: 600;
+}
+
+.modificar-usuario-dialog .dialog-message {
+    color: #6f625d;
+}

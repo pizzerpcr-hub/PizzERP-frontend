@@ -3,10 +3,13 @@ import {
     obtenerEtiquetaRol,
 } from "../../constants/roles.js";
 import LoadingSpinner from "../common/LoadingSpinner/LoadingSpinner.jsx";
+import SortableHeader from "../common/SortableHeader.jsx";
 
 function UsuariosTable({
     usuarios,
     cargando,
+    orden,
+    onOrdenar,
     hayBusqueda,
     idUsuarioActual,
     usuariosPendientes,
@@ -14,24 +17,25 @@ function UsuariosTable({
     onCambiarEstado,
     puedeEditar = true,
     puedeCambiarEstado = () => true,
+    mostrarAcciones = false,
 }) {
     return (
         <div className="table-wrap">
             <table className="usuarios-table" role="table" aria-label="Usuarios registrados">
                 <thead role="rowgroup">
                     <tr role="row">
-                        <th>Nombre Completo</th>
-                        <th>Usuario</th>
-                        <th>Rol Asignado</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
+                        <SortableHeader label="Nombre Completo" campo="nombre" orden={orden} onOrdenar={onOrdenar} />
+                        <SortableHeader label="Usuario" campo="usuario" orden={orden} onOrdenar={onOrdenar} />
+                        <SortableHeader label="Rol Asignado" campo="rol" orden={orden} onOrdenar={onOrdenar} />
+                        <SortableHeader label="Estado" campo="estado" orden={orden} onOrdenar={onOrdenar} />
+                        {mostrarAcciones && <th>Acciones</th>}
                     </tr>
                 </thead>
 
                 {cargando ? (
                     <tbody role="rowgroup">
                         <tr role="row">
-                            <td role="cell" colSpan="5" className="cargando-usuarios">
+                            <td role="cell" colSpan={mostrarAcciones ? 5 : 4} className="cargando-usuarios">
                                 <LoadingSpinner label="Cargando usuarios" />
                             </td>
                         </tr>
@@ -40,7 +44,7 @@ function UsuariosTable({
                     <tbody id="usersTable" role="rowgroup">
                         {usuarios.length === 0 ? (
                             <tr role="row">
-                                <td role="cell" colSpan="5" className="empty-row">
+                                <td role="cell" colSpan={mostrarAcciones ? 5 : 4} className="empty-row">
                                     {hayBusqueda
                                         ? "No se encontraron usuarios."
                                         : "No hay usuarios registrados."}
@@ -97,7 +101,7 @@ function UsuariosTable({
                                             </span>
                                         </td>
 
-                                        <td role="cell" className="user-actions">
+                                        {mostrarAcciones && <td role="cell" className="user-actions">
                                             {puedeEditar && <button
                                                 type="button"
                                                 onClick={() =>
@@ -126,7 +130,7 @@ function UsuariosTable({
                                                     ? "Desactivar"
                                                     : "Activar"}
                                             </button>}
-                                        </td>
+                                        </td>}
                                     </tr>
                                 );
                             })

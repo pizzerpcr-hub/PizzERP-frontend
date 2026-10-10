@@ -73,7 +73,7 @@
 .user-dialog .change-reason {
     display: grid;
     gap: 7px;
-    margin: 18px 0;
+    margin: 18px 0 6px;
     padding: 16px;
     border: 1px solid #e8e3df;
     border-left: 4px solid #d2b8aa;
@@ -315,6 +315,15 @@
 }
 .module-page .management-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px; white-space: nowrap; }
 .module-page .management-table th { padding: 11px 10px; border-bottom: 1px solid #d9dee7; background: #faf9f7; color: #756860; font-size: 14px; font-weight: 600; text-align: left; vertical-align: middle; }
+.module-page .table-sort-button { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: inherit; text-align: left; cursor: pointer; }
+.module-page .table-sort-button:hover { color: #a33e16; }
+.module-page .table-sort-button:focus-visible { outline: 2px solid #a33e16; outline-offset: 3px; border-radius: 2px; }
+.module-page .table-sort-indicator { color: #a33e16; font-size: 11px; }
+.module-page .table-sort-mobile { display: none; }
+@media (max-width: 1100px) {
+    .module-page .table-sort-mobile { display: grid; gap: 6px; margin: 0 0 12px; color: #543e34; font-size: 13px; font-weight: 600; }
+    .module-page .table-sort-mobile select { width: 100%; min-height: 40px; padding: 8px 11px; border: 1px solid #dcd5d0; border-radius: 7px; background: #fff; color: #291b17; font: inherit; }
+}
 .module-page :is(.management-table, .ingredients-table, .usuarios-table) th { text-transform: none; letter-spacing: normal; }
 .module-page .management-table td { padding: 11px 10px; border-bottom: 1px solid #d9dee7; color: #49342c; text-align: left; vertical-align: middle; }
 .module-page .management-table tbody tr:hover { background: #fffcf8; }
@@ -436,7 +445,11 @@
 .module-page .form-section-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
 .module-page .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .module-page .form-group { display: grid; gap: 6px; margin-bottom: 14px; }
+.module-page .form-group:has(> .field-character-count),
+.module-page .role-form-group.change-reason { margin-bottom: 6px; }
+.module-page .productos-form-section > label:has(> .field-character-count) { margin-bottom: 6px; }
 .module-page .required-fields-hint { margin: 12px 0 0; color: #6f625d; font-size: 14px; line-height: 1.45; }
+.module-page .change-reason + .required-fields-hint { margin-top: 0; }
 .module-page .required-fields-hint.error { color: #a62c23; font-weight: 600; }
 .module-page .required-field-message {
     display: block;
@@ -495,6 +508,12 @@
 }
 .module-page .add-item-button { padding: 7px 10px; border: 1px solid #d9c5b9; border-radius: 6px; background: #fff; color: #91401e; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .module-page .remove-item-button { width: 34px; height: 34px; padding: 0; border: 1px solid #e3c9c4; border-radius: 6px; background: #fff; color: #a53d32; font-size: 20px; cursor: pointer; }
+.module-page .category-sizes-toggle { display: flex; align-items: center; gap: 9px; cursor: pointer; }
+.module-page .category-sizes-toggle input { width: 17px; min-width: 17px; height: 17px; min-height: 17px; margin: 0; padding: 0; }
+.module-page .category-sizes-list { display: grid; gap: 8px; margin-top: 12px; }
+.module-page .category-size-row { display: flex; align-items: center; gap: 8px; }
+.module-page .category-size-row input { flex: 1; min-width: 0; }
+.module-page .category-size-row .remove-item-button { flex: none; }
 .module-page .form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee9e5; }
 .module-page .role-modal { padding: 28px 30px; border-radius: 12px; }
 .module-page .role-modal .management-eyebrow { margin-bottom: 5px; font-size: 13px; font-weight: 700; text-transform: uppercase; }
@@ -585,7 +604,7 @@
 
     .module-page .management-card td:first-child,
     .module-page .management-card td:nth-child(2),
-    .module-page .management-card td:last-child { grid-column: 1 / -1; }
+    .module-page .management-card td[data-label="Acciones"] { grid-column: 1 / -1; }
 
     /* Las celdas de una tarjeta no conservan porcentajes de columnas de tabla. */
     .module-page .management-table .management-card > td {
@@ -613,7 +632,7 @@
         font-weight: 600;
     }
 
-    .module-page .management-card td:last-child {
+    .module-page .management-card td[data-label="Acciones"] {
         padding-top: 12px;
         border-top: 1px solid #e4dfda;
     }

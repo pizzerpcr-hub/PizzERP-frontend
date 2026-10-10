@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useBusquedaLista } from "../../hooks/useListaSesion.js";
 import { useTablaPaginada } from "../../hooks/useTablaPaginada.js";
+import SortableHeader from "../../components/common/SortableHeader.jsx";
+import TableSortSelect from "../../components/common/TableSortSelect.jsx";
 import "../ModulePage.css";
 import "./Ingredientes.css";
 import IngredienteForm from "../../components/forms/IngredienteForm/IngredienteForm.jsx";
@@ -19,8 +21,9 @@ import {
 function Ingredientes() {
     const { usuario, cargandoSesion } = useAuth();
     const tieneAcceso = puede(usuario, "ingredientes");
+    const mostrarAcciones = puede(usuario, "ingredientes", "editar") || puede(usuario, "ingredientes", "eliminar");
     const [busqueda, setBusqueda] = useBusquedaLista("/api/ingredients");
-    const { datos: ingredientes, paginacion, cargando, error: errorLista, recargar } = useTablaPaginada(
+    const { datos: ingredientes, paginacion, cargando, error: errorLista, recargar, orden, cambiarOrden, establecerOrden } = useTablaPaginada(
         "/api/ingredients", "ingredientes", busqueda, !cargandoSesion && tieneAcceso);
     const [formulario, setFormulario] = useState(null);
     const [enviando, setEnviando] = useState(false);
@@ -106,12 +109,25 @@ function Ingredientes() {
                 </div>
                 <PageSearch className="page-search--header" label="Buscar ingrediente" id="buscarIngrediente"
                     placeholder="Buscar ingrediente" value={busqueda} maxLength={100} onChange={(event) => setBusqueda(event.target.value)} /></div>
+                <TableSortSelect orden={orden} onOrdenar={establecerOrden} opciones={[
+                    { campo: "nombre", label: "Nombre" }, { campo: "unidad", label: "Unidad de medida" },
+                    { campo: "cantidad", label: "Cantidad disponible", mayorAMenor: true },
+                    { campo: "stock", label: "Stock mínimo", mayorAMenor: true },
+                    { campo: "estado", label: "Estado" },
+                ]} />
                 <div className="table-wrap">
                     <table className="ingredients-table" aria-label="Ingredientes registrados">
-                        <thead><tr><th>Nombre</th><th>Unidad de Medida</th><th>Cantidad Disponible</th><th>Stock Mínimo</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <thead><tr>
+                            <SortableHeader label="Nombre" campo="nombre" orden={orden} onOrdenar={cambiarOrden} />
+                            <SortableHeader label="Unidad de Medida" campo="unidad" orden={orden} onOrdenar={cambiarOrden} />
+                            <SortableHeader label="Cantidad Disponible" campo="cantidad" orden={orden} onOrdenar={cambiarOrden} direccionInicial="desc" />
+                            <SortableHeader label="Stock Mínimo" campo="stock" orden={orden} onOrdenar={cambiarOrden} direccionInicial="desc" />
+                            <SortableHeader label="Estado" campo="estado" orden={orden} onOrdenar={cambiarOrden} />
+                            {mostrarAcciones && <th>Acciones</th>}
+                        </tr></thead>
                         <tbody>
-                            {cargando ? <tr><td colSpan="6" className="ingredient-loading"><LoadingSpinner label="Cargando ingredientes" /></td></tr>
-                                : ingredientes.length === 0 ? <tr><td colSpan="6" className="module-empty">
+                            {cargando ? <tr><td colSpan={mostrarAcciones ? 6 : 5} className="ingredient-loading"><LoadingSpinner label="Cargando ingredientes" /></td></tr>
+                                : ingredientes.length === 0 ? <tr><td colSpan={mostrarAcciones ? 6 : 5} className="module-empty">
                                     {busqueda ? "No se encontraron ingredientes." : "No hay ingredientes registrados."}
                                 </td></tr> : ingredientes.map((ingrediente) => <tr className="ingredient-card" key={ingrediente.id_ingrediente}>
                                     <td data-label="Nombre"><strong>{ingrediente.nombre}</strong></td>
@@ -120,7 +136,7 @@ function Ingredientes() {
                                     <td data-label="Stock Mínimo">{Number(ingrediente.stock_minimo).toLocaleString("es-CR", { maximumFractionDigits: 2 })}</td>
                                     <td data-label="Estado"><span className={`status ${ingrediente.estado === "ACTIVO" ? "active" : "inactive"}`}>
                                         {ingrediente.estado === "ACTIVO" ? "Activo" : "Inactivo"}</span></td>
-                                    <td data-label="Acciones"><div className="table-actions">
+                                    {mostrarAcciones && <td data-label="Acciones"><div className="table-actions">
                                         {puede(usuario, "ingredientes", "editar") && <button className="action-button edit" type="button" disabled={enviando}
                                             onClick={() => setFormulario({ ingrediente })}>Modificar</button>}
                                         {puede(usuario, "ingredientes", ingrediente.estado === "ACTIVO" ? "eliminar" : "editar") &&
@@ -129,7 +145,7 @@ function Ingredientes() {
                                                     setErrorEstado("");
                                                     setIngredienteSeleccionado(ingrediente);
                                                 }}>{ingrediente.estado === "ACTIVO" ? "Desactivar" : "Activar"}</button>}
-                                    </div></td>
+                                    </div></td>}
                                 </tr>)}
                         </tbody>
                     </table>

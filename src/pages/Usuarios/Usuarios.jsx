@@ -4,6 +4,7 @@ import CambiarEstadoUsuarioDialog from "../../components/forms/CambiarEstadoUsua
 import UsuariosTable from "../../components/TablaUsuarios/UsuariosTable.jsx";
 import Paginacion from "../../components/common/Paginacion/Paginacion.jsx";
 import { useTablaPaginada } from "../../hooks/useTablaPaginada.js";
+import TableSortSelect from "../../components/common/TableSortSelect.jsx";
 import RegistrarUsuarioForm from "../../components/forms/RegistrarUsuarioForm/RegistrarUsuarioForm.jsx";
 import ModificarUsuarioForm from "../../components/forms/ModificarUsuarioForm/ModificarUsuarioForm.jsx";
 
@@ -29,6 +30,7 @@ const usuarioPublico = (usuarioListado) => ({
     id_usuario: usuarioListado.id_usuario,
     nombre_completo: usuarioListado.nombre_completo,
     nombre_usuario: usuarioListado.nombre_usuario,
+    correo_electronico: usuarioListado.correo_electronico,
     rol: usuarioListado.rol,
     estado: usuarioListado.estado,
 });
@@ -36,7 +38,7 @@ const usuarioPublico = (usuarioListado) => ({
 const obtenerErroresCampo = (error) => {
     if (error.status !== 422) return null;
     const erroresCampo = {};
-    for (const campo of ["nombre_completo", "nombre_usuario", "contrasena", "rol"]) {
+    for (const campo of ["nombre_completo", "nombre_usuario", "correo_electronico", "contrasena", "rol"]) {
         const mensajes = error.errors?.[campo];
         const mensaje = Array.isArray(mensajes) ? mensajes[0] : mensajes;
         if (typeof mensaje === "string" && mensaje) erroresCampo[campo] = mensaje;
@@ -58,7 +60,7 @@ function Usuarios() {
     const puedeCrearUsuarios = puede(usuario, "usuarios", "crear");
     const necesitaCatalogoRoles = puedeEditarUsuarios || puedeCrearUsuarios;
     const { datos: usuarios, paginacion, cargando: cargandoUsuarios,
-        error: errorListado, recargar: reintentarListado } = useTablaPaginada(
+        error: errorListado, recargar: reintentarListado, orden, cambiarOrden, establecerOrden } = useTablaPaginada(
         "/api/users", "usuarios", busqueda, !cargandoSesion && tieneAccesoUsuarios);
     const { datos: rolesDisponibles, disponible: catalogoRolesDisponible,
         error: errorRoles, recargar: reintentarRoles } = useListaSesion(
@@ -262,8 +264,14 @@ function Usuarios() {
                         onChange={(event) => setBusqueda(event.target.value)} />
                 </div>
 
+                <TableSortSelect orden={orden} onOrdenar={establecerOrden} opciones={[
+                    { campo: "nombre", label: "Nombre completo" }, { campo: "usuario", label: "Usuario" },
+                    { campo: "rol", label: "Rol asignado" }, { campo: "estado", label: "Estado" },
+                ]} />
                 <UsuariosTable
                     usuarios={usuarios}
+                    orden={orden}
+                    onOrdenar={cambiarOrden}
                     cargando={cargandoUsuarios}
                     hayBusqueda={Boolean(busqueda.trim())}
                     idUsuarioActual={usuario?.id_usuario}
@@ -271,6 +279,7 @@ function Usuarios() {
                     onEditar={abrirEdicion}
                     onCambiarEstado={abrirCambioEstado}
                     puedeEditar={puedeEditarUsuarios}
+                    mostrarAcciones={puedeEditarUsuarios || puede(usuario, "usuarios", "eliminar")}
                     puedeCambiarEstado={(estado) => puede(usuario, "usuarios", estado === "ACTIVO" ? "eliminar" : "editar")}
                 />
                 {!cargandoUsuarios && <Paginacion paginacion={paginacion} nombre="usuarios" />}

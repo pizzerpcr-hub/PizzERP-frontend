@@ -10,6 +10,28 @@ import {
     obtenerInformacionPanel,
 } from "../../constants/roles.js";
 
+const TONOS_AVATAR = [
+    [12, 58],
+    [28, 62],
+    [43, 58],
+    [100, 28],
+    [350, 42],
+];
+
+const obtenerColorAvatar = (rol) => {
+    if (!rol) {
+        return "#e9ddd5";
+    }
+
+    const codigoRol = Array.from(rol).reduce(
+        (codigo, caracter) => Math.imul(codigo ^ caracter.codePointAt(0), 16777619) >>> 0,
+        2166136261,
+    );
+    const [matiz, saturacion] = TONOS_AVATAR[codigoRol % TONOS_AVATAR.length];
+
+    return `hsl(${matiz + ((codigoRol >>> 8) % 9) - 4} ${saturacion + ((codigoRol >>> 16) % 9) - 4}% ${69 + ((codigoRol >>> 24) % 9)}%)`;
+};
+
 function Sidebar({ items = [] }) {
     const navigate = useNavigate();
     const ubicacion = useLocation();
@@ -189,7 +211,10 @@ function Sidebar({ items = [] }) {
 
                 <div className="management-account">
                     <div className="management-profile">
-                        <span className="profile-avatar">
+                        <span
+                            className="profile-avatar"
+                            style={{ backgroundColor: obtenerColorAvatar(rolNormalizado) }}
+                        >
                             {iniciales}
                         </span>
 

@@ -31,6 +31,23 @@ test("la consulta de tabla solicita la página y búsqueda al servidor", async (
     }
 });
 
+test("la consulta solicita el orden de precio para toda la página", async () => {
+    const fetchAnterior = globalThis.fetch;
+    let rutaSolicitada;
+    globalThis.fetch = async ruta => {
+        rutaSolicitada = ruta;
+        return Response.json({ productos: [], paginacion: { pagina: 1, totalPaginas: 1, totalElementos: 0 } });
+    };
+
+    try {
+        await obtenerPaginaTabla("/api/products", "productos", 1, "pizza", undefined,
+            { parametros: { sort: "precio", direction: "desc" } });
+        assert.equal(rutaSolicitada, "/api/products?direction=desc&page=1&search=pizza&sort=precio");
+    } finally {
+        globalThis.fetch = fetchAnterior;
+    }
+});
+
 test("la consulta de tabla conserva el error de validación del servidor", async () => {
     const fetchAnterior = globalThis.fetch;
     globalThis.fetch = async () => new Response(JSON.stringify({ errors: { page: ["Página inválida."] } }), {

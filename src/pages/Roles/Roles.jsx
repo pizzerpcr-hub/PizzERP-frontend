@@ -11,6 +11,8 @@ import { MODULOS_GESTION, puede } from "../../constants/roles.js";
 import { actualizarRol, cambiarEstadoRol, registrarRol } from "../../services/gestionesService.js";
 import { useBusquedaLista } from "../../hooks/useListaSesion.js";
 import { useTablaPaginada } from "../../hooks/useTablaPaginada.js";
+import SortableHeader from "../../components/common/SortableHeader.jsx";
+import TableSortSelect from "../../components/common/TableSortSelect.jsx";
 
 const nombresPestanas = Object.fromEntries([
     ...MODULOS_GESTION,
@@ -20,9 +22,10 @@ const nombresPestanas = Object.fromEntries([
 
 function RolesPermisos() {
     const { usuario, actualizarUsuario } = useAuth();
+    const mostrarAcciones = puede(usuario, "roles", "editar") || puede(usuario, "roles", "eliminar");
     const [mensaje, setMensaje] = useState("");
     const [busqueda, setBusqueda] = useBusquedaLista("/api/roles");
-    const { datos: roles, paginacion, cargando, error: errorCarga, recargar } = useTablaPaginada(
+    const { datos: roles, paginacion, cargando, error: errorCarga, recargar, orden, cambiarOrden, establecerOrden } = useTablaPaginada(
         "/api/roles", "roles", busqueda, puede(usuario, "roles"));
     const [rolEditando, setRolEditando] = useState(null);
     const [modalAbierto, setModalAbierto] = useState(false);
@@ -117,10 +120,18 @@ function RolesPermisos() {
                 <PageSearch className="page-search--header" label="Buscar rol" id="buscarRol"
                     placeholder="Buscar por nombre..." value={busqueda} maxLength={100} onChange={(event) => setBusqueda(event.target.value)} />
             </div>
+            <TableSortSelect orden={orden} onOrdenar={establecerOrden} opciones={[
+                { campo: "nombre", label: "Rol" }, { campo: "estado", label: "Estado" },
+            ]} />
             <div className="table-wrap"><table className="management-table">
-                <thead><tr><th>Rol</th><th>Pestañas Permitidas</th><th>Estado</th><th>Acciones</th></tr></thead>
-                <tbody>{cargando ? <tr><td colSpan="4"><LoadingSpinner label="Cargando roles" /></td></tr>
-                    : roles.length === 0 ? <tr><td colSpan="4" className="module-empty">{busqueda ? "No se encontraron roles." : "No hay roles registrados."}</td></tr>
+                <thead><tr>
+                    <SortableHeader label="Rol" campo="nombre" orden={orden} onOrdenar={cambiarOrden} />
+                    <th>Pestañas Permitidas</th>
+                    <SortableHeader label="Estado" campo="estado" orden={orden} onOrdenar={cambiarOrden} />
+                    {mostrarAcciones && <th className="actions-column">Acciones</th>}
+                </tr></thead>
+                <tbody>{cargando ? <tr><td colSpan={mostrarAcciones ? 4 : 3}><LoadingSpinner label="Cargando roles" /></td></tr>
+                    : roles.length === 0 ? <tr><td colSpan={mostrarAcciones ? 4 : 3} className="module-empty">{busqueda ? "No se encontraron roles." : "No hay roles registrados."}</td></tr>
                         : roles.map((rol) => <tr className="management-card" key={rol.id_rol}>
                             <td data-label="Rol">{rol.nombre}</td>
                             <td data-label="Pestañas Permitidas">
@@ -133,7 +144,7 @@ function RolesPermisos() {
                                 ) : <span className="roles-no-tabs">Ninguna</span>}
                             </td>
                             <td data-label="Estado">{rol.estado === "ACTIVO" ? "Activo" : "Inactivo"}</td>
-                            <td data-label="Acciones"><div className="roles-actions" aria-busy={enviandoEstado === rol.id_rol}>
+                            {mostrarAcciones && <td data-label="Acciones"><div className="roles-actions" aria-busy={enviandoEstado === rol.id_rol}>
                                 {puede(usuario, "roles", "editar") &&
                                     <button type="button" disabled={enviandoEstado === rol.id_rol} onClick={() => abrir(rol)}>Modificar</button>}
                                 {puede(usuario, "roles", rol.estado === "ACTIVO" ? "eliminar" : "editar") &&
@@ -142,7 +153,7 @@ function RolesPermisos() {
                                         {enviandoEstado === rol.id_rol
                                             ? rol.estado === "ACTIVO" ? "Desactivando…" : "Activando…"
                                             : rol.estado === "ACTIVO" ? "Desactivar" : "Activar"}</button>}
-                            </div></td>
+                            </div></td>}
                         </tr>)}</tbody>
             </table></div>
             {!cargando && <Paginacion paginacion={paginacion} nombre="roles" />}

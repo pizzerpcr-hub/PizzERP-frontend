@@ -1078,7 +1078,7 @@ select {
     }
 
     .ingredients-page .ingredient-card td:first-child,
-    .ingredients-page .ingredient-card td:last-child {
+    .ingredients-page .ingredient-card td[data-label="Acciones"] {
         grid-column: 1 / -1;
     }
 
@@ -1091,7 +1091,7 @@ select {
         font-weight: 600;
     }
 
-    .ingredients-page .ingredient-card td:last-child {
+    .ingredients-page .ingredient-card td[data-label="Acciones"] {
         padding-top: 12px;
         border-top: 1px solid #e4dfda;
     }

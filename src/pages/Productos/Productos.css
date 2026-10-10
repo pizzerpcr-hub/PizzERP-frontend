@@ -153,4 +153,5 @@
     .productos-form-actions { flex-direction: column-reverse; }
     .productos-form-actions button { width: 100%; }
     .productos-page .productos-ingredient-row { grid-template-columns: minmax(0, 1fr) 80px 34px; }
+    .productos-page .productos-ingredient-row > :first-child { grid-column: 1 / -1; }
 }

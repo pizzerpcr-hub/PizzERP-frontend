@@ -10,11 +10,13 @@ import Paginacion from "../../components/common/Paginacion/Paginacion.jsx";
 import { actualizarCategoria, desactivarCategoriaConProductos, registrarCategoria } from "../../services/catalogoService.js";
 import { useBusquedaLista } from "../../hooks/useListaSesion.js";
 import { useTablaPaginada } from "../../hooks/useTablaPaginada.js";
+import SortableHeader from "../../components/common/SortableHeader.jsx";
+import TableSortSelect from "../../components/common/TableSortSelect.jsx";
 
 function Categorias() {
     const { usuario } = useAuth();
     const [busqueda, setBusqueda] = useBusquedaLista("/api/categories");
-    const { datos: categorias, paginacion, cargando, error: errorCarga, recargar } = useTablaPaginada(
+    const { datos: categorias, paginacion, cargando, error: errorCarga, recargar, orden, cambiarOrden, establecerOrden } = useTablaPaginada(
         "/api/categories", "categorias", busqueda, puede(usuario, "categorias"));
     const [mensaje, setMensaje] = useState("");
     const [categoriaEditando, setCategoriaEditando] = useState(null);
@@ -26,6 +28,7 @@ function Categorias() {
     const productosActivos = Number(categoriaSeleccionada?.productos_activos_count ?? 0);
     const tieneProductosActivos = categoriaSeleccionada?.estado === "ACTIVO" && productosActivos > 0;
     const puedeDesactivarProductos = puede(usuario, "productos", "eliminar");
+    const mostrarAcciones = puede(usuario, "categorias", "editar") || puede(usuario, "categorias", "eliminar");
 
     useEffect(() => {
         if (!mensaje) return undefined;
@@ -120,13 +123,25 @@ function Categorias() {
                         placeholder="Buscar por nombre o descripción..." value={busqueda} maxLength={100}
                         onChange={(event) => setBusqueda(event.target.value)} />
                 </div>
+                <TableSortSelect orden={orden} onOrdenar={establecerOrden} opciones={[
+                    { campo: "codigo", label: "Código" }, { campo: "nombre", label: "Nombre" },
+                    { campo: "descripcion", label: "Descripción" }, { campo: "productos", label: "Productos", mayorAMenor: true },
+                    { campo: "estado", label: "Estado" },
+                ]} />
                 <div className="table-wrap">
                     <table className="management-table">
-                        <thead><tr><th>Código</th><th>Nombre</th><th>Descripción</th><th>Productos</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <thead><tr>
+                            <SortableHeader label="Código" campo="codigo" orden={orden} onOrdenar={cambiarOrden} />
+                            <SortableHeader label="Nombre" campo="nombre" orden={orden} onOrdenar={cambiarOrden} />
+                            <SortableHeader label="Descripción" campo="descripcion" orden={orden} onOrdenar={cambiarOrden} />
+                            <SortableHeader label="Productos" campo="productos" orden={orden} onOrdenar={cambiarOrden} direccionInicial="desc" />
+                            <SortableHeader label="Estado" campo="estado" orden={orden} onOrdenar={cambiarOrden} />
+                            {mostrarAcciones && <th>Acciones</th>}
+                        </tr></thead>
                         <tbody>
-                            {cargando ? <tr><td colSpan="6"><LoadingSpinner label="Cargando categorías" /></td></tr>
-                                : errorCarga && !categorias.length ? <tr><td colSpan="6" className="module-empty">No fue posible mostrar las categorías.</td></tr>
-                                    : categorias.length === 0 ? <tr><td colSpan="6" className="module-empty">
+                            {cargando ? <tr><td colSpan={mostrarAcciones ? 6 : 5}><LoadingSpinner label="Cargando categorías" /></td></tr>
+                                : errorCarga && !categorias.length ? <tr><td colSpan={mostrarAcciones ? 6 : 5} className="module-empty">No fue posible mostrar las categorías.</td></tr>
+                                    : categorias.length === 0 ? <tr><td colSpan={mostrarAcciones ? 6 : 5} className="module-empty">
                                     {busqueda ? "No se encontraron categorías." : "No hay categorías registradas."}
                                 </td></tr> : categorias.map((categoria) => <tr className="management-card" key={categoria.id_categoria}>
                                     <td data-label="Código">{categoria.codigo_categoria}</td>
@@ -135,7 +150,7 @@ function Categorias() {
                                     <td data-label="Productos">{categoria.productos_count}</td>
                                     <td data-label="Estado"><span className={`catalog-status ${categoria.estado === "ACTIVO" ? "active" : "inactive"}`}>
                                         {categoria.estado === "ACTIVO" ? "Activo" : "Inactivo"}</span></td>
-                                    <td data-label="Acciones"><div className="category-table-actions">
+                                    {mostrarAcciones && <td data-label="Acciones"><div className="category-table-actions">
                                         {puede(usuario, "categorias", "editar") && <button className="catalog-action" type="button" disabled={enviando}
                                             onClick={() => abrirFormulario(categoria)}>Modificar</button>}
                                         {puede(usuario, "categorias", categoria.estado === "ACTIVO" ? "eliminar" : "editar") &&
@@ -144,7 +159,7 @@ function Categorias() {
                                                 setConfirmandoDesactivacionConProductos(false);
                                                 setCategoriaSeleccionada(categoria);
                                             }}>{categoria.estado === "ACTIVO" ? "Desactivar" : "Activar"}</button>}
-                                    </div></td>
+                                    </div></td>}
                                 </tr>)}
                         </tbody>
                     </table>

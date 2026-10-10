@@ -255,6 +255,37 @@
     font-weight: 600;
 }
 
+.email-confirmation-dialog {
+    width: min(92vw, 420px);
+    max-height: calc(100dvh - 32px);
+    padding: 24px;
+    border: 0;
+    border-radius: 14px;
+    color: #38221a;
+    background: #fff;
+    box-shadow: 0 22px 55px rgba(35, 20, 14, 0.27);
+    font-family: var(--font);
+    overflow-y: auto;
+}
+
+.email-confirmation-dialog::backdrop {
+    background: rgba(34, 18, 13, 0.47);
+}
+
+.email-confirmation-dialog h2 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.email-confirmation-dialog p {
+    margin: 0;
+    color: #5f4a42;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
 
 /* =========================
    Dialog actions

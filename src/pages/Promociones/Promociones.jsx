@@ -10,15 +10,18 @@ import { puede } from "../../constants/roles.js";
 import { actualizarCombo, cambiarEstadoCombo, obtenerProductosParaCombo, registrarCombo } from "../../services/gestionesService.js";
 import { useBusquedaLista, useListaSesion } from "../../hooks/useListaSesion.js";
 import { useTablaPaginada } from "../../hooks/useTablaPaginada.js";
+import SortableHeader from "../../components/common/SortableHeader.jsx";
+import TableSortSelect from "../../components/common/TableSortSelect.jsx";
 
 const formatoPrecio = new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC" });
 
 function Combos() {
     const { usuario } = useAuth();
+    const mostrarAcciones = puede(usuario, "combos", "editar") || puede(usuario, "combos", "eliminar");
     const [error, setError] = useState("");
     const [mensaje, setMensaje] = useState("");
     const [busqueda, setBusqueda] = useBusquedaLista("/api/combos");
-    const { datos: combos, paginacion, cargando, error: errorLista, recargar } = useTablaPaginada(
+    const { datos: combos, paginacion, cargando, error: errorLista, recargar, orden, cambiarOrden, establecerOrden } = useTablaPaginada(
         "/api/combos", "combos", busqueda, puede(usuario, "combos"));
     const [comboEditando, setComboEditando] = useState(null);
     const [modalAbierto, setModalAbierto] = useState(false);
@@ -92,10 +95,23 @@ function Combos() {
         </div>
         <PageSearch className="page-search--header" label="Buscar combo" id="buscarCombo"
             placeholder="Buscar por nombre, código o precio..." value={busqueda} maxLength={100} onChange={(event) => setBusqueda(event.target.value)} /></div>
+            <TableSortSelect orden={orden} onOrdenar={establecerOrden} opciones={[
+                { campo: "codigo", label: "Código" }, { campo: "nombre", label: "Combo" },
+                { campo: "precio", label: "Precio", mayorAMenor: true },
+                { campo: "vigencia", label: "Vigencia", mayorAMenor: true }, { campo: "estado", label: "Estado" },
+            ]} />
             <div className="table-wrap"><table className="management-table">
-                <thead><tr><th>Código</th><th>Combo</th><th>Productos</th><th>Precio</th><th>Vigencia</th><th>Estado</th><th>Acciones</th></tr></thead>
-                <tbody>{cargando ? <tr><td colSpan="7"><LoadingSpinner label="Cargando combos" /></td></tr>
-                    : combos.length === 0 ? <tr><td colSpan="7" className="module-empty">{busqueda ? "No se encontraron combos." : "No hay promociones registradas."}</td></tr>
+                <thead><tr>
+                    <SortableHeader label="Código" campo="codigo" orden={orden} onOrdenar={cambiarOrden} />
+                    <SortableHeader label="Combo" campo="nombre" orden={orden} onOrdenar={cambiarOrden} />
+                    <th>Productos</th>
+                    <SortableHeader label="Precio" campo="precio" orden={orden} onOrdenar={cambiarOrden} direccionInicial="desc" />
+                    <SortableHeader label="Vigencia" campo="vigencia" orden={orden} onOrdenar={cambiarOrden} />
+                    <SortableHeader label="Estado" campo="estado" orden={orden} onOrdenar={cambiarOrden} />
+                    {mostrarAcciones && <th>Acciones</th>}
+                </tr></thead>
+                <tbody>{cargando ? <tr><td colSpan={mostrarAcciones ? 7 : 6}><LoadingSpinner label="Cargando combos" /></td></tr>
+                    : combos.length === 0 ? <tr><td colSpan={mostrarAcciones ? 7 : 6} className="module-empty">{busqueda ? "No se encontraron combos." : "No hay promociones registradas."}</td></tr>
                         : combos.map((combo) => <tr className="management-card" key={combo.id_combo}>
                             <td data-label="Código"><strong>{combo.codigo_combo}</strong></td>
                             <td data-label="Combo"><strong>{combo.nombre}</strong><span className="combo-description">{combo.descripcion}</span></td>
@@ -103,7 +119,7 @@ function Combos() {
                             <td data-label="Precio">{formatoPrecio.format(Number(combo.precio))}</td>
                             <td data-label="Vigencia">{combo.fecha_inicio} — {combo.fecha_fin}</td>
                             <td data-label="Estado">{combo.estado === "ACTIVO" ? "Activo" : "Inactivo"}</td>
-                            <td data-label="Acciones"><div className="category-table-actions">
+                            {mostrarAcciones && <td data-label="Acciones"><div className="category-table-actions">
                                 {puede(usuario, "combos", "editar") && <button className="catalog-action" type="button"
                                     onClick={() => abrir(combo)}>Modificar</button>}
                                 {puede(usuario, "combos", combo.estado === "ACTIVO" ? "eliminar" : "editar") &&
@@ -113,7 +129,7 @@ function Combos() {
                                             setComboSeleccionado(combo);
                                         }}>
                                         {combo.estado === "ACTIVO" ? "Desactivar" : "Activar"}</button>}
-                            </div></td>
+                            </div></td>}
                         </tr>)}</tbody>
             </table></div>
             {!cargando && <Paginacion paginacion={paginacion} nombre="combos" />}
