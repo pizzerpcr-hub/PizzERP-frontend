@@ -340,12 +340,13 @@
         table-layout: fixed;
     }
 
-    .module-page.productos-page .management-table :is(th, td):nth-child(1) { width: 14%; }
-    .module-page.productos-page .management-table :is(th, td):nth-child(2) { width: 23%; }
-    .module-page.productos-page .management-table :is(th, td):nth-child(3) { width: 17%; }
-    .module-page.productos-page .management-table :is(th, td):nth-child(4) { width: 13%; }
-    .module-page.productos-page .management-table :is(th, td):nth-child(5) { width: 12%; }
-    .module-page.productos-page .management-table :is(th, td):nth-child(6) { width: 21%; }
+    .module-page.productos-page .management-table :is(th, td):nth-child(1) { width: 12%; }
+    .module-page.productos-page .management-table :is(th, td):nth-child(2) { width: 21%; }
+    .module-page.productos-page .management-table :is(th, td):nth-child(3) { width: 15%; }
+    .module-page.productos-page .management-table :is(th, td):nth-child(4) { width: 12%; }
+    .module-page.productos-page .management-table :is(th, td):nth-child(5) { width: 10%; }
+    .module-page.productos-page .management-table :is(th, td):nth-child(6) { width: 10%; }
+    .module-page.productos-page .management-table :is(th, td):nth-child(7) { width: 20%; }
 
     .module-page.categorias-page .management-table th,
     .module-page.categorias-page .management-table td,

@@ -7,6 +7,18 @@ const unidadesCompatibles = (unidad) => {
     if (["ml", "l"].includes(unidad)) return ["ml", "l"];
     return unidad ? [unidad] : [];
 };
+const convertirCantidad = (cantidad, origen, destino) => {
+    const partes = /^(\d+)(?:\.(\d{1,2}))?$/.exec(cantidad);
+    if (!partes) return null;
+    const factores = { g: 1n, kg: 1000n, ml: 1n, l: 1000n };
+    if (!factores[origen] || !factores[destino] || !unidadesCompatibles(origen).includes(destino)) return null;
+    const centesimas = BigInt(partes[1]) * 100n + BigInt((partes[2] ?? "").padEnd(2, "0"));
+    const numerador = centesimas * factores[origen];
+    if (numerador % factores[destino] !== 0n) return null;
+    const resultado = numerador / factores[destino];
+    if (resultado < 1n || resultado > 9999999999n) return null;
+    return `${resultado / 100n}.${String(resultado % 100n).padStart(2, "0")}`;
+};
 const firmaIngredientes = (filas) => JSON.stringify(filas.map((fila) => ({
     id: Number(fila.id_ingrediente), cantidad: Number(fila.cantidad_requerida), unidad: fila.unidad_medida,
 })).sort((a, b) => a.id - b.id));
@@ -20,6 +32,7 @@ function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar, pue
         nombre: producto?.nombre ?? "",
         descripcion: producto?.descripcion ?? "",
         precio: producto?.precio ?? "",
+        tamano: producto?.tamano ?? "",
         estado: producto?.estado ?? "ACTIVO",
         motivo: "",
     });
@@ -38,6 +51,7 @@ function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar, pue
         Number(datos.id_categoria) !== Number(producto.id_categoria) ||
         datos.nombre.trim() !== producto.nombre || datos.descripcion.trim() !== producto.descripcion ||
         Number(datos.precio) !== Number(producto.precio) || datos.estado !== producto.estado ||
+        datos.tamano !== (producto.tamano ?? "") ||
         firmaIngredientes(ingredientes) !== firmaIngredientes(producto.ingredientes.map((ingrediente) => ({
             id_ingrediente: ingrediente.id_ingrediente,
             cantidad_requerida: ingrediente.pivot?.cantidad_requerida,
@@ -59,17 +73,35 @@ function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar, pue
     };
 
     const cambiarIngrediente = (indice, campo, valor) => {
-        setIngredientes((actual) => actual.map((fila, posicion) =>
-            posicion === indice ? {
-                ...fila,
-                [campo]: valor,
-                ...(campo === "id_ingrediente" ? { unidad_medida: ingredientesDisponibles.find((disponible) =>
-                    String(disponible.id_ingrediente) === valor)?.unidad_medida ?? "" } : {}),
-            } : fila));
+        const fila = ingredientes[indice];
+        if (!fila) return;
+        const cambio = { [campo]: valor };
+        let avisoCantidad;
+        if (campo === "id_ingrediente") {
+            const unidadBase = ingredientesDisponibles.find((disponible) => String(disponible.id_ingrediente) === valor)?.unidad_medida ?? "";
+            const compatibles = unidadesCompatibles(unidadBase);
+            cambio.unidad_medida = compatibles.includes(fila.unidad_medida)
+                ? fila.unidad_medida : compatibles.includes("g") ? "g" : unidadBase;
+            if (fila.unidad_medida && !compatibles.includes(fila.unidad_medida)) {
+                cambio.cantidad_requerida = "";
+                avisoCantidad = "La unidad del ingrediente cambió. Ingresa la cantidad en la nueva unidad.";
+            }
+        } else if (campo === "unidad_medida" && valor !== fila.unidad_medida && fila.cantidad_requerida.trim()) {
+            const convertida = convertirCantidad(fila.cantidad_requerida, fila.unidad_medida, valor);
+            if (convertida === null) {
+                setErrores((actual) => ({ ...actual, [`ingredientes.${indice}.unidad_medida`]:
+                    "No se puede convertir esta cantidad exactamente con dos decimales dentro del rango permitido. Conserva la unidad o vacía la cantidad antes de cambiarla." }));
+                return;
+            }
+            cambio.cantidad_requerida = convertida;
+        }
+        setIngredientes((actual) => actual.map((actualFila, posicion) => posicion === indice ? { ...actualFila, ...cambio } : actualFila));
         setErrores((actual) => ({
             ...actual,
             [`ingredientes.${indice}.${campo}`]: undefined,
             ...(campo === "id_ingrediente" ? { [`ingredientes.${indice}.unidad_medida`]: undefined } : {}),
+            ...(campo === "id_ingrediente" || campo === "unidad_medida"
+                ? { [`ingredientes.${indice}.cantidad_requerida`]: avisoCantidad } : {}),
         }));
         setErrorGeneral("");
     };
@@ -101,6 +133,7 @@ function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar, pue
                 nombre: datos.nombre.trim(),
                 descripcion: datos.descripcion.trim(),
                 precio: datos.precio,
+                tamano: datos.tamano,
                 estado: datos.estado,
                 ingredientes: ingredientes.map((ingrediente) => ({
                     id_ingrediente: Number(ingrediente.id_ingrediente),
@@ -177,6 +210,17 @@ function ProductoForm({ producto, categorias, enviando, onGuardar, onCerrar, pue
                         </label>
                     </div>
                     <div className="productos-form-grid">
+                        <label>Tamaño de pizza
+                            <select name="tamano" value={datos.tamano} disabled={enviando}
+                                onChange={(event) => cambiar("tamano", event.target.value)} aria-invalid={Boolean(errores.tamano)}>
+                                <option value="">No aplica</option>
+                                <option value="personal">Personal</option>
+                                <option value="mediana">Mediana</option>
+                                <option value="grande">Grande</option>
+                                <option value="familiar">Familiar</option>
+                            </select>
+                            {errores.tamano && <span className="required-field-message" role="alert">{errores.tamano}</span>}
+                        </label>
                         <label>Estado
                             <select value={datos.estado} onChange={(event) => cambiar("estado", event.target.value)}>
                                 <option value="ACTIVO">Activo</option>
